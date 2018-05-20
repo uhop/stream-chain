@@ -37,12 +37,12 @@ npm i stream-chain
 
 ## Documentation
 
-The main module provides a class based on [EventEmitter](https://nodejs.org/dist/latest-v10.x/docs/api/events.html#events_class_eventemitter). It chains its arguments in a single pipeline optionally binding common stream events.
+The main module provides a class based on [EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter). It chains its arguments in a single pipeline optionally binding common stream events.
 
 The constructor accepts two parameters:
 
-* `fns` is an array of functions or instances of [Duplex](https://nodejs.org/dist/latest-v10.x/docs/api/stream.html#stream_class_stream_duplex) or [Transform](https://nodejs.org/dist/latest-v10.x/docs/api/stream.html#stream_class_stream_transform) streams.
-  * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [documentation](https://nodejs.org/dist/latest-v10.x/docs/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in the content of created stream.
+* `fns` is an array of functions or instances of [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) or [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) streams.
+  * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in the content of created stream.
     * If it is a regular function, it can return an array of values to pass to the next stream, a single value, `undefined` or `null`. Two latter values indicate that no value should be passed.
     * If it is a generator function, it can yield and/or return all necessary values. Each yield/return value will be treated like a returned value from a regular function.
     * If it is an asynchronous function, it will be waited to be resolved, and the resulting value will be treated like a returned value from a regular function.
