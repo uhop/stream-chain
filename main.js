@@ -1,20 +1,20 @@
 'use strict';
 
 const EventEmitter = require('events');
-const {Transform} = require('stream');
+const {Duplex, Transform} = require('stream');
 
 const GeneratorFunction = Object.getPrototypeOf(function*() {}).constructor;
 const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor;
 
 function processData(result, stream, callback) {
-  if (result !== undefined) {
+  if (result !== undefined && result !== null) {
     if (result instanceof Array) {
-      result.forEach(value => value !== undefined && stream.push(value));
+      result.forEach(value => value !== undefined && value !== null && stream.push(value));
     } else {
       stream.push(result);
     }
   }
-  callback && callback();
+  callback && callback(null);
 }
 
 class Chain extends EventEmitter {
@@ -26,7 +26,7 @@ class Chain extends EventEmitter {
     }
 
     this.streams = fns.map((fn, index) => {
-      let transform;
+      let transform, stream;
       if (fn instanceof AsyncFunction) {
         transform = function(chunk, encoding, callback) {
           fn.call(this, chunk, encoding).then(result => processData(result, this, callback), error => callback(error));
@@ -40,11 +40,13 @@ class Chain extends EventEmitter {
               processData(result.value, this);
               if (result.done) break;
             }
-            callback();
+            callback(null);
           } catch (error) {
             callback(error);
           }
         };
+      } else if (fn instanceof Duplex || fn instanceof Transform) {
+        stream = fn;
       } else if (typeof fn === 'function') {
         transform = function(chunk, encoding, callback) {
           try {
@@ -55,9 +57,11 @@ class Chain extends EventEmitter {
           }
         };
       } else {
-        throw Error('Arguments should be functions.');
+        throw Error('Arguments should be functions or streams.');
       }
-      const stream = new Transform({objectMode: true, transform});
+      if (!stream) {
+        stream = new Transform({objectMode: true, transform});
+      }
       !skipEvents && stream.on('error', error => this.emit('error', error));
       return stream;
     });

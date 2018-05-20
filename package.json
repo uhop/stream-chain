@@ -4,7 +4,7 @@
   "description": "Chain functions as transform streams.",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/tests.js"
   },
   "repository": {
     "type": "git",
@@ -14,10 +14,13 @@
     "stream",
     "chain"
   ],
-  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com>",
+  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (http://lazutkin.com/)",
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/uhop/stream-chain/issues"
   },
-  "homepage": "https://github.com/uhop/stream-chain#readme"
+  "homepage": "https://github.com/uhop/stream-chain#readme",
+  "devDependencies": {
+    "heya-unit": "^0.3.0"
+  }
 }
