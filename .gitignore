@@ -1,0 +1,4 @@
+node_modules/*
+report/*
+coverage/*
+.AppleDouble
