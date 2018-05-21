@@ -68,7 +68,7 @@ The constructor accepts two parameters:
           * If it is `undefined` or `null`, no value shall be passed.
           * Otherwise, the value will be passed to the next stream.
       * Special value:
-        * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a special value.
+        * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
         * If it is an instance of a generator or "nextable" (an object with a method called `next()`), it will be iterated according to the [generator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator) protocol. The results should be regular values.
       * Any thrown exception will be catched and passed to a callback function effectively generating an error event.
   * If it is an asynchronous function, it can return a regular value.
@@ -81,7 +81,8 @@ The constructor accepts two parameters:
 
 ## Release History
 
-- 1.0.0 *the initial release.*
+- 1.0.1 *Fixed the README.*
+- 1.0.0 *The initial release.*
 
 [npm-image]:      https://img.shields.io/npm/v/stream-chain.svg
 [npm-url]:        https://npmjs.org/package/stream-chain
