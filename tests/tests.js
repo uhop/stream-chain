@@ -3,5 +3,7 @@
 const unit = require('heya-unit');
 
 require('./test_simple');
+require('./test_errors');
+require('./test_demo');
 
 unit.run();
