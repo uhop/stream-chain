@@ -79,8 +79,19 @@ The constructor accepts two parameters:
 * `skipEvents` is an optional Boolean parameter. If it is `false` (the default), `'error'` events from all streams are forwarded to the created instance, `'data'` and `'end'` events are forwarded from the last stream of a pipeline. If it is `true`, no event forwarding is made.
   * This parameter is useful for handling non-standard events. In this case the forwarding of events can be done either manually, or in a constructor of a derived class.
 
+An instance is based on `EventEmitter`, and defines follwing public properties:
+
+* `streams` is an array of streams created by a constructor. Its values either `Transform` streams that use corresponding functions from a constructor parameter, or user-provided `Transform` and/or `Duplex` streams. All streams are piped starting from the beginning.
+* `input` is the beginning of the pipeline. Effectively it is the first item of `streams`.
+* `output` is the end of the pipeline. Effectively it is the last item of `streams`.
+
+`input` and `output` are helpers that used to combine the procesing pipeline with other streams, which usually provide I/O for the pipeline.
+
+An instance can be used to attach handlers for stream events. See the example above, and test files in `tests/` folder.
+
 ## Release History
 
+- 1.0.2 *Better README.*
 - 1.0.1 *Fixed the README.*
 - 1.0.0 *The initial release.*
 
