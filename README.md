@@ -63,7 +63,7 @@ While a lot of API improvements were made to make streams easy to use, in realit
 ## Installation
 
 ```
-npm i stream-chain
+npm i --save stream-chain
 ```
 
 ## Documentation
@@ -77,7 +77,7 @@ Many details about this package can be discovered by looking at test files locat
 The constructor accepts following arguments:
 
 * `fns` is an array of functions or stream instances.
-  * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
+  * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
     * If it is a regular function, it can return:
       * Regular value:
         * Array of values to pass several or zero values to the next stream as they are.
@@ -98,7 +98,7 @@ The constructor accepts following arguments:
     * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) or [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) can go anywhere.
       * Both `Transform` and `Duplex` are always `Readable` and `Writable`.
 * `skipEvents` is an optional flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance, `'data'` and `'end'` events are forwarded from the last stream of a pipeline. If it is truthy, no event forwarding is made.
-  * It is useful for handling non-standard events. In this case the forwarding of events can be done either manually or in constructor of a derived class.
+  * It is useful for handling non-standard events. In this case the forwarding of events can be done either externally or in constructor of a derived class.
 
 ```js
 const chain = new Chain([x => x * x, x => [x - 1, x, x + 1]]);
