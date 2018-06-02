@@ -16,6 +16,10 @@ Originally `stream-chain` was used internally with [stream-fork](https://www.npm
 ```js
 const Chain = require('stream-chain');
 
+const fs = require('fs');
+const zlib = require('zlib');
+const {Transform} = require('stream');
+
 // the chain will work on a stream of number objects
 const chain = new Chain([
   // transforms a value
@@ -35,13 +39,20 @@ const chain = new Chain([
   x => x % 2 ? x : null,
   // uses an arbitrary transform stream
   new Transform({
-    objectMode: true,
+    writableObjectMode: true,
     transform(x, _, callback) {
-      callback(null, x + 1);
+      // transform to text
+      callback(null, x.toString());
     }
-  })
+  }),
+  // compress
+  zlib.createGzip(),
+  // save to a file
+  fs.createWriteStream('output.txt.gz')
 ]);
-chain.on('data', data => console.log(data));
+// log errors
+chain.on('error', error => console.log(error));
+// use the chain
 dataSource.pipe(chain.input);
 ```
 
@@ -106,6 +117,23 @@ Following public properties are available:
 * `output` is the end of the pipeline. Effectively it is the last item of `streams`.
 
 `input` and `output` are helpers that used to combine the procesing pipeline with other streams, which usually provide I/O for the pipeline.
+
+```js
+const chain = new Chain([
+  x => x * x,
+  x => [x - 1, x, x + 1],
+  new Transform({
+    writableObjectMode: true,
+    transform(chunk, _, callback) {
+      callback(null, chunk.toString());
+    }
+  })
+]);
+chain.output
+  .pipe(zlib.createGzip())
+  .pipe(fs.createWriteStream('output.txt.gz'));
+dataSource.pipe(chain.input);
+```
 
 ## Release History
 
