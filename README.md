@@ -5,9 +5,11 @@
 [![devDependencies][dev-deps-image]][dev-deps-url]
 [![NPM version][npm-image]][npm-url]
 
-`stream-chain` creates a chain of object mode transform streams out of regular functions, asynchronous functions, generator functions, and existing Transform and Duplex object mode streams. It eliminates a boilerplate helping to concentrate on functionality without losing the performance.
+`stream-chain` creates a chain of object mode transform streams out of regular functions, asynchronous functions, generator functions, and existing [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) and [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) object mode streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). It eliminates a boilerplate helping to concentrate on functionality without losing the performance.
 
-It is a lightweight, no-dependencies packages, which is distributed under New BSD license.
+Originally `stream-chain` was used internally with [stream-fork](https://www.npmjs.com/package/stream-fork) and [stream-json](https://www.npmjs.com/package/stream-json) to create flexible data processing pipelines.
+
+`stream-chain` is a lightweight, no-dependencies micro-package. It is distributed under New BSD license.
 
 ## Intro
 
@@ -55,11 +57,15 @@ npm i stream-chain
 
 ## Documentation
 
-The main module provides a class based on [EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter). It chains its arguments in a single pipeline optionally binding common stream events.
+`Chain`, which is returned by `require('stream-chain')`, is based on [EventEmitter](https://nodejs.org/api/events.html#events_class_eventemitter). It chains its dependents in a single pipeline optionally binding common stream events.
 
-The constructor accepts two parameters:
+Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`main.js`).
 
-* `fns` is an array of functions or instances of [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) or [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) streams.
+### Constructor: `new Chain(fns[, skipEvents])`
+
+The constructor accepts following arguments:
+
+* `fns` is an array of functions or stream instances.
   * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
     * If it is a regular function, it can return:
       * Regular value:
@@ -76,21 +82,34 @@ The constructor accepts two parameters:
   * If it is a generator function, each yield or return should produce a regular value.
     * In essence, it is covered under "special values" as a function that returns a generator object.
   * If a value is a valid stream, it is included as is in the pipeline.
-* `skipEvents` is an optional Boolean parameter. If it is `false` (the default), `'error'` events from all streams are forwarded to the created instance, `'data'` and `'end'` events are forwarded from the last stream of a pipeline. If it is `true`, no event forwarding is made.
-  * This parameter is useful for handling non-standard events. In this case the forwarding of events can be done either manually, or in a constructor of a derived class.
+    * The very first stream can be [Readable](https://nodejs.org/api/stream.html#stream_readable_streams).
+    * The very last stream can be [Writable](https://nodejs.org/api/stream.html#stream_writable_streams).
+    * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) or [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) can go anywhere.
+      * Both `Transform` and `Duplex` are always `Readable` and `Writable`.
+* `skipEvents` is an optional flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance, `'data'` and `'end'` events are forwarded from the last stream of a pipeline. If it is truthy, no event forwarding is made.
+  * It is useful for handling non-standard events. In this case the forwarding of events can be done either manually or in constructor of a derived class.
 
-An instance is based on `EventEmitter`, and defines follwing public properties:
+```js
+const chain = new Chain([x => x * x, x => [x - 1, x, x + 1]]);
+chain.on('error', error => console.error(error));
+dataSource.pipe(chain.input);
+```
 
-* `streams` is an array of streams created by a constructor. Its values either `Transform` streams that use corresponding functions from a constructor parameter, or user-provided `Transform` and/or `Duplex` streams. All streams are piped starting from the beginning.
+An instance can be used to attach handlers for stream events.
+
+### Properties
+
+Following public properties are available:
+
+* `streams` is an array of streams created by a constructor. Its values either `Transform` streams that use corresponding functions from a constructor parameter, or user-provided streams. All streams are piped sequentially starting from the beginning.
 * `input` is the beginning of the pipeline. Effectively it is the first item of `streams`.
 * `output` is the end of the pipeline. Effectively it is the last item of `streams`.
 
 `input` and `output` are helpers that used to combine the procesing pipeline with other streams, which usually provide I/O for the pipeline.
 
-An instance can be used to attach handlers for stream events. See the example above, and test files in `tests/` folder.
-
 ## Release History
 
+- 1.0.3 *Improved documentation.*
 - 1.0.2 *Better README.*
 - 1.0.1 *Fixed the README.*
 - 1.0.0 *The initial release.*
