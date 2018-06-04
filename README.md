@@ -5,7 +5,7 @@
 [![devDependencies][dev-deps-image]][dev-deps-url]
 [![NPM version][npm-image]][npm-url]
 
-`stream-chain` creates a chain of object mode transform streams out of regular functions, asynchronous functions, generator functions, and existing [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) and [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) object mode streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a `Duplex` stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance.
+`stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
 
 Originally `stream-chain` was used internally with [stream-fork](https://www.npmjs.com/package/stream-fork) and [stream-json](https://www.npmjs.com/package/stream-json) to create flexible data processing pipelines.
 
@@ -60,13 +60,14 @@ While a lot of API improvements were made to make streams easy to use, in realit
 
 ## Installation
 
-```
+```bash
 npm i --save stream-chain
+# or: yarn add stream-chain
 ```
 
 ## Documentation
 
-`Chain`, which is returned by `require('stream-chain')`, is based on `Duplex`. It chains its dependents in a single pipeline optionally binding `error` events.
+`Chain`, which is returned by `require('stream-chain')`, is based on [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex). It chains its dependents in a single pipeline optionally binding `error` events.
 
 Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`main.js`).
 
@@ -75,7 +76,7 @@ Many details about this package can be discovered by looking at test files locat
 The constructor accepts following arguments:
 
 * `fns` is an array of functions or stream instances.
-  * If a value is a function, a `Transform` stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
+  * If a value is a function, a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
     * If it is a regular function, it can return:
       * Regular value:
         * Array of values to pass several or zero values to the next stream as they are.
@@ -169,7 +170,7 @@ dataSource.pipe(chain);
 
 Following public properties are available:
 
-* `streams` is an array of streams created by a constructor. Its values either `Transform` streams that use corresponding functions from a constructor parameter, or user-provided streams. All streams are piped sequentially starting from the beginning.
+* `streams` is an array of streams created by a constructor. Its values either [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) streams that use corresponding functions from a constructor parameter, or user-provided streams. All streams are piped sequentially starting from the beginning.
 * `input` is the beginning of the pipeline. Effectively it is the first item of `streams`.
 * `output` is the end of the pipeline. Effectively it is the last item of `streams`.
 
@@ -207,7 +208,7 @@ Please select what style you want to use, and never mix them together with the s
 
 Following static methods are available:
 
-* `chain(fns[, options)` is a factory function, which has the same arguments as the constructor and returns a `Chain` instance.
+* `chain(fns[, options)` is a helper factory function, which has the same arguments as the constructor and returns a `Chain` instance.
   ```js
   const {chain} = require('stream-chain');
 
@@ -227,6 +228,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.0.1 *Improved documentation.*
 - 2.0.0 *Upgraded to use Duplex instead of EventEmitter as the base.*
 - 1.0.3 *Improved documentation.*
 - 1.0.2 *Better README.*
