@@ -5,7 +5,7 @@ const unit = require('heya-unit');
 const Chain = require('../main');
 
 unit.add(module, [
-  function test_noStreams(t) {
+  function test_errorsNoStreams(t) {
     try {
       const chain = new Chain([]);
       t.test(false); // shouldn't be here
@@ -13,7 +13,7 @@ unit.add(module, [
       eval(t.TEST('e instanceof Error'));
     }
   },
-  function test_wrongStreams(t) {
+  function test_errorsWrongStreams(t) {
     try {
       const chain = new Chain([1]);
       t.test(false); // shouldn't be here

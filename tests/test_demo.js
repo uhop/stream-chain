@@ -48,6 +48,6 @@ unit.add(module, [
       async.done();
     });
 
-    streamFromArray([1, 2, 3]).pipe(chain.input);
+    streamFromArray([1, 2, 3]).pipe(chain);
   }
 ]);
