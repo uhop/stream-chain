@@ -228,6 +228,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*
 - 2.0.1 *Improved documentation.*
 - 2.0.0 *Upgraded to use Duplex instead of EventEmitter as the base.*
 - 1.0.3 *Improved documentation.*

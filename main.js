@@ -62,9 +62,11 @@ class Chain extends Duplex {
     this.input = this.streams[0];
     this.output = this.streams.reduce((output, stream) => (output && output.pipe(stream)) || stream);
 
-    if (!(this.input instanceof Writable)) {
+    if (this.input instanceof Writable) {
+      this.on('finish', () => this.input.end(null, null)); // for Node 6
+    } else {
       this._write = (_1, _2, callback) => callback(null);
-      this._final = callback => callback(null);
+      // this._final = callback => callback(null); // unavailable in Node 6
       this.input.on('end', () => this.end());
     }
 
@@ -90,14 +92,14 @@ class Chain extends Duplex {
       error = e;
     }
   }
-  _final(callback) {
-    let error = null;
-    try {
-      this.input.end(null, null, e => callback(e || error));
-    } catch (e) {
-      error = e;
-    }
-  }
+  // _final(callback) { // unavailable in Node 6
+  //   let error = null;
+  //   try {
+  //     this.input.end(null, null, e => callback(e || error));
+  //   } catch (e) {
+  //     error = e;
+  //   }
+  // }
   _read() {
     this.output.resume();
   }
