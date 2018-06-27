@@ -4,7 +4,6 @@
 [![Dependencies][deps-image]][deps-url]
 [![devDependencies][dev-deps-image]][dev-deps-url]
 [![NPM version][npm-image]][npm-url]
-
 [![TypeScript definitions on DefinitelyTyped][definitelytyped-image]](definitelytyped-url)
 
 
