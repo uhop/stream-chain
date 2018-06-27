@@ -5,6 +5,9 @@
 [![devDependencies][dev-deps-image]][dev-deps-url]
 [![NPM version][npm-image]][npm-url]
 
+[![TypeScript definitions on DefinitelyTyped][definitelytyped-image]](definitelytyped-url)
+
+
 `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
 
 Originally `stream-chain` was used internally with [stream-fork](https://www.npmjs.com/package/stream-fork) and [stream-json](https://www.npmjs.com/package/stream-json) to create flexible data processing pipelines.
@@ -244,3 +247,5 @@ Following static methods are available:
 [dev-deps-url]:   https://david-dm.org/uhop/stream-chain?type=dev
 [travis-image]:   https://img.shields.io/travis/uhop/stream-chain.svg
 [travis-url]:     https://travis-ci.org/uhop/stream-chain
+[definitelytyped-image]: https://img.shields.io/badge/DefinitelyTyped-.d.ts-blue.svg
+[definitelytyped-url]:   https://definitelytyped.org
