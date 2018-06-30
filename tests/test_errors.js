@@ -2,7 +2,7 @@
 
 const unit = require('heya-unit');
 
-const Chain = require('../main');
+const Chain = require('../index');
 
 unit.add(module, [
   function test_errorsNoStreams(t) {

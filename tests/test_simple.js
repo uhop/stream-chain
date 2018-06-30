@@ -2,7 +2,7 @@
 
 const unit = require('heya-unit');
 
-const Chain = require('../main');
+const Chain = require('../index');
 const {streamFromArray, streamToArray} = require('./helpers');
 const {Transform} = require('stream');
 

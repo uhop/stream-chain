@@ -2,7 +2,7 @@
   "name": "stream-chain",
   "version": "2.0.3",
   "description": "Chain functions as transform streams.",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
     "test": "node tests/tests.js"
   },
