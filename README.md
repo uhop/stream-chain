@@ -58,7 +58,7 @@ dataSource.pipe(chain).pipe(fs.createWriteStream('output.txt.gz'));
 
 Making processing pipelines appears to be easy: just chain functions one after another, and we are done. Real life pipelines filter objects out and/or produce more objects out of a few ones. On top of that we have to deal with asynchronous operations, while processing or producing data: networking, databases, files, user responses, and so on. Unequal number of values per stage, and unequal throughput of stages introduced problems like [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/), which requires algorithms implemented by [streams](https://nodejs.org/api/stream.html).
 
-While a lot of API improvements were made to make streams easy to use, in reality, a lot of boilerplate is required when creaing a pipeline. `stream-chain` eliminates most of it.
+While a lot of API improvements were made to make streams easy to use, in reality, a lot of boilerplate is required when creating a pipeline. `stream-chain` eliminates most of it.
 
 ## Installation
 
@@ -157,7 +157,7 @@ The constructor accepts following arguments:
     ```
   * Always make sure that `writableObjectMode` is the same as the corresponding object mode of the first stream, and `readableObjectMode` is the same as the corresponding object mode of the last stream.
     * Eventually both these modes can be deduced, but Node does not define the standard way to determine it, so currently it cannot be done reliably.
-  * Additionally following custom properties are recognized:
+  * Additionally the following custom properties are recognized:
     * `skipEvents` is an optional flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
 
 An instance can be used to attach handlers for stream events.
