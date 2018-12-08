@@ -10,9 +10,9 @@ function Many(values) {
 }
 
 const processData = (result, stream) => {
-  if (result instanceof Final) {
+  if (result instanceof Chain.Final) {
     result = result.value;
-  } else if (result instanceof Many) {
+  } else if (result instanceof Chain.Many) {
     result = result.values;
   }
   if (result !== undefined && result !== null) {
@@ -24,6 +24,17 @@ const processData = (result, stream) => {
   }
 };
 
+const runAsyncGenerator = async (gen, stream) => {
+  for (;;) {
+    let data = gen.next();
+    if (data && typeof data.then == 'function') {
+      data = await data;
+    }
+    if (data.done) break;
+    processData(data.value, stream);
+  }
+};
+
 const wrapFunction = fn =>
   new Transform({
     writableObjectMode: true,
@@ -32,20 +43,16 @@ const wrapFunction = fn =>
       try {
         const result = fn.call(this, chunk, encoding);
         if (result && typeof result.then == 'function') {
-          // Promise
+          // thenable
           result.then(result => (processData(result, this), callback(null)), error => callback(error));
           return;
         }
         if (result && typeof result.next == 'function') {
           // generator
-          while (true) {
-            const data = result.next();
-            processData(data.value, this);
-            if (data.done) break;
-          }
-        } else {
-          processData(result, this);
+          runAsyncGenerator(result, this).then(() => callback(null), error => callback(error));
+          return;
         }
+        processData(result, this);
         callback(null);
       } catch (error) {
         callback(error);
@@ -62,7 +69,7 @@ const wrapArray = array =>
         let value = chunk;
         for (let i = 0; i < array.length; ++i) {
           const result = array[i].call(this, value, encoding);
-          if (result instanceof Final) {
+          if (result instanceof Chain.Final) {
             value = result.value;
             break;
           }
@@ -76,12 +83,6 @@ const wrapArray = array =>
     }
   });
 
-const convertToTransform = fn => {
-  if (typeof fn === 'function') return wrapFunction(fn);
-  if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
-  return null;
-};
-
 class Chain extends Duplex {
   constructor(fns, options) {
     super(options || {writableObjectMode: true, readableObjectMode: true});
@@ -91,6 +92,7 @@ class Chain extends Duplex {
     }
 
     this.streams = fns
+      .filter(fn => fn)
       .map((fn, index) => {
         if (typeof fn === 'function' || fn instanceof Array) return Chain.convertToTransform(fn);
         if (
@@ -136,7 +138,6 @@ class Chain extends Duplex {
     }
   }
   _final(callback) {
-    // unavailable in Node 6
     let error = null;
     try {
       this.input.end(null, null, e => callback(e || error));
@@ -147,14 +148,14 @@ class Chain extends Duplex {
   _read() {
     this.output.resume();
   }
-  static chain(fns, options) {
+  static make(fns, options) {
     return new Chain(fns, options);
   }
   static final(value) {
-    return new Final(value);
+    return new Chain.Final(value);
   }
   static many(values) {
-    return new Many(values);
+    return new Chain.Many(values);
   }
   static convertToTransform(fn) {
     if (typeof fn === 'function') return wrapFunction(fn);
@@ -163,7 +164,10 @@ class Chain extends Duplex {
   }
 }
 
-Chain.make = Chain.chain;
+Chain.Final = Final;
+Chain.Many = Many;
+
+Chain.chain = Chain.make;
 Chain.make.Constructor = Chain;
 
 module.exports = Chain;

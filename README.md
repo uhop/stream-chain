@@ -124,7 +124,8 @@ The constructor accepts following arguments:
           }
           x => new Nextable(x)
           ```
-      * Any thrown exception will be catched and passed to a callback function effectively generating an error event.
+          `next()` can return a `Promise` according to the [asynchronous generator](https://zaiste.net/nodejs_10_asynchronous_iteration_async_generators/) protocol.
+      * Any thrown exception will be caught and passed to a callback function effectively generating an error event.
         ```js
         // fails
         x => { throw new Error('Bad!'); }
@@ -138,13 +139,27 @@ The constructor accepts following arguments:
       return x;
     }
     ```
-  * If it is a generator function, each yield or return should produce a regular value.
+  * If it is a generator function, each yield should produce a regular value.
     * In essence, it is covered under "special values" as a function that returns a generator object.
     ```js
     // produces multiple values:
     function* (x) {
       for (let i = -1; i <= 1; ++i) {
         if (i) yield x + i;
+      }
+      return x;
+    }
+    ```
+  * *(since 2.2.0)* If it is an asynchronous generator function, each yield should produce a regular value.
+    * In essence, it is covered under "special values" as a function that returns a generator object.
+    ```js
+    // produces multiple values:
+    async function* (x) {
+      for (let i = -1; i <= 1; ++i) {
+        if (i) {
+          await new Promise(resolve => setTimeout(() => resolve(), 50));
+          yield x + i;
+        }
       }
       return x;
     }
@@ -294,7 +309,7 @@ Following static methods are available:
     ]]));
   ```
 * *(since 2.1.0)* `many(array)` is a helper factory function, which is used to wrap arrays to be interpreted as multiple values returned from a function.
-  At the moment it is redundant: you can use a simple array to indicate that, but a naked array is being depricated and in future versions it will be passed as is.
+  At the moment it is redundant: you can use a simple array to indicate that, but a naked array is being deprecated and in future versions it will be passed as is.
   The thinking is that using `many()` is better indicates the intention. Additionally, in the future versions it will be used by array of functions (see above).
   ```js
   const {chain, many} = require('stream-chain');
@@ -306,6 +321,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
 - 2.1.0 *Added simple transducers, dropped Node 6.*
 - 2.0.3 *Added TypeScript typings and the badge.*
 - 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*

@@ -32,7 +32,7 @@ unit.add(module, [
         function*(x) {
           yield x * x;
           yield x * x * x;
-          return 2 * x;
+          yield 2 * x;
         }
       ]),
       output = [];

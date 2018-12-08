@@ -1,3 +1,5 @@
+'use strict';
+
 const {Transform} = require('stream');
 
 class Take extends Transform {

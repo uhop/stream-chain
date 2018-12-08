@@ -1,3 +1,5 @@
+'use strict';
+
 const {Writable} = require('stream');
 
 const defaultInitial = 0;

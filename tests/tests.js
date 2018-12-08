@@ -7,6 +7,7 @@ require('./test_readWrite');
 require('./test_errors');
 
 require('./test_transducers');
+require('./test_comp');
 
 require('./test_take');
 require('./test_skip');

@@ -1,3 +1,5 @@
+'use strict';
+
 const {Transform} = require('stream');
 
 const alwaysTrue = () => true;
