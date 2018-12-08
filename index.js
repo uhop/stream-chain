@@ -2,27 +2,13 @@
 
 const {Readable, Writable, Duplex, Transform} = require('stream');
 
+const none = {};
 function Final(value) {
   this.value = value;
 }
 function Many(values) {
   this.values = values;
 }
-
-const processData = (result, stream) => {
-  if (result instanceof Chain.Final) {
-    result = result.value;
-  } else if (result instanceof Chain.Many) {
-    result = result.values;
-  }
-  if (result !== undefined && result !== null) {
-    if (result instanceof Array) {
-      result.forEach(value => value !== undefined && value !== null && stream.push(value));
-    } else {
-      stream.push(result);
-    }
-  }
-};
 
 const runAsyncGenerator = async (gen, stream) => {
   for (;;) {
@@ -31,7 +17,7 @@ const runAsyncGenerator = async (gen, stream) => {
       data = await data;
     }
     if (data.done) break;
-    processData(data.value, stream);
+    Chain.sanitize(data.value, stream);
   }
 };
 
@@ -44,7 +30,7 @@ const wrapFunction = fn =>
         const result = fn.call(this, chunk, encoding);
         if (result && typeof result.then == 'function') {
           // thenable
-          result.then(result => (processData(result, this), callback(null)), error => callback(error));
+          result.then(result => (Chain.sanitize(result, this), callback(null)), error => callback(error));
           return;
         }
         if (result && typeof result.next == 'function') {
@@ -52,7 +38,7 @@ const wrapFunction = fn =>
           runAsyncGenerator(result, this).then(() => callback(null), error => callback(error));
           return;
         }
-        processData(result, this);
+        Chain.sanitize(result, this);
         callback(null);
       } catch (error) {
         callback(error);
@@ -75,7 +61,7 @@ const wrapArray = array =>
           }
           value = result;
         }
-        processData(value, this);
+        Chain.sanitize(value, this);
         callback(null);
       } catch (error) {
         callback(error);
@@ -157,6 +143,20 @@ class Chain extends Duplex {
   static many(values) {
     return new Chain.Many(values);
   }
+  static sanitize(result, stream) {
+    if (result instanceof Chain.Final) {
+      result = result.value;
+    } else if (result instanceof Chain.Many) {
+      result = result.values;
+    }
+    if (result !== undefined && result !== null && result !== Chain.none) {
+      if (result instanceof Array) {
+        result.forEach(value => value !== undefined && value !== null && stream.push(value));
+      } else {
+        stream.push(result);
+      }
+    }
+  };
   static convertToTransform(fn) {
     if (typeof fn === 'function') return wrapFunction(fn);
     if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
@@ -164,6 +164,7 @@ class Chain extends Duplex {
   }
 }
 
+Chain.none = none;
 Chain.Final = Final;
 Chain.Many = Many;
 

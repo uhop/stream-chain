@@ -7,8 +7,7 @@ const {streamFromArray} = require('./helpers');
 
 const comp = require('../utils/comp');
 
-const {final, many} = Chain;
-const none = final();
+const {none, final, many} = Chain;
 
 unit.add(module, [
   function test_comp(t) {
@@ -42,7 +41,7 @@ unit.add(module, [
   function test_compNothing(t) {
     const async = t.startAsync('test_compNothing');
 
-    const chain = new Chain([comp(x => x * x, () => final(), x => 2 * x + 1)]),
+    const chain = new Chain([comp(x => x * x, () => none, x => 2 * x + 1)]),
       output = [];
 
     streamFromArray([1, 2, 3]).pipe(chain);
@@ -165,6 +164,33 @@ unit.add(module, [
 
     const chain = new Chain([
         comp(
+          async x =>
+            await new Promise(resolve => {
+              setTimeout(() => resolve(-x), 20);
+            }),
+          x => many([x, x * 10]),
+          function*(x) {
+            yield x;
+            yield final(x - 1);
+          },
+          x => -x
+        )
+      ]),
+      output = [];
+
+    streamFromArray([1, 2]).pipe(chain);
+
+    chain.on('data', value => output.push(value));
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
+      async.done();
+    });
+  },
+  function test_compAsFun(t) {
+    const async = t.startAsync('test_compAsFun');
+
+    const chain = new Chain([
+        comp.asFun(
           async x =>
             await new Promise(resolve => {
               setTimeout(() => resolve(-x), 20);
