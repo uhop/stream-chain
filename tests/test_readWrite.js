@@ -82,7 +82,9 @@ unit.add(module, [
       output2 = [],
       chain = new Chain([streamFromArray([1, 2, 3]), streamToArray(output1)]);
 
-    streamFromArray([4, 5, 6]).pipe(chain).pipe(streamToArray(output2));
+    streamFromArray([4, 5, 6])
+      .pipe(chain)
+      .pipe(streamToArray(output2));
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output1, [1, 2, 3])'));

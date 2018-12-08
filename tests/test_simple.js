@@ -78,6 +78,20 @@ unit.add(module, [
       async.done();
     });
   },
+  function test_simpleMany(t) {
+    const async = t.startAsync('test_simpleMany');
+
+    const chain = new Chain([x => Chain.many([x * x, x * x * x, 2 * x])]),
+      output = [];
+
+    streamFromArray([1, 2, 3]).pipe(chain);
+
+    chain.on('data', value => output.push(value));
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
+      async.done();
+    });
+  },
   function test_simpleChain(t) {
     const async = t.startAsync('test_simpleChain');
 

@@ -81,7 +81,7 @@ The constructor accepts following arguments:
   * If a value is a function, a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
     * If it is a regular function, it can return:
       * Regular value:
-        * Array of values to pass several or zero values to the next stream as they are.
+        * *(depricated since 2.1.0)* Array of values to pass several or zero values to the next stream as they are.
           ```js
           // produces no values:
           x => []
@@ -104,14 +104,23 @@ The constructor accepts following arguments:
         * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
           ```js
           // delays by 0.5s:
-          x => new Promise(resolve => setTimeout(() => resolve(x), 500))
+          x => new Promise(
+            resolve => setTimeout(() => resolve(x), 500))
           ```
         * If it is an instance of a generator or "nextable" (an object with a method called `next()`), it will be iterated according to the [generator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator) protocol. The results should be regular values.
           ```js
           // produces multiple values:
           class Nextable {
-            constructor(x) { this.x = x; this.i = -1; }
-            next() { return {done: this.i <= 1, value: this.x + this.i++}; }
+            constructor(x) {
+              this.x = x;
+              this.i = -1;
+            }
+            next() {
+              return {
+                done:  this.i <= 1,
+                value: this.x + this.i++
+              };
+            }
           }
           x => new Nextable(x)
           ```
@@ -140,6 +149,13 @@ The constructor accepts following arguments:
       return x;
     }
     ```
+  * *(since 2.1.0)* If a value is an array, it is assumed an array of regular functions.
+    Their values are passed in a chain. All values (including `null`, `undefined`, and arrays) are allowed
+    and passed without modifications. The last value is a subject to precessing defined above for regular functions.
+    * Empty arrays are ignored.
+    * If any function returns a value produced by `Chain.final(value)` (see below), it terminates the chain using
+      `value` as the final value of the chain.
+    * This feature bypasses streams. It is implemented for performance reasons.
   * If a value is a valid stream, it is included as is in the pipeline.
     * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform).
     * [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex).
@@ -227,9 +243,70 @@ Following static methods are available:
     fs.createWriteStream('output.txt.gz')
   ])
   ```
+* *(since 2.1.0)* `final(value)` is a helper factory function, which can be used in by chained functions (see above the array of functions).
+  It returns a special value, which terminates the chain and uses the passed value as the result of the chain.
+  ```js
+  const {chain, final} = require('stream-chain');
+
+  // simple
+  dataSource
+    .pipe(chain([[x => x * x, x => 2 * x + 1]]));
+  // faster than [x => x * x, x => 2 * x + 1]
+
+  // final
+  dataSource
+    .pipe(chain([[
+      x => x * x,
+      x => final(x),
+      x => 2 * x + 1
+    ]]));
+  // the same as [[x => x * x, x => x]]
+  // the same as [[x => x * x]]
+  // the same as [x => x * x]
+
+  // final as a terminator
+  dataSource
+    .pipe(chain([[
+      x => x * x,
+      x => final(),
+      x => 2 * x + 1
+    ]]));
+  // produces no values, because the final value is undefined,
+  // which is interpreted as "no value shall be passed"
+  // see the doc above
+
+  // final() as a filter
+  dataSource
+    .pipe(chain([[
+      x => x * x,
+      x => x % 2 ? final() : x,
+      x => 2 * x + 1
+    ]]));
+  // only even values are passed, odd values are ignored
+
+  // if you want to be really performant...
+  const none = final();
+  dataSource
+    .pipe(chain([[
+      x => x * x,
+      x => x % 2 ? none : x,
+      x => 2 * x + 1
+    ]]));
+  ```
+* *(since 2.1.0)* `many(array)` is a helper factory function, which is used to wrap arrays to be interpreted as multiple values returned from a function.
+  At the moment it is redundant: you can use a simple array to indicate that, but a naked array is being depricated and in future versions it will be passed as is.
+  The thinking is that using `many()` is better indicates the intention. Additionally, in the future versions it will be used by array of functions (see above).
+  ```js
+  const {chain, many} = require('stream-chain');
+
+  dataSource
+    .pipe(chain([x => many([x, x + 1, x + 2])]));
+  // currently the same as [x => [x, x + 1, x + 2]]
+  ```
 
 ## Release History
 
+- 2.1.0 *Added simple transducers, dropped Node 6.*
 - 2.0.3 *Added TypeScript typings and the badge.*
 - 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*
 - 2.0.1 *Improved documentation.*
