@@ -1,6 +1,6 @@
 {
   "name": "stream-chain",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Chain functions as transform streams.",
   "main": "index.js",
   "scripts": {
