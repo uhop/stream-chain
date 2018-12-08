@@ -1,9 +1,10 @@
 {
   "name": "stream-chain",
-  "version": "2.0.3",
+  "version": "2.1.0",
   "description": "Chain functions as transform streams.",
   "main": "index.js",
   "scripts": {
+    "debug": "node --inspect-brk tests/tests.js",
     "test": "node tests/tests.js"
   },
   "repository": {
