@@ -3,8 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray, streamToArray} = require('./helpers');
-const {Transform} = require('stream');
+const {streamFromArray} = require('./helpers');
 
 unit.add(module, [
   function test_transducers(t) {

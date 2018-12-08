@@ -76,6 +76,12 @@ const wrapArray = array =>
     }
   });
 
+const convertToTransform = fn => {
+  if (typeof fn === 'function') return wrapFunction(fn);
+  if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
+  return null;
+};
+
 class Chain extends Duplex {
   constructor(fns, options) {
     super(options || {writableObjectMode: true, readableObjectMode: true});
@@ -86,16 +92,7 @@ class Chain extends Duplex {
 
     this.streams = fns
       .map((fn, index) => {
-        if (typeof fn === 'function') return wrapFunction(fn);
-        if (fn instanceof Array) {
-          switch (fn.length) {
-            case 0:
-              return null;
-            case 1:
-              return wrapFunction(fn[0]);
-          }
-          return fn.length ? wrapArray(fn) : 0;
-        }
+        if (typeof fn === 'function' || fn instanceof Array) return Chain.convertToTransform(fn);
         if (
           fn instanceof Duplex ||
           fn instanceof Transform ||
@@ -159,6 +156,14 @@ class Chain extends Duplex {
   static many(values) {
     return new Many(values);
   }
+  static convertToTransform(fn) {
+    if (typeof fn === 'function') return wrapFunction(fn);
+    if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
+    return null;
+  }
 }
+
+Chain.make = Chain.chain;
+Chain.make.Constructor = Chain;
 
 module.exports = Chain;
