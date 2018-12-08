@@ -12,7 +12,7 @@ const next = async (value, fns, index, push) => {
     }
     if (value === none) break;
     if (value instanceof Final) {
-      push(value.value);
+      value !== none && push(value.value);
       break;
     }
     if (value instanceof Many) {
@@ -34,7 +34,11 @@ const next = async (value, fns, index, push) => {
           data = await data;
         }
         if (data.done) break;
-        await next(data.value, fns, i, push);
+        if (i == fns.length) {
+          push(data.value);
+        } else {
+          await next(data.value, fns, i, push);
+        }
       }
       break;
     }
