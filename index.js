@@ -17,7 +17,11 @@ const runAsyncGenerator = async (gen, stream) => {
       data = await data;
     }
     if (data.done) break;
-    Chain.sanitize(data.value, stream);
+    const value = data.value;
+    if (value && typeof value.then == 'function') {
+      value = await value;
+    }
+    Chain.sanitize(value, stream);
   }
 };
 
@@ -89,7 +93,7 @@ class Chain extends Duplex {
         ) {
           return fn;
         }
-        throw Error('Arguments should be functions or streams.');
+        throw Error('Arguments should be functions, arrays or streams.');
       })
       .filter(s => s);
     this.input = this.streams[0];
@@ -156,7 +160,7 @@ class Chain extends Duplex {
         stream.push(result);
       }
     }
-  };
+  }
   static convertToTransform(fn) {
     if (typeof fn === 'function') return wrapFunction(fn);
     if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
