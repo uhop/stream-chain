@@ -16,8 +16,19 @@ class Fold extends Transform {
     }
   }
   _transform(chunk, encoding, callback) {
-    this._accumulator = this._reducer.call(this, this._accumulator, chunk);
-    callback(null);
+    const result = this._reducer.call(this, this._accumulator, chunk);
+    if (result && typeof result.then == 'function') {
+      result.then(
+        value => {
+          this._accumulator = value;
+          callback(null);
+        },
+        error => callback(error)
+      );
+    } else {
+      this._accumulator = result;
+      callback(null);
+    }
   }
   _final(callback) {
     this.push(this._accumulator);

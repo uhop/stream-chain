@@ -16,12 +16,19 @@ class Reduce extends Writable {
     }
   }
   _write(chunk, encoding, callback) {
-    this.accumulator = this._reducer.call(this, this.accumulator, chunk);
-    callback(null);
-  }
-  _writev(chunks, callback) {
-    chunks.forEach(item => (this.accumulator = this._reducer.call(this, this.accumulator, item.chunk)));
-    callback(null);
+    const result = this._reducer.call(this, this.accumulator, chunk);
+    if (result && typeof result.then == 'function') {
+      result.then(
+        value => {
+          this.accumulator = value;
+          callback(null);
+        },
+        error => callback(error)
+      );
+    } else {
+      this.accumulator = result;
+      callback(null);
+    }
   }
   static make(reducer, initial) {
     return new Reduce(typeof reducer == 'object' ? reducer : {reducer, initial});

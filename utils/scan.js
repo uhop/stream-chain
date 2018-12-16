@@ -16,9 +16,21 @@ class Scan extends Transform {
     }
   }
   _transform(chunk, encoding, callback) {
-    this._accumulator = this._reducer.call(this, this._accumulator, chunk);
-    this.push(this._accumulator);
-    callback(null);
+    const result = this._reducer.call(this, this._accumulator, chunk);
+    if (result && typeof result.then == 'function') {
+      result.then(
+        value => {
+          this._accumulator = value;
+          this.push(this._accumulator);
+          callback(null);
+        },
+        error => callback(error)
+      );
+    } else {
+      this._accumulator = result;
+      this.push(this._accumulator);
+      callback(null);
+    }
   }
   static make(reducer, initial) {
     return new Scan(typeof reducer == 'object' ? reducer : {reducer, initial});

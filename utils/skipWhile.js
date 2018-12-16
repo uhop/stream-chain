@@ -13,11 +13,25 @@ class SkipWhile extends Transform {
     }
   }
   _transform(chunk, encoding, callback) {
-    if (!this._condition.call(this, chunk)) {
-      this._transform = this._passThrough;
-      this.push(chunk);
+    const result = this._condition.call(this, chunk);
+    if (result && typeof result.then == 'function') {
+      result.then(
+        flag => {
+          if (!flag) {
+            this._transform = this._passThrough;
+            this.push(chunk);
+          }
+          callback(null);
+        },
+        error => callback(error)
+      );
+    } else {
+      if (!result) {
+        this._transform = this._passThrough;
+        this.push(chunk);
+      }
+      callback(null);
     }
-    callback(null);
   }
   _passThrough(chunk, encoding, callback) {
     this.push(chunk);

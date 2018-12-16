@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray} = require('./helpers');
+const {streamFromArray, delay} = require('./helpers');
 
 const take = require('../utils/take');
 const takeWhile = require('../utils/takeWhile');
@@ -41,6 +41,20 @@ unit.add(module, [
     const async = t.startAsync('test_takeWhile');
 
     const chain = new Chain([takeWhile(x => x != 3)]),
+      output = [];
+
+    streamFromArray([1, 2, 3, 4, 5]).pipe(chain);
+
+    chain.on('data', value => output.push(value));
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [1, 2])'));
+      async.done();
+    });
+  },
+  function test_takeWhileAsync(t) {
+    const async = t.startAsync('test_takeWhileAsync');
+
+    const chain = new Chain([takeWhile(delay(x => x != 3))]),
       output = [];
 
     streamFromArray([1, 2, 3, 4, 5]).pipe(chain);

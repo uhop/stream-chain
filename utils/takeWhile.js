@@ -13,12 +13,27 @@ class TakeWhile extends Transform {
     }
   }
   _transform(chunk, encoding, callback) {
-    if (this._condition.call(this, chunk)) {
-      this.push(chunk);
+    const result = this._condition.call(this, chunk);
+    if (result && typeof result.then == 'function') {
+      result.then(
+        flag => {
+          if (flag) {
+            this.push(chunk);
+          } else {
+            this._transform = this._doNothing;
+          }
+          callback(null);
+        },
+        error => callback(error)
+      );
     } else {
-      this._transform = this._doNothing;
+      if (result) {
+        this.push(chunk);
+      } else {
+        this._transform = this._doNothing;
+      }
+      callback(null);
     }
-    callback(null);
   }
   _doNothing(chunk, encoding, callback) {
     callback(null);
@@ -28,6 +43,5 @@ class TakeWhile extends Transform {
   }
 }
 TakeWhile.make.Constructor = TakeWhile;
-
 
 module.exports = TakeWhile.make;
