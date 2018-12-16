@@ -71,17 +71,17 @@ npm i --save stream-chain
 
 `Chain`, which is returned by `require('stream-chain')`, is based on [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex). It chains its dependents in a single pipeline optionally binding `error` events.
 
-Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`main.js`).
+Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`index.js`).
 
 ### Constructor: `new Chain(fns[, options])`
 
-The constructor accepts following arguments:
+The constructor accepts the following arguments:
 
-* `fns` is an array of functions or stream instances.
-  * If a value is a function, a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in context of the created stream.
+* `fns` is an array of functions arrays or stream instances.
+  * If a value is a function, a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in the context of the created stream.
     * If it is a regular function, it can return:
       * Regular value:
-        * *(depricated since 2.1.0)* Array of values to pass several or zero values to the next stream as they are.
+        * *(deprecated since 2.1.0)* Array of values to pass several or zero values to the next stream as they are.
           ```js
           // produces no values:
           x => []
