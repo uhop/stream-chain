@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray, streamToArray} = require('./helpers');
+const {streamFromArray, streamToArray, delay} = require('./helpers');
 const {Transform} = require('stream');
 
 unit.add(module, [
@@ -48,12 +48,7 @@ unit.add(module, [
   function test_simpleAsync(t) {
     const async = t.startAsync('test_simpleAsync');
 
-    const chain = new Chain([
-        async x =>
-          await new Promise(resolve => {
-            setTimeout(() => resolve(x + 1), 20);
-          })
-      ]),
+    const chain = new Chain([delay(x => x + 1)]),
       output = [];
 
     streamFromArray([1, 2, 3]).pipe(chain);

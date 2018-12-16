@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray} = require('./helpers');
+const {streamFromArray, delay} = require('./helpers');
 
 const comp = require('../utils/comp');
 
@@ -69,15 +69,7 @@ unit.add(module, [
   function test_compAsync(t) {
     const async = t.startAsync('test_compAsync');
 
-    const chain = new Chain([
-        comp(
-          async x =>
-            await new Promise(resolve => {
-              setTimeout(() => resolve(x * x), 20);
-            }),
-          x => 2 * x + 1
-        )
-      ]),
+    const chain = new Chain([comp(delay(x => x * x), x => 2 * x + 1)]),
       output = [];
 
     streamFromArray([1, 2, 3]).pipe(chain);
@@ -115,13 +107,7 @@ unit.add(module, [
   function test_compMany(t) {
     const async = t.startAsync('test_compMany');
 
-    const chain = new Chain([
-        comp(
-          x => x * x,
-          x => many([x, x + 1, x + 2]),
-          x => 2 * x + 1
-        )
-      ]),
+    const chain = new Chain([comp(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1)]),
       output = [];
 
     streamFromArray([1, 2, 3]).pipe(chain);
@@ -137,10 +123,7 @@ unit.add(module, [
 
     const chain = new Chain([
         comp(
-          async x =>
-            await new Promise(resolve => {
-              setTimeout(() => resolve(-x), 20);
-            }),
+          delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
             yield x;
@@ -164,10 +147,7 @@ unit.add(module, [
 
     const chain = new Chain([
         comp(
-          async x =>
-            await new Promise(resolve => {
-              setTimeout(() => resolve(-x), 20);
-            }),
+          delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
             yield x;
@@ -191,10 +171,7 @@ unit.add(module, [
 
     const chain = new Chain([
         comp.asFun(
-          async x =>
-            await new Promise(resolve => {
-              setTimeout(() => resolve(-x), 20);
-            }),
+          delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
             yield x;
