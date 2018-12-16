@@ -20,4 +20,15 @@ const streamToArray = array =>
     }
   });
 
-module.exports = {streamFromArray, streamToArray};
+const delay = (fn, ms = 20) => async (...args) =>
+  new Promise((resolve, reject) => {
+    setTimeout(() => {
+      try {
+        resolve(fn(...args));
+      } catch (error) {
+        reject(error);
+      }
+    }, ms);
+  });
+
+module.exports = {streamFromArray, streamToArray, delay};
