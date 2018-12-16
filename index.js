@@ -50,15 +50,19 @@ const wrapFunction = fn =>
     }
   });
 
-const wrapArray = array =>
+const wrapArray = fns =>
   new Transform({
     writableObjectMode: true,
     readableObjectMode: true,
     transform(chunk, encoding, callback) {
       try {
         let value = chunk;
-        for (let i = 0; i < array.length; ++i) {
-          const result = array[i].call(this, value, encoding);
+        for (let i = 0; i < fns.length; ++i) {
+          const result = fns[i].call(this, value, encoding);
+          if (result === Chain.none) {
+            callback(null);
+            return;
+          }
           if (result instanceof Chain.Final) {
             value = result.value;
             break;
@@ -163,7 +167,7 @@ class Chain extends Duplex {
   }
   static convertToTransform(fn) {
     if (typeof fn === 'function') return wrapFunction(fn);
-    if (fn instanceof Array) return fn.length ? wrapArray(fn) : 0;
+    if (fn instanceof Array) return fn.length ? wrapArray(fn) : null;
     return null;
   }
 }
