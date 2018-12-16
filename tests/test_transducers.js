@@ -37,7 +37,7 @@ unit.add(module, [
   function test_transducersNothing(t) {
     const async = t.startAsync('test_transducersNothing');
 
-    const chain = new Chain([[x => x * x, () => Chain.final(), x => 2 * x + 1]]),
+    const chain = new Chain([[x => x * x, () => Chain.none, x => 2 * x + 1]]),
       output = [];
 
     streamFromArray([1, 2, 3]).pipe(chain);
