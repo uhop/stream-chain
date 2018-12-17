@@ -3,7 +3,8 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray, streamToArray} = require('./helpers');
+const {streamToArray} = require('./helpers');
+const {fromIterable} = require('../utils/FromIterable');
 
 unit.add(module, [
   function test_readWriteReadable(t) {
@@ -11,7 +12,7 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([streamFromArray([1, 2, 3]), x => x * x]);
+      chain = new Chain([fromIterable([1, 2, 3]), x => x * x]);
 
     chain.pipe(streamToArray(output1));
 
@@ -25,24 +26,24 @@ unit.add(module, [
   function test_readWriteWritable(t) {
     const async = t.startAsync('test_readWriteWritable');
 
-    const output1 = [],
-      chain = new Chain([x => x * x, streamToArray(output1)]);
+    const output = [],
+      chain = new Chain([x => x * x, streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(chain);
 
     chain.on('end', () => {
-      eval(t.TEST('t.unify(output1, [1, 4, 9])'));
+      eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
   },
   function test_readWriteReadableWritable(t) {
     const async = t.startAsync('test_readWriteReadableWritable');
 
-    const output1 = [],
-      chain = new Chain([streamFromArray([1, 2, 3]), x => x * x, streamToArray(output1)]);
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, streamToArray(output)]);
 
     chain.on('end', () => {
-      eval(t.TEST('t.unify(output1, [1, 4, 9])'));
+      eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
   },
@@ -51,7 +52,7 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([streamFromArray([1, 2, 3])]);
+      chain = new Chain([fromIterable([1, 2, 3])]);
 
     chain.pipe(streamToArray(output1));
 
@@ -65,13 +66,13 @@ unit.add(module, [
   function test_readWriteSingleWritable(t) {
     const async = t.startAsync('test_readWriteSingleWritable');
 
-    const output1 = [],
-      chain = new Chain([streamToArray(output1)]);
+    const output = [],
+      chain = new Chain([streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(chain);
 
     chain.on('end', () => {
-      eval(t.TEST('t.unify(output1, [1, 2, 3])'));
+      eval(t.TEST('t.unify(output, [1, 2, 3])'));
       async.done();
     });
   },
@@ -80,9 +81,9 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([streamFromArray([1, 2, 3]), streamToArray(output1)]);
+      chain = new Chain([fromIterable([1, 2, 3]), streamToArray(output1)]);
 
-    streamFromArray([4, 5, 6])
+    fromIterable([4, 5, 6])
       .pipe(chain)
       .pipe(streamToArray(output2));
 

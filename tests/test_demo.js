@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray} = require('./helpers');
+const {fromIterable} = require('../utils/FromIterable');
 const {Transform} = require('stream');
 
 unit.add(module, [
@@ -48,6 +48,6 @@ unit.add(module, [
       async.done();
     });
 
-    streamFromArray([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(chain);
   }
 ]);

@@ -3,22 +3,20 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray, delay} = require('./helpers');
+const {streamToArray, delay} = require('./helpers');
 
+const {fromIterable} = require('../utils/FromIterable');
 const fold = require('../utils/fold');
 const scan = require('../utils/scan');
-const Reduce = require('../utils/Reduce');
+const {reduce} = require('../utils/Reduce');
 
 unit.add(module, [
   function test_fold(t) {
     const async = t.startAsync('test_fold');
 
-    const chain = new Chain([fold((acc, x) => acc + x, 0)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), fold((acc, x) => acc + x, 0), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [6])'));
       async.done();
@@ -27,12 +25,9 @@ unit.add(module, [
   function test_foldAsync(t) {
     const async = t.startAsync('test_foldAsync');
 
-    const chain = new Chain([fold(delay((acc, x) => acc + x), 0)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), fold(delay((acc, x) => acc + x), 0), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [6])'));
       async.done();
@@ -41,12 +36,9 @@ unit.add(module, [
   function test_foldScan(t) {
     const async = t.startAsync('test_foldScan');
 
-    const chain = new Chain([scan((acc, x) => acc + x, 0)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), scan((acc, x) => acc + x, 0), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 3, 6])'));
       async.done();
@@ -55,12 +47,9 @@ unit.add(module, [
   function test_foldScanAsync(t) {
     const async = t.startAsync('test_foldScanAsync');
 
-    const chain = new Chain([scan(delay((acc, x) => acc + x), 0)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), scan(delay((acc, x) => acc + x), 0), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 3, 6])'));
       async.done();
@@ -69,24 +58,24 @@ unit.add(module, [
   function test_foldReduce(t) {
     const async = t.startAsync('test_foldReduce');
 
-    const reduce = new Reduce({reducer: (acc, x) => acc + x, initial: 0});
+    const r = reduce((acc, x) => acc + x, 0);
 
-    streamFromArray([1, 2, 3]).pipe(reduce);
+    fromIterable([1, 2, 3]).pipe(r);
 
-    reduce.on('finish', () => {
-      eval(t.TEST('t.unify(reduce.accumulator, 6)'));
+    r.on('finish', () => {
+      eval(t.TEST('t.unify(r.accumulator, 6)'));
       async.done();
     });
   },
   function test_foldReduceAsync(t) {
     const async = t.startAsync('test_foldReduceAsync');
 
-    const reduce = new Reduce({reducer: delay((acc, x) => acc + x), initial: 0});
+    const r = reduce({reducer: delay((acc, x) => acc + x), initial: 0});
 
-    streamFromArray([1, 2, 3]).pipe(reduce);
+    fromIterable([1, 2, 3]).pipe(r);
 
-    reduce.on('finish', () => {
-      eval(t.TEST('t.unify(reduce.accumulator, 6)'));
+    r.on('finish', () => {
+      eval(t.TEST('t.unify(r.accumulator, 6)'));
       async.done();
     });
   }

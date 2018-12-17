@@ -1,15 +1,6 @@
 'use strict';
 
-const {Readable, Writable} = require('stream');
-
-const streamFromArray = array =>
-  new Readable({
-    objectMode: true,
-    read() {
-      if (isNaN(this.index)) this.index = 0;
-      this.push(this.index < array.length ? array[this.index++] : null);
-    }
-  });
+const {Writable} = require('stream');
 
 const streamToArray = array =>
   new Writable({
@@ -31,4 +22,4 @@ const delay = (fn, ms = 20) => async (...args) =>
     }, ms);
   });
 
-module.exports = {streamFromArray, streamToArray, delay};
+module.exports = {streamToArray, delay};

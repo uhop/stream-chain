@@ -3,8 +3,9 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
-const {streamFromArray, delay} = require('./helpers');
+const {streamToArray, delay} = require('./helpers');
 
+const {fromIterable} = require('../utils/FromIterable');
 const comp = require('../utils/comp');
 
 const {none, final, many} = Chain;
@@ -13,12 +14,9 @@ unit.add(module, [
   function test_comp(t) {
     const async = t.startAsync('test_comp');
 
-    const chain = new Chain([comp(x => x * x, x => 2 * x + 1)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), comp(x => x * x, x => 2 * x + 1), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
@@ -27,12 +25,13 @@ unit.add(module, [
   function test_compFinal(t) {
     const async = t.startAsync('test_compFinal');
 
-    const chain = new Chain([comp(x => x * x, x => final(x), x => 2 * x + 1)]),
-      output = [];
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        comp(x => x * x, x => final(x), x => 2 * x + 1),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
@@ -41,12 +40,9 @@ unit.add(module, [
   function test_compNothing(t) {
     const async = t.startAsync('test_compNothing');
 
-    const chain = new Chain([comp(x => x * x, () => none, x => 2 * x + 1)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), comp(x => x * x, () => none, x => 2 * x + 1), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [])'));
       async.done();
@@ -55,12 +51,9 @@ unit.add(module, [
   function test_compEmpty(t) {
     const async = t.startAsync('test_compEmpty');
 
-    const chain = new Chain([x => x * x, comp()]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, comp(), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
@@ -69,12 +62,9 @@ unit.add(module, [
   function test_compAsync(t) {
     const async = t.startAsync('test_compAsync');
 
-    const chain = new Chain([comp(delay(x => x * x), x => 2 * x + 1)]),
-      output = [];
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3]), comp(delay(x => x * x), x => 2 * x + 1), streamToArray(output)]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
@@ -83,7 +73,9 @@ unit.add(module, [
   function test_compGenerator(t) {
     const async = t.startAsync('test_compGenerator');
 
-    const chain = new Chain([
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
         comp(
           x => x * x,
           function*(x) {
@@ -92,13 +84,10 @@ unit.add(module, [
             yield x + 2;
           },
           x => 2 * x + 1
-        )
-      ]),
-      output = [];
+        ),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 5, 7, 9, 11, 13, 19, 21, 23])'));
       async.done();
@@ -107,12 +96,13 @@ unit.add(module, [
   function test_compMany(t) {
     const async = t.startAsync('test_compMany');
 
-    const chain = new Chain([comp(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1)]),
-      output = [];
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        comp(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2, 3]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 5, 7, 9, 11, 13, 19, 21, 23])'));
       async.done();
@@ -121,7 +111,9 @@ unit.add(module, [
   function test_compCombined(t) {
     const async = t.startAsync('test_compCombined');
 
-    const chain = new Chain([
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2]),
         comp(
           delay(x => -x),
           x => many([x, x * 10]),
@@ -130,13 +122,10 @@ unit.add(module, [
             yield x - 1;
           },
           x => -x
-        )
-      ]),
-      output = [];
+        ),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 2, 10, 11, 2, 3, 20, 21])'));
       async.done();
@@ -145,7 +134,9 @@ unit.add(module, [
   function test_compCombinedFinal(t) {
     const async = t.startAsync('test_compCombinedFinal');
 
-    const chain = new Chain([
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2]),
         comp(
           delay(x => -x),
           x => many([x, x * 10]),
@@ -154,13 +145,10 @@ unit.add(module, [
             yield final(x - 1);
           },
           x => -x
-        )
-      ]),
-      output = [];
+        ),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
       async.done();
@@ -169,7 +157,9 @@ unit.add(module, [
   function test_compAsFun(t) {
     const async = t.startAsync('test_compAsFun');
 
-    const chain = new Chain([
+    const output = [],
+      chain = new Chain([
+        fromIterable([1, 2]),
         comp.asFun(
           delay(x => -x),
           x => many([x, x * 10]),
@@ -178,13 +168,10 @@ unit.add(module, [
             yield final(x - 1);
           },
           x => -x
-        )
-      ]),
-      output = [];
+        ),
+        streamToArray(output)
+      ]);
 
-    streamFromArray([1, 2]).pipe(chain);
-
-    chain.on('data', value => output.push(value));
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
       async.done();
