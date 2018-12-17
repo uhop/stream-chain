@@ -87,7 +87,7 @@ class Chain extends Duplex {
 
     this.streams = fns
       .filter(fn => fn)
-      .map((fn, index) => {
+      .map((fn, index, fns) => {
         if (typeof fn === 'function' || fn instanceof Array) return Chain.convertToTransform(fn);
         if (
           fn instanceof Duplex ||
