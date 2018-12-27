@@ -1,14 +1,7 @@
 'use strict';
 
 const {Readable, Writable, Duplex, Transform} = require('stream');
-
-const none = {};
-function Final(value) {
-  this.value = value;
-}
-function Many(values) {
-  this.values = values;
-}
+const {none, Final, Many, final, many} = require('./defs');
 
 const runAsyncGenerator = async (gen, stream) => {
   for (;;) {
@@ -145,12 +138,6 @@ class Chain extends Duplex {
   static make(fns, options) {
     return new Chain(fns, options);
   }
-  static final(value) {
-    return new Chain.Final(value);
-  }
-  static many(values) {
-    return new Chain.Many(values);
-  }
   static sanitize(result, stream) {
     if (result instanceof Chain.Final) {
       result = result.value;
@@ -174,7 +161,9 @@ class Chain extends Duplex {
 
 Chain.none = none;
 Chain.Final = Final;
+Chain.final = final;
 Chain.Many = Many;
+Chain.many = many;
 
 Chain.chain = Chain.make;
 Chain.make.Constructor = Chain;

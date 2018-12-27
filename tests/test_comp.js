@@ -7,6 +7,7 @@ const {streamToArray, delay} = require('./helpers');
 
 const {fromIterable} = require('../utils/FromIterable');
 const comp = require('../utils/comp');
+const asFun = require('../utils/asFun');
 
 const {none, final, many} = Chain;
 
@@ -160,7 +161,7 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        comp.asFun(
+        asFun(
           delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
