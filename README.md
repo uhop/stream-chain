@@ -164,9 +164,9 @@ The constructor accepts the following arguments:
       return x;
     }
     ```
-  * *(since 2.1.0)* If a value is an array, it is assumed an array of regular functions.
+  * *(since 2.1.0)* If a value is an array, it is assumed to be an array of regular functions.
     Their values are passed in a chain. All values (including `null`, `undefined`, and arrays) are allowed
-    and passed without modifications. The last value is a subject to precessing defined above for regular functions.
+    and passed without modifications. The last value is a subject to processing defined above for regular functions.
     * Empty arrays are ignored.
     * If any function returns a value produced by `Chain.final(value)` (see below), it terminates the chain using
       `value` as the final value of the chain.
