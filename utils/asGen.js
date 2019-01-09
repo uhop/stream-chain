@@ -17,9 +17,7 @@ const next = async function*(value, fns, index) {
     if (isMany(value)) {
       const values = getManyValues(value);
       if (i == fns.length) {
-        for (let j = 0; j < values.length; ++j) {
-          yield values[j];
-        }
+        yield* values;
       } else {
         for (let j = 0; j < values.length; ++j) {
           yield* next(values[j], fns, i);
