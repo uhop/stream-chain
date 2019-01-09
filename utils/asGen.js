@@ -56,6 +56,11 @@ const nop = async function*() {};
 const asGen = (...fns) => {
   fns = fns.filter(fn => fn);
   if (!fns.length) return nop;
+  if (Symbol.asyncIterator && fns[0][Symbol.asyncIterator]) {
+    fns[0] = fns[0][Symbol.asyncIterator];
+  } else if (Symbol.iterator && fns[0][Symbol.iterator]) {
+    fns[0] = fns[0][Symbol.iterator];
+  }
   return async function*(value) {
     yield* next(value, fns, 0);
   };
