@@ -10,7 +10,8 @@ const next = async (value, fns, index, push) => {
     }
     if (value === none) break;
     if (isFinal(value)) {
-      value !== none && push(getFinalValue(value));
+      const val = getFinalValue(value);
+      val !== none && push(val);
       break;
     }
     if (isMany(value)) {

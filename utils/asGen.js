@@ -10,7 +10,8 @@ const next = async function*(value, fns, index) {
     }
     if (value === none) break;
     if (isFinal(value)) {
-      if (value !== none) yield getFinalValue(value);
+      const val = getFinalValue(value);
+      if (val !== none) yield val;
       break;
     }
     if (isMany(value)) {
