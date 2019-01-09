@@ -1,7 +1,20 @@
 'use strict';
 
 const {Readable, Writable, Duplex, Transform} = require('stream');
-const {none, Final, Many, final, many} = require('./defs');
+
+// const {none, Final, Many, final, many} = require('./defs');
+const none = Symbol.for('stream-chain.none');
+const finalSymbol = Symbol.for('stream-chain.final');
+const manySymbol = Symbol.for('stream-chain.many');
+
+const final = value => ({[finalSymbol]: value});
+const many = values => ({[manySymbol]: values});
+
+const isFinal = o => o && typeof o == 'object' && finalSymbol in o;
+const isMany = o => o && typeof o == 'object' && manySymbol in o;
+
+const getFinalValue = o => o[finalSymbol];
+const getManyValues = o => o[manySymbol];
 
 const runAsyncGenerator = async (gen, stream) => {
   for (;;) {
@@ -56,8 +69,8 @@ const wrapArray = fns =>
             callback(null);
             return;
           }
-          if (result instanceof Chain.Final) {
-            value = result.value;
+          if (Chain.isFinal(result)) {
+            value = Chain.getFinalValue(result);
             break;
           }
           value = result;
@@ -139,10 +152,10 @@ class Chain extends Duplex {
     return new Chain(fns, options);
   }
   static sanitize(result, stream) {
-    if (result instanceof Chain.Final) {
-      result = result.value;
-    } else if (result instanceof Chain.Many) {
-      result = result.values;
+    if (Chain.isFinal(result)) {
+      result = Chain.getFinalValue(result);
+    } else if (Chain.isMany(result)) {
+      result = Chain.getManyValues(result);
     }
     if (result !== undefined && result !== null && result !== Chain.none) {
       if (result instanceof Array) {
@@ -160,10 +173,12 @@ class Chain extends Duplex {
 }
 
 Chain.none = none;
-Chain.Final = Final;
 Chain.final = final;
-Chain.Many = Many;
+Chain.isFinal = isFinal;
+Chain.getFinalValue = getFinalValue;
 Chain.many = many;
+Chain.isMany = isMany;
+Chain.getManyValues = getManyValues;
 
 Chain.chain = Chain.make;
 Chain.make.Constructor = Chain;

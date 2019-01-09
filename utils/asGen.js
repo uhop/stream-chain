@@ -1,6 +1,6 @@
 'use strict';
 
-const {none, Final, Many} = require('../defs');
+const {none, final, isFinal, getFinalValue, many, isMany, getManyValues} = require('../defs');
 
 const next = async function*(value, fns, index) {
   for (let i = index; i <= fns.length; ++i) {
@@ -9,12 +9,12 @@ const next = async function*(value, fns, index) {
       value = await value;
     }
     if (value === none) break;
-    if (value instanceof Final) {
-      if (value !== none) yield value;
+    if (isFinal(value)) {
+      if (value !== none) yield getFinalValue(value);
       break;
     }
-    if (value instanceof Many) {
-      const values = value.values;
+    if (isMany(value)) {
+      const values = getManyValues(value);
       if (i == fns.length) {
         for (let j = 0; j < values.length; ++j) {
           yield values[j];
@@ -63,7 +63,11 @@ const asGen = (...fns) => {
 asGen.next = next;
 
 asGen.none = none;
-asGen.Final = Final;
-asGen.Many = Many;
+asGen.final = final;
+asGen.isFinal = isFinal;
+asGen.getFinalValue = getFinalValue;
+asGen.many = many;
+asGen.isMany = isMany;
+asGen.getManyValues = getManyValues;
 
 module.exports = asGen;
