@@ -1,12 +1,13 @@
 # stream-chain
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/uhop/stream-chain.svg)](https://greenkeeper.io/)
 
 [![Build status][travis-image]][travis-url]
-[![Dependencies][deps-image]][deps-url]
-[![devDependencies][dev-deps-image]][dev-deps-url]
 [![NPM version][npm-image]][npm-url]
 [![TypeScript definitions on DefinitelyTyped][definitelytyped-image]](definitelytyped-url)
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/uhop/stream-chain.svg)](https://greenkeeper.io/)
+[![Dependencies][deps-image]][deps-url]
+[![devDependencies][dev-deps-image]][dev-deps-url]
 
 
 `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
@@ -323,6 +324,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
 - 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
 - 2.1.0 *Added simple transducers, dropped Node 6.*
 - 2.0.3 *Added TypeScript typings and the badge.*
