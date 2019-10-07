@@ -2,10 +2,9 @@
 
 const {Readable, Writable, Duplex, Transform} = require('stream');
 
-// const {none, Final, Many, final, many} = require('./defs');
-const none = Symbol.for('stream-chain.none');
-const finalSymbol = Symbol.for('stream-chain.final');
-const manySymbol = Symbol.for('stream-chain.many');
+const none = Symbol.for('object-stream.none');
+const finalSymbol = Symbol.for('object-stream.final');
+const manySymbol = Symbol.for('object-stream.many');
 
 const final = value => ({[finalSymbol]: value});
 const many = values => ({[manySymbol]: values});
