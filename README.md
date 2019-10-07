@@ -3,7 +3,7 @@
 
 [![Build status][travis-image]][travis-url]
 [![NPM version][npm-image]][npm-url]
-[![TypeScript definitions on DefinitelyTyped][definitelytyped-image]](definitelytyped-url)
+[![TypeScript definitions on DefinitelyTyped][definitelytyped-image]][definitelytyped-url]
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/uhop/stream-chain.svg)](https://greenkeeper.io/)
 [![Dependencies][deps-image]][deps-url]
