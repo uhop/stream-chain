@@ -1,14 +1,7 @@
-# stream-chain
+# stream-chain [![NPM version][npm-img]][npm-url]
 
-
-[![Build status][travis-image]][travis-url]
-[![NPM version][npm-image]][npm-url]
-[![TypeScript definitions on DefinitelyTyped][definitelytyped-image]][definitelytyped-url]
-
-[![Greenkeeper badge](https://badges.greenkeeper.io/uhop/stream-chain.svg)](https://greenkeeper.io/)
-[![Dependencies][deps-image]][deps-url]
-[![devDependencies][dev-deps-image]][dev-deps-url]
-
+[npm-img]:      https://img.shields.io/npm/v/stream-chain.svg
+[npm-url]:      https://npmjs.org/package/stream-chain
 
 `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
 
@@ -336,14 +329,3 @@ Following static methods are available:
 - 1.0.2 *Better README.*
 - 1.0.1 *Fixed the README.*
 - 1.0.0 *The initial release.*
-
-[npm-image]:      https://img.shields.io/npm/v/stream-chain.svg
-[npm-url]:        https://npmjs.org/package/stream-chain
-[deps-image]:     https://img.shields.io/david/uhop/stream-chain.svg
-[deps-url]:       https://david-dm.org/uhop/stream-chain
-[dev-deps-image]: https://img.shields.io/david/dev/uhop/stream-chain.svg
-[dev-deps-url]:   https://david-dm.org/uhop/stream-chain?type=dev
-[travis-image]:   https://img.shields.io/travis/uhop/stream-chain.svg
-[travis-url]:     https://travis-ci.org/uhop/stream-chain
-[definitelytyped-image]: https://img.shields.io/badge/DefinitelyTyped-.d.ts-blue.svg
-[definitelytyped-url]:   https://definitelytyped.org
