@@ -324,6 +324,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.2.2 *Technical release. No need to upgrade.*
 - 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
 - 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
 - 2.1.0 *Added simple transducers, dropped Node 6.*
