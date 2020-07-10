@@ -1,6 +1,6 @@
 {
   "name": "stream-chain",
-  "version": "2.2.2",
+  "version": "2.2.3",
   "description": "Chain functions as transform streams.",
   "main": "index.js",
   "scripts": {
@@ -23,5 +23,9 @@
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "devDependencies": {
     "heya-unit": "^0.3.0"
-  }
+  },
+  "files": [
+    "/*.js",
+    "/utils"
+  ]
 }
