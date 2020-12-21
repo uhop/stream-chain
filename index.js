@@ -22,7 +22,7 @@ const runAsyncGenerator = async (gen, stream) => {
       data = await data;
     }
     if (data.done) break;
-    const value = data.value;
+    let value = data.value;
     if (value && typeof value.then == 'function') {
       value = await value;
     }
