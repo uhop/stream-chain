@@ -317,6 +317,7 @@ Following static methods are available:
 
 ## Release History
 
+- 2.2.4 *Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang)).*
 - 2.2.3 *Technical release. No need to upgrade.*
 - 2.2.2 *Technical release. No need to upgrade.*
 - 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
