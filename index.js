@@ -1,6 +1,6 @@
 'use strict';
 
-const {Readable, Writable, Duplex, Transform} = require('stream');
+const {Duplex, Transform} = require('stream');
 
 const none = Symbol.for('object-stream.none');
 const finalSymbol = Symbol.for('object-stream.final');
