@@ -9,7 +9,7 @@ const manySymbol = Symbol.for('object-stream.many');
 const final = value => ({[finalSymbol]: value});
 const many = values => ({[manySymbol]: values});
 
-const isFinal = o => o && typeof o == 'object' && finalSymbol in o;
+const isFinalValue = o => o && typeof o == 'object' && finalSymbol in o;
 const isMany = o => o && typeof o == 'object' && manySymbol in o;
 
 const getFinalValue = o => o[finalSymbol];
@@ -68,7 +68,7 @@ const wrapArray = fns =>
             callback(null);
             return;
           }
-          if (Chain.isFinal(result)) {
+          if (Chain.isFinalValue(result)) {
             value = Chain.getFinalValue(result);
             break;
           }
@@ -151,7 +151,7 @@ class Chain extends Duplex {
     return new Chain(fns, options);
   }
   static sanitize(result, stream) {
-    if (Chain.isFinal(result)) {
+    if (Chain.isFinalValue(result)) {
       result = Chain.getFinalValue(result);
     } else if (Chain.isMany(result)) {
       result = Chain.getManyValues(result);
@@ -173,7 +173,7 @@ class Chain extends Duplex {
 
 Chain.none = none;
 Chain.final = final;
-Chain.isFinal = isFinal;
+Chain.isFinalValue = isFinalValue;
 Chain.getFinalValue = getFinalValue;
 Chain.many = many;
 Chain.isMany = isMany;

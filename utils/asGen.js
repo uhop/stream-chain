@@ -1,6 +1,6 @@
 'use strict';
 
-const {none, final, isFinal, getFinalValue, many, isMany, getManyValues} = require('../defs');
+const {none, final, isFinalValue, getFinalValue, many, isMany, getManyValues} = require('../defs');
 
 const next = async function*(value, fns, index) {
   for (let i = index; i <= fns.length; ++i) {
@@ -9,7 +9,7 @@ const next = async function*(value, fns, index) {
       value = await value;
     }
     if (value === none) break;
-    if (isFinal(value)) {
+    if (isFinalValue(value)) {
       const val = getFinalValue(value);
       if (val !== none) yield val;
       break;
@@ -68,7 +68,7 @@ asGen.next = next;
 
 asGen.none = none;
 asGen.final = final;
-asGen.isFinal = isFinal;
+asGen.isFinalValue = isFinalValue;
 asGen.getFinalValue = getFinalValue;
 asGen.many = many;
 asGen.isMany = isMany;

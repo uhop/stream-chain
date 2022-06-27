@@ -1,6 +1,6 @@
 'use strict';
 
-const {none, final, isFinal, getFinalValue, many, isMany, getManyValues} = require('../defs');
+const {none, final, isFinalValue, getFinalValue, many, isMany, getManyValues} = require('../defs');
 
 const next = async (value, fns, index, push) => {
   for (let i = index; i <= fns.length; ++i) {
@@ -9,7 +9,7 @@ const next = async (value, fns, index, push) => {
       value = await value;
     }
     if (value === none) break;
-    if (isFinal(value)) {
+    if (isFinalValue(value)) {
       const val = getFinalValue(value);
       val !== none && push(val);
       break;
@@ -76,7 +76,7 @@ asFun.next = next;
 
 asFun.none = none;
 asFun.final = final;
-asFun.isFinal = isFinal;
+asFun.isFinalValue = isFinalValue;
 asFun.getFinalValue = getFinalValue;
 asFun.many = many;
 asFun.isMany = isMany;
