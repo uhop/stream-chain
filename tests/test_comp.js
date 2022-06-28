@@ -9,7 +9,7 @@ const {fromIterable} = require('../utils/FromIterable');
 const comp = require('../utils/comp');
 const asFun = require('../utils/asFun');
 
-const {none, final, many} = Chain;
+const {none, finalValue, many} = Chain;
 
 unit.add(module, [
   function test_comp(t) {
@@ -29,7 +29,7 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        comp(x => x * x, x => final(x), x => 2 * x + 1),
+        comp(x => x * x, x => finalValue(x), x => 2 * x + 1),
         streamToArray(output)
       ]);
 
@@ -143,7 +143,7 @@ unit.add(module, [
           x => many([x, x * 10]),
           function*(x) {
             yield x;
-            yield final(x - 1);
+            yield finalValue(x - 1);
           },
           x => -x
         ),
@@ -166,7 +166,7 @@ unit.add(module, [
           x => many([x, x * 10]),
           function*(x) {
             yield x;
-            yield final(x - 1);
+            yield finalValue(x - 1);
           },
           x => -x
         ),

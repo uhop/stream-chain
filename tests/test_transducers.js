@@ -24,7 +24,7 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        [x => x * x, x => Chain.final(x), x => 2 * x + 1],
+        [x => x * x, x => Chain.finalValue(x), x => 2 * x + 1],
         streamToArray(output)
       ]);
 
