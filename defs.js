@@ -1,27 +1,47 @@
 'use strict';
 
 const none = Symbol.for('object-stream.none');
-const finalSymbol = Symbol.for('object-stream.final');
-const manySymbol = Symbol.for('object-stream.many');
 const stop = Symbol.for('object-stream.stop');
 
-const finalValue = value => ({[finalSymbol]: value});
-const many = values => ({[manySymbol]: values});
+const finalSymbol = Symbol.for('object-stream.final');
+const manySymbol = Symbol.for('object-stream.many');
+const flushSymbol = Symbol.for('object-stream.flush');
 
-const isFinalValue = o => o && typeof o == 'object' && finalSymbol in o;
-const isMany = o => o && typeof o == 'object' && manySymbol in o;
+const finalValue = value => ({[finalSymbol]: 1, value});
+const many = values => ({[manySymbol]: 1, values});
 
-const getFinalValue = o => o[finalSymbol];
-const getManyValues = o => o[manySymbol];
+const isFinalValue = o => o && o[finalSymbol] === 1;
+const isMany = o => o && o[manySymbol] === 1;
+const isFlushable = o => o && o[flushSymbol] === 1;
+
+const getFinalValue = value => value.value;
+const getManyValues = value => value.values;
+
+const flushable = (write, final = null) => {
+  const fn = final ? value => (value === none ? final() : write(value)) : write;
+  fn[flushSymbol] = 1;
+  return fn;
+};
 
 class Stop extends Error {}
 
-module.exports.none = none;
-module.exports.stop = stop;
-module.exports.finalValue = finalValue;
-module.exports.isFinalValue = isFinalValue;
-module.exports.getFinalValue = getFinalValue;
-module.exports.many = many;
-module.exports.isMany = isMany;
-module.exports.getManyValues = getManyValues;
-module.exports.Stop = Stop;
+// old aliases
+const final = finalValue;
+
+module.exports = {
+  none,
+  stop,
+  Stop,
+  finalSymbol,
+  manySymbol,
+  flushSymbol,
+  finalValue,
+  many,
+  flushable,
+  isFinalValue,
+  isMany,
+  isFlushable,
+  getFinalValue,
+  getManyValues,
+  final
+};
