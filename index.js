@@ -1,19 +1,7 @@
 'use strict';
 
 const {Readable, Writable, Duplex, Transform} = require('stream');
-
-const none = Symbol.for('object-stream.none');
-const finalSymbol = Symbol.for('object-stream.final');
-const manySymbol = Symbol.for('object-stream.many');
-
-const final = value => ({[finalSymbol]: value});
-const many = values => ({[manySymbol]: values});
-
-const isFinalValue = o => o && typeof o == 'object' && finalSymbol in o;
-const isMany = o => o && typeof o == 'object' && manySymbol in o;
-
-const getFinalValue = o => o[finalSymbol];
-const getManyValues = o => o[manySymbol];
+const {none, finalValue, many, isFinalValue, isMany, getFinalValue, getManyValues} = require('./defs');
 
 const runAsyncGenerator = async (gen, stream) => {
   for (;;) {
@@ -172,7 +160,7 @@ class Chain extends Duplex {
 }
 
 Chain.none = none;
-Chain.final = final;
+Chain.finalValue = finalValue;
 Chain.isFinalValue = isFinalValue;
 Chain.getFinalValue = getFinalValue;
 Chain.many = many;
