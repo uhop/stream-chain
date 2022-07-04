@@ -2,9 +2,10 @@
 
 const unit = require('heya-unit');
 
-const Chain = require('../index');
-const {fromIterable} = require('../utils/FromIterable');
 const {Transform} = require('stream');
+
+const Chain = require('../src/index');
+const {fromIterable} = require('../src/utils/FromIterable');
 
 unit.add(module, [
   function test_demo(t) {

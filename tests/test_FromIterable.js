@@ -2,10 +2,10 @@
 
 const unit = require('heya-unit');
 
-const Chain = require('../index');
+const Chain = require('../src/index');
 const {streamToArray, delay} = require('./helpers');
 
-const {fromIterable} = require('../utils/FromIterable');
+const {fromIterable} = require('../src/utils/FromIterable');
 
 unit.add(module, [
   function test_FromIterable(t) {
