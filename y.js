@@ -2,7 +2,7 @@
 const {PassThrough} = require('stream');
 
 const defs = require('./defs');
-const {make: makeStream} = require('./AsStream');
+const {make: makeStream} = require('./src/AsStream');
 
 const s = makeStream(x => x * x);
 // const s = makeStream(async x => x * x);
