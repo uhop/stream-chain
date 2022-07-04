@@ -141,7 +141,7 @@ class AsStream extends Duplex {
   }
 }
 
-AsStream.stream = AsStream.make;
+AsStream.asStream = AsStream.make;
 AsStream.make.Constructor = AsStream;
 
 module.exports = AsStream;
