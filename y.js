@@ -2,9 +2,9 @@
 const {PassThrough} = require('stream');
 
 const defs = require('./defs');
-const {make: makeStream} = require('./utils/Stream');
+const {make: makeStream} = require('./AsStream');
 
-// const s = makeStream(x => x * x);
+const s = makeStream(x => x * x);
 // const s = makeStream(async x => x * x);
 // const s = makeStream(function* (x) { for (let i = 0; i < x; ++i) yield i; });
 // const s = makeStream(async function* (x) { for (let i = 0; i < x; ++i) yield i; });
@@ -12,7 +12,7 @@ const {make: makeStream} = require('./utils/Stream');
 // const s = makeStream(x => defs.none);
 // const s = makeStream(x => defs.finalValue(42));
 // const s = makeStream(x => defs.many(['a', x, 'b']));
-const s = makeStream(x => defs.stop);
+// const s = makeStream(x => defs.stop);
 
 const h = new PassThrough({writableObjectMode: true, readableObjectMode: true});
 const p = h.pipe(s);
