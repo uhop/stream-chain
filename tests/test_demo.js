@@ -21,11 +21,11 @@ unit.add(module, [
         // transforms a value
         x => x * x,
         // returns several values
-        x => [x - 1, x, x + 1],
+        x => Chain.many([x - 1, x, x + 1]),
         // waits for an asynchronous operation
         async x => await getTotalFromDatabaseByKey(x),
         // returns multiple values with a generator
-        function*(x) {
+        function* (x) {
           for (let i = x; i > 0; --i) {
             yield i;
           }

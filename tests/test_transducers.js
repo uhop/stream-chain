@@ -3,6 +3,7 @@
 const unit = require('heya-unit');
 
 const Chain = require('../index');
+const gen = require('../gen');
 const {streamToArray} = require('./helpers');
 const {fromIterable} = require('../utils/FromIterable');
 
@@ -11,7 +12,14 @@ unit.add(module, [
     const async = t.startAsync('test_transducers');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), [x => x * x, x => 2 * x + 1], streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        gen(
+          x => x * x,
+          x => 2 * x + 1
+        ),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
@@ -24,7 +32,11 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        [x => x * x, x => Chain.finalValue(x), x => 2 * x + 1],
+        gen(
+          x => x * x,
+          x => Chain.finalValue(x),
+          x => 2 * x + 1
+        ),
         streamToArray(output)
       ]);
 
@@ -39,7 +51,11 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        [x => x * x, () => Chain.none, x => 2 * x + 1],
+        gen(
+          x => x * x,
+          () => Chain.none,
+          x => 2 * x + 1
+        ),
         streamToArray(output)
       ]);
 
@@ -52,7 +68,7 @@ unit.add(module, [
     const async = t.startAsync('test_transducersEmpty');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, [], streamToArray(output)]);
+      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, gen(), streamToArray(output)]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
@@ -63,7 +79,12 @@ unit.add(module, [
     const async = t.startAsync('test_transducersOne');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, [x => 2 * x + 1], streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        x => x * x,
+        gen(x => 2 * x + 1),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));

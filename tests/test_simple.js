@@ -15,9 +15,7 @@ unit.add(module, [
       output1 = [],
       output2 = [];
 
-    fromIterable([1, 2, 3])
-      .pipe(chain)
-      .pipe(streamToArray(output1));
+    fromIterable([1, 2, 3]).pipe(chain).pipe(streamToArray(output1));
 
     chain.on('data', value => output2.push(value));
     chain.on('end', () => {
@@ -32,7 +30,7 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        function*(x) {
+        function* (x) {
           yield x * x;
           yield x * x * x;
           yield 2 * x;
@@ -56,22 +54,15 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_simpleArray(t) {
-    const async = t.startAsync('test_simpleArray');
-
-    const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => [x * x, x * x * x, 2 * x], streamToArray(output)]);
-
-    chain.on('end', () => {
-      eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
-      async.done();
-    });
-  },
   function test_simpleMany(t) {
     const async = t.startAsync('test_simpleMany');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => Chain.many([x * x, x * x * x, 2 * x]), streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        x => Chain.many([x * x, x * x * x, 2 * x]),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
@@ -82,7 +73,12 @@ unit.add(module, [
     const async = t.startAsync('test_simpleChain');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, x => 2 * x + 1, streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        x => x * x,
+        x => 2 * x + 1,
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
@@ -114,11 +110,37 @@ unit.add(module, [
     const async = t.startAsync('test_simpleChain');
 
     const output = [],
-      chain = Chain.chain([fromIterable([1, 2, 3]), x => x * x, x => 2 * x + 1, streamToArray(output)]);
+      chain = Chain.chain([
+        fromIterable([1, 2, 3]),
+        x => x * x,
+        x => 2 * x + 1,
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
+  },
+  function test_simpleIterable(t) {
+    const async = t.startAsync('test_simpleIterable');
+
+    const output = [],
+      chain = new Chain([
+        [1, 2, 3],
+        function* (x) {
+          yield x * x;
+          yield x * x * x;
+          yield 2 * x;
+        },
+        streamToArray(output)
+      ]);
+
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
+      async.done();
+    });
+
+    chain.end(0); // start the chain
   }
 ]);

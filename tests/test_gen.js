@@ -6,17 +6,22 @@ const Chain = require('../index');
 const {streamToArray, delay} = require('./helpers');
 
 const {fromIterable} = require('../utils/FromIterable');
-const gen = require('../utils/gen');
-const asGen = require('../utils/asGen');
 
-const {none, finalValue, many} = Chain;
+const {none, finalValue, many, gen} = Chain;
 
 unit.add(module, [
   function test_gen(t) {
     const async = t.startAsync('test_gen');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), gen(x => x * x, x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        gen(
+          x => x * x,
+          x => 2 * x + 1
+        ),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
@@ -29,7 +34,11 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        gen(x => x * x, x => finalValue(x), x => 2 * x + 1),
+        gen(
+          x => x * x,
+          x => finalValue(x),
+          x => 2 * x + 1
+        ),
         streamToArray(output)
       ]);
 
@@ -42,7 +51,15 @@ unit.add(module, [
     const async = t.startAsync('test_compNothing');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), gen(x => x * x, () => none, x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        gen(
+          x => x * x,
+          () => none,
+          x => 2 * x + 1
+        ),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [])'));
@@ -64,7 +81,14 @@ unit.add(module, [
     const async = t.startAsync('test_genAsync');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), gen(delay(x => x * x), x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([
+        fromIterable([1, 2, 3]),
+        gen(
+          delay(x => x * x),
+          x => 2 * x + 1
+        ),
+        streamToArray(output)
+      ]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
@@ -79,7 +103,7 @@ unit.add(module, [
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
-          function*(x) {
+          function* (x) {
             yield x;
             yield x + 1;
             yield x + 2;
@@ -100,7 +124,11 @@ unit.add(module, [
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        gen(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1),
+        gen(
+          x => x * x,
+          x => many([x, x + 1, x + 2]),
+          x => 2 * x + 1
+        ),
         streamToArray(output)
       ]);
 
@@ -118,7 +146,7 @@ unit.add(module, [
         gen(
           delay(x => -x),
           x => many([x, x * 10]),
-          function*(x) {
+          function* (x) {
             yield x;
             yield x - 1;
           },
@@ -141,7 +169,7 @@ unit.add(module, [
         gen(
           delay(x => -x),
           x => many([x, x * 10]),
-          function*(x) {
+          function* (x) {
             yield x;
             yield finalValue(x - 1);
           },
@@ -155,16 +183,16 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_genAsGen(t) {
-    const async = t.startAsync('test_genAsGen');
+  function test_genSyncIterator(t) {
+    const async = t.startAsync('test_genSyncIterator');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        asGen(
+        gen(
           delay(x => -x),
           x => many([x, x * 10]),
-          function*(x) {
+          function* (x) {
             yield x;
             yield finalValue(x - 1);
           },
@@ -178,16 +206,16 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_genAsAsyncGen(t) {
-    const async = t.startAsync('test_genAsAsyncGen');
+  function test_genAsyncIterator(t) {
+    const async = t.startAsync('test_genAsyncIterator');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        asGen(
+        gen(
           delay(x => -x),
           x => many([x, x * 10]),
-          async function*(x) {
+          async function* (x) {
             yield delay(x => x)(x);
             yield delay(x => finalValue(x - 1))(x);
           },
