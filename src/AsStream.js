@@ -41,7 +41,7 @@ class AsStream extends Duplex {
       return;
     }
     this._processChunk(defs.none, null).then(
-      () => callback(null),
+      () => (this.push(null), callback(null)),
       error => callback(error)
     );
   }
