@@ -28,20 +28,18 @@ class Stop extends Error {}
 // old aliases
 const final = finalValue;
 
-module.exports = {
-  none,
-  stop,
-  Stop,
-  finalSymbol,
-  manySymbol,
-  flushSymbol,
-  finalValue,
-  many,
-  flushable,
-  isFinalValue,
-  isMany,
-  isFlushable,
-  getFinalValue,
-  getManyValues,
-  final
-};
+module.exports.none = none;
+module.exports.stop = stop;
+module.exports.Stop = Stop;
+module.exports.finalSymbol = finalSymbol;
+module.exports.manySymbol = manySymbol;
+module.exports.flushSymbol = flushSymbol;
+module.exports.finalValue = finalValue;
+module.exports.many = many;
+module.exports.flushable = flushable;
+module.exports.isFinalValue = isFinalValue;
+module.exports.isMany = isMany;
+module.exports.isFlushable = isFlushable;
+module.exports.getFinalValue = getFinalValue;
+module.exports.getManyValues = getManyValues;
+module.exports.final = final;
