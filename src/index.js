@@ -3,7 +3,7 @@
 const {Duplex} = require('stream');
 const defs = require('./defs');
 const gen = require('./gen');
-const {asStream} = require('./AsStream');
+const asStream = require('./asStream');
 
 // is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 const isReadableNodeStream = obj =>
