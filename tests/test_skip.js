@@ -5,7 +5,7 @@ const unit = require('heya-unit');
 const {streamToArray, delay} = require('./helpers');
 const chain = require('../src/index');
 
-const {fromIterable} = require('../src/utils/FromIterable');
+const fromIterable = require('../src/utils/FromIterable');
 const skip = require('../src/utils/skip');
 const skipWhile = require('../src/utils/skipWhile');
 

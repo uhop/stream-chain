@@ -5,7 +5,7 @@ const unit = require('heya-unit');
 const {Transform} = require('stream');
 const {streamToArray, delay} = require('./helpers');
 const chain = require('../src/index');
-const {fromIterable} = require('../src/utils/FromIterable');
+const fromIterable = require('../src/utils/FromIterable');
 
 unit.add(module, [
   function test_simpleGeneric(t) {

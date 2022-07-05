@@ -5,7 +5,7 @@ const unit = require('heya-unit');
 const {streamToArray, delay} = require('./helpers');
 const chain = require('../src/index');
 
-const {fromIterable} = require('../src/utils/FromIterable');
+const fromIterable = require('../src/utils/FromIterable');
 const fold = require('../src/utils/fold');
 const scan = require('../src/utils/scan');
 const reduce = require('../src/utils/reduce');
