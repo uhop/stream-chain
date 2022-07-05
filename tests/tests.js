@@ -2,7 +2,7 @@
 
 const unit = require('heya-unit');
 
-require('./test_FromIterable');
+require('./test_fromIterable');
 
 require('./test_simple');
 require('./test_readWrite');

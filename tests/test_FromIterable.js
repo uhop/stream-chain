@@ -5,11 +5,11 @@ const unit = require('heya-unit');
 const chain = require('../src/index');
 const {streamToArray, delay} = require('./helpers');
 
-const fromIterable = require('../src/utils/FromIterable');
+const fromIterable = require('../src/utils/fromIterable');
 
 unit.add(module, [
-  function test_FromIterable(t) {
-    const async = t.startAsync('test_FromIterable');
+  function test_fromIterable(t) {
+    const async = t.startAsync('test_fromIterable');
 
     const output = [],
       c = chain([fromIterable([1, 2, 3]), streamToArray(output)]);
@@ -19,8 +19,8 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_FromIterableFun(t) {
-    const async = t.startAsync('test_FromIterableFun');
+  function test_fromIterableFun(t) {
+    const async = t.startAsync('test_fromIterableFun');
 
     const output = [],
       c = chain([fromIterable(() => 0), streamToArray(output)]);
@@ -30,8 +30,8 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_FromIterableAsyncFun(t) {
-    const async = t.startAsync('test_FromIterableAsyncFun');
+  function test_fromIterableAsyncFun(t) {
+    const async = t.startAsync('test_fromIterableAsyncFun');
 
     const output = [],
       c = chain([fromIterable(delay(() => 0)), streamToArray(output)]);
@@ -41,12 +41,12 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_FromIterableGen(t) {
-    const async = t.startAsync('test_FromIterableGen');
+  function test_fromIterableGen(t) {
+    const async = t.startAsync('test_fromIterableGen');
 
     const output = [],
       c = chain([
-        fromIterable(function*() {
+        fromIterable(function* () {
           yield 0;
           yield 1;
         }),
@@ -58,32 +58,34 @@ unit.add(module, [
       async.done();
     });
   },
-  // function test_FromIterableAsyncGen(t) {
-  //   const async = t.startAsync('test_FromIterableAsyncGen');
-
-  //   const output = [],
-  //     c = chain([
-  //       fromIterable(async function*() {
-  //         yield delay(() => 0)();
-  //         yield delay(() => 1)();
-  //       }),
-  //       streamToArray(output)
-  //     ]);
-
-  //   c.on('end', () => {
-  //     eval(t.TEST('t.unify(output, [0, 1])'));
-  //     async.done();
-  //   });
-  // },
-  function test_FromIterableNextable(t) {
-    const async = t.startAsync('test_FromIterableNextable');
+  function test_fromIterableAsyncGen(t) {
+    const async = t.startAsync('test_fromIterableAsyncGen');
 
     const output = [],
       c = chain([
-        fromIterable((function*() {
-          yield 0;
-          yield 1;
-        })()),
+        fromIterable(async function* () {
+          yield delay(() => 0)();
+          yield delay(() => 1)();
+        }),
+        streamToArray(output)
+      ]);
+
+    c.on('end', () => {
+      eval(t.TEST('t.unify(output, [0, 1])'));
+      async.done();
+    });
+  },
+  function test_fromIterableNextable(t) {
+    const async = t.startAsync('test_fromIterableNextable');
+
+    const output = [],
+      c = chain([
+        fromIterable(
+          (function* () {
+            yield 0;
+            yield 1;
+          })()
+        ),
         streamToArray(output)
       ]);
 

@@ -5,7 +5,7 @@ const unit = require('heya-unit');
 const {Transform} = require('stream');
 
 const chain = require('../src/index');
-const fromIterable = require('../src/utils/FromIterable');
+const fromIterable = require('../src/utils/fromIterable');
 
 const getTotalFromDatabaseByKey = async x =>
 new Promise(resolve => {
