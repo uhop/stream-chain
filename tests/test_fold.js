@@ -9,7 +9,7 @@ const fromIterable = require('../src/utils/fromIterable');
 const fold = require('../src/utils/fold');
 const scan = require('../src/utils/scan');
 const reduce = require('../src/utils/reduce');
-const reduceStream = require('../src/utils/ReduceStream');
+const reduceStream = require('../src/utils/reduceStream');
 
 const {asStream} = chain;
 
