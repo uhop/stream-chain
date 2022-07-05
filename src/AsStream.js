@@ -4,10 +4,9 @@ const {Duplex} = require('stream');
 const defs = require('./defs');
 
 class AsStream extends Duplex {
-  static resolved = Promise.resolve();
 
   constructor(fn, options) {
-    super(Object.assign({}, options, {writableObjectMode: true, readableObjectMode: true}));
+    super(Object.assign({}, {writableObjectMode: true, readableObjectMode: true}, options));
     if (typeof fn == 'function') {
       this._fn = fn;
     } else if (fn) {
@@ -23,7 +22,7 @@ class AsStream extends Duplex {
       );
 
     // pump variables
-    this._paused = AsStream.resolved;
+    this._paused = Promise.resolve();
     this._resolvePaused = null;
     this._queue = [];
   }
@@ -54,7 +53,7 @@ class AsStream extends Duplex {
     if (!this._resolvePaused) return;
     this._resolvePaused();
     this._resolvePaused = null;
-    this._paused = AsStream.resolved;
+    this._paused = Promise.resolve();
   }
   _pause() {
     if (this._resolvePaused) return;
