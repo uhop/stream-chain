@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const {streamToArray} = require('./helpers');
-const Chain = require('../src/index');
+const chain = require('../src/index');
 const {fromIterable} = require('../src/utils/FromIterable');
 
 unit.add(module, [
@@ -12,12 +12,12 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x]);
+      c = chain([fromIterable([1, 2, 3]), x => x * x]);
 
-    chain.pipe(streamToArray(output1));
+    c.pipe(streamToArray(output1));
 
-    chain.on('data', value => output2.push(value));
-    chain.on('end', () => {
+    c.on('data', value => output2.push(value));
+    c.on('end', () => {
       eval(t.TEST('t.unify(output1, [1, 4, 9])'));
       eval(t.TEST('t.unify(output2, [1, 4, 9])'));
       async.done();
@@ -27,11 +27,11 @@ unit.add(module, [
     const async = t.startAsync('test_readWriteWritable');
 
     const output = [],
-      chain = new Chain([x => x * x, streamToArray(output)]);
+      c = chain([x => x * x, streamToArray(output)]);
 
-    fromIterable([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(c);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
@@ -40,9 +40,9 @@ unit.add(module, [
     const async = t.startAsync('test_readWriteReadableWritable');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3]), x => x * x, streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
@@ -52,12 +52,12 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([fromIterable([1, 2, 3])]);
+      c = chain([fromIterable([1, 2, 3])]);
 
-    chain.pipe(streamToArray(output1));
+    c.pipe(streamToArray(output1));
 
-    chain.on('data', value => output2.push(value));
-    chain.on('end', () => {
+    c.on('data', value => output2.push(value));
+    c.on('end', () => {
       eval(t.TEST('t.unify(output1, [1, 2, 3])'));
       eval(t.TEST('t.unify(output2, [1, 2, 3])'));
       async.done();
@@ -67,11 +67,11 @@ unit.add(module, [
     const async = t.startAsync('test_readWriteSingleWritable');
 
     const output = [],
-      chain = new Chain([streamToArray(output)]);
+      c = chain([streamToArray(output)]);
 
-    fromIterable([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(c);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 2, 3])'));
       async.done();
     });
@@ -81,13 +81,13 @@ unit.add(module, [
 
     const output1 = [],
       output2 = [],
-      chain = new Chain([fromIterable([1, 2, 3]), streamToArray(output1)]);
+      c = chain([fromIterable([1, 2, 3]), streamToArray(output1)]);
 
     fromIterable([4, 5, 6])
-      .pipe(chain)
+      .pipe(c)
       .pipe(streamToArray(output2));
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output1, [1, 2, 3])'));
       eval(t.TEST('t.unify(output2, [])'));
       async.done();

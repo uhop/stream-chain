@@ -4,21 +4,21 @@ const unit = require('heya-unit');
 
 const {Transform} = require('stream');
 const {streamToArray, delay} = require('./helpers');
-const Chain = require('../src/index');
+const chain = require('../src/index');
 const {fromIterable} = require('../src/utils/FromIterable');
 
 unit.add(module, [
   function test_simpleGeneric(t) {
     const async = t.startAsync('test_simpleGeneric');
 
-    const chain = new Chain([x => x * x]),
+    const c = chain([x => x * x]),
       output1 = [],
       output2 = [];
 
-    fromIterable([1, 2, 3]).pipe(chain).pipe(streamToArray(output1));
+    fromIterable([1, 2, 3]).pipe(c).pipe(streamToArray(output1));
 
-    chain.on('data', value => output2.push(value));
-    chain.on('end', () => {
+    c.on('data', value => output2.push(value));
+    c.on('end', () => {
       eval(t.TEST('t.unify(output1, [1, 4, 9])'));
       eval(t.TEST('t.unify(output2, [1, 4, 9])'));
       async.done();
@@ -28,7 +28,7 @@ unit.add(module, [
     const async = t.startAsync('test_simpleGenerator');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         function* (x) {
           yield x * x;
@@ -38,7 +38,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
       async.done();
     });
@@ -47,9 +47,9 @@ unit.add(module, [
     const async = t.startAsync('test_simpleAsync');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), delay(x => x + 1), streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3]), delay(x => x + 1), streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [2, 3, 4])'));
       async.done();
     });
@@ -58,13 +58,13 @@ unit.add(module, [
     const async = t.startAsync('test_simpleMany');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
-        x => Chain.many([x * x, x * x * x, 2 * x]),
+        x => chain.many([x * x, x * x * x, 2 * x]),
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
       async.done();
     });
@@ -73,14 +73,14 @@ unit.add(module, [
     const async = t.startAsync('test_simpleChain');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         x => x * x,
         x => 2 * x + 1,
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
@@ -89,7 +89,7 @@ unit.add(module, [
     const async = t.startAsync('test_simpleStream');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         new Transform({
           objectMode: true,
@@ -101,7 +101,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
@@ -110,14 +110,14 @@ unit.add(module, [
     const async = t.startAsync('test_simpleChain');
 
     const output = [],
-      chain = Chain.chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         x => x * x,
         x => 2 * x + 1,
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
@@ -126,7 +126,7 @@ unit.add(module, [
     const async = t.startAsync('test_simpleIterable');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         [1, 2, 3],
         function* (x) {
           yield x * x;
@@ -136,11 +136,11 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 1, 2, 4, 8, 4, 9, 27, 6])'));
       async.done();
     });
 
-    chain.end(0); // start the chain
+    c.end(0); // start the chain
   }
 ]);

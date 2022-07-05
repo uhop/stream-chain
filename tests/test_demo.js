@@ -4,7 +4,7 @@ const unit = require('heya-unit');
 
 const {Transform} = require('stream');
 
-const Chain = require('../src/index');
+const chain = require('../src/index');
 const {fromIterable} = require('../src/utils/FromIterable');
 
 const getTotalFromDatabaseByKey = async x =>
@@ -18,11 +18,11 @@ unit.add(module, [
   function test_demo(t) {
     const async = t.startAsync('test_demo');
 
-    const chain = new Chain([
+    const c = chain([
         // transforms a value
         x => x * x,
         // returns several values
-        x => Chain.many([x - 1, x, x + 1]),
+        x => chain.many([x - 1, x, x + 1]),
         // waits for an asynchronous operation
         async x => await getTotalFromDatabaseByKey(x),
         // returns multiple values with a generator
@@ -43,22 +43,22 @@ unit.add(module, [
         })
       ]),
       output = [];
-    chain.on('data', data => output.push(data));
-    chain.on('end', () => {
+    c.on('data', data => output.push(data));
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [2, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2])'));
       async.done();
     });
 
-    fromIterable([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(c);
   },
   function test_demoNoGrouping(t) {
     const async = t.startAsync('test_demoNoGrouping');
 
-    const chain = new Chain([
+    const c = chain([
         // transforms a value
         x => x * x,
         // returns several values
-        x => Chain.many([x - 1, x, x + 1]),
+        x => chain.many([x - 1, x, x + 1]),
         // waits for an asynchronous operation
         async x => await getTotalFromDatabaseByKey(x),
         // returns multiple values with a generator
@@ -79,12 +79,12 @@ unit.add(module, [
         })
       ], {noGrouping: true}),
       output = [];
-    chain.on('data', data => output.push(data));
-    chain.on('end', () => {
+    c.on('data', data => output.push(data));
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [2, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2])'));
       async.done();
     });
 
-    fromIterable([1, 2, 3]).pipe(chain);
+    fromIterable([1, 2, 3]).pipe(c);
   }
 ]);

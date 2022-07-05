@@ -3,7 +3,7 @@
 const unit = require('heya-unit');
 
 const {streamToArray, delay} = require('./helpers');
-const Chain = require('../src/index');
+const chain = require('../src/index');
 
 const {fromIterable} = require('../src/utils/FromIterable');
 const skip = require('../src/utils/skip');
@@ -14,9 +14,9 @@ unit.add(module, [
     const async = t.startAsync('test_skip');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3, 4, 5]), skip(2), streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3, 4, 5]), skip(2), streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 4, 5])'));
       async.done();
     });
@@ -25,9 +25,9 @@ unit.add(module, [
     const async = t.startAsync('test_skipWhile');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3, 4, 5]), skipWhile(x => x != 3), streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3, 4, 5]), skipWhile(x => x != 3), streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 4, 5])'));
       async.done();
     });
@@ -36,9 +36,9 @@ unit.add(module, [
     const async = t.startAsync('test_skipWhileAsync');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3, 4, 5]), skipWhile(delay(x => x != 3)), streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3, 4, 5]), skipWhile(delay(x => x != 3)), streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 4, 5])'));
       async.done();
     });

@@ -3,17 +3,17 @@
 const unit = require('heya-unit');
 
 const {streamToArray, delay} = require('./helpers');
-const Chain = require('../src/index');
+const chain = require('../src/index');
 const {fromIterable} = require('../src/utils/FromIterable');
 
-const {none, finalValue, many, gen} = Chain;
+const {none, finalValue, many, gen} = chain;
 
 unit.add(module, [
   function test_gen(t) {
     const async = t.startAsync('test_gen');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
@@ -22,7 +22,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
@@ -31,7 +31,7 @@ unit.add(module, [
     const async = t.startAsync('test_genFinal');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
@@ -41,7 +41,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
@@ -50,7 +50,7 @@ unit.add(module, [
     const async = t.startAsync('test_compNothing');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
@@ -60,7 +60,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [])'));
       async.done();
     });
@@ -69,9 +69,9 @@ unit.add(module, [
     const async = t.startAsync('test_genEmpty');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, gen(), streamToArray(output)]);
+      c = chain([fromIterable([1, 2, 3]), x => x * x, gen(), streamToArray(output)]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
@@ -80,7 +80,7 @@ unit.add(module, [
     const async = t.startAsync('test_genAsync');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           delay(x => x * x),
@@ -89,7 +89,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
@@ -98,7 +98,7 @@ unit.add(module, [
     const async = t.startAsync('test_genGenerator');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
@@ -112,7 +112,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 5, 7, 9, 11, 13, 19, 21, 23])'));
       async.done();
     });
@@ -121,7 +121,7 @@ unit.add(module, [
     const async = t.startAsync('test_genMany');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2, 3]),
         gen(
           x => x * x,
@@ -131,7 +131,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 5, 7, 9, 11, 13, 19, 21, 23])'));
       async.done();
     });
@@ -140,7 +140,7 @@ unit.add(module, [
     const async = t.startAsync('test_genCombined');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2]),
         gen(
           delay(x => -x),
@@ -154,7 +154,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 2, 10, 11, 2, 3, 20, 21])'));
       async.done();
     });
@@ -163,7 +163,7 @@ unit.add(module, [
     const async = t.startAsync('test_genCombinedFinal');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2]),
         gen(
           delay(x => -x),
@@ -177,7 +177,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
       async.done();
     });
@@ -186,7 +186,7 @@ unit.add(module, [
     const async = t.startAsync('test_genSyncIterator');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2]),
         gen(
           delay(x => -x),
@@ -200,7 +200,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
       async.done();
     });
@@ -209,7 +209,7 @@ unit.add(module, [
     const async = t.startAsync('test_genAsyncIterator');
 
     const output = [],
-      chain = new Chain([
+      c = chain([
         fromIterable([1, 2]),
         gen(
           delay(x => -x),
@@ -223,7 +223,7 @@ unit.add(module, [
         streamToArray(output)
       ]);
 
-    chain.on('end', () => {
+    c.on('end', () => {
       eval(t.TEST('t.unify(output, [1, -2, 10, -11, 2, -3, 20, -21])'));
       async.done();
     });

@@ -63,8 +63,8 @@ const groupFunctions = (output, fn, index, fns) => {
 const produceStreams = item => {
   if (Array.isArray(item)) {
     if (!item.length) return null;
-    if (item.length == 1) return item[0] && Chain.asStream(item[0]);
-    return Chain.asStream(Chain.gen(...item));
+    if (item.length == 1) return item[0] && chain.asStream(item[0]);
+    return chain.asStream(chain.gen(...item));
   }
   return item;
 };
@@ -77,12 +77,14 @@ const wrapFunctions = (fn, index, fns) => {
   ) {
     return fn; // an acceptable stream
   }
-  if (typeof fn == 'function') return Chain.asStream(fn); // a function
+  if (typeof fn == 'function') return chain.asStream(fn); // a function
   const iterator = getIterator(fn);
   if (!iterator)
     throw TypeError('Item #' + index + ' is not a proper stream, function, nor iterable.');
-  return Chain.asStream(iterator);
+  return chain.asStream(iterator);
 };
+
+let chain = null; // will be assigned later
 
 class Chain extends Duplex {
   constructor(fns, options) {
@@ -148,30 +150,31 @@ class Chain extends Duplex {
   }
 }
 
-Chain.chain = Chain.make;
 Chain.make.Constructor = Chain;
-Chain.gen = gen;
-Chain.asStream = asStream;
 
-module.exports = Chain;
+chain = Chain.make;
+
+module.exports = chain;
 
 // to keep ESM happy:
-module.exports.none = defs.none;
-module.exports.stop = defs.stop;
-module.exports.Stop = defs.Stop;
-module.exports.finalSymbol = defs.finalSymbol;
-module.exports.manySymbol = defs.manySymbol;
-module.exports.flushSymbol = defs.flushSymbol;
-module.exports.finalValue = defs.finalValue;
-module.exports.many = defs.many;
-module.exports.flushable = defs.flushable;
-module.exports.isFinalValue = defs.isFinalValue;
-module.exports.isMany = defs.isMany;
-module.exports.isFlushable = defs.isFlushable;
-module.exports.getFinalValue = defs.getFinalValue;
-module.exports.getManyValues = defs.getManyValues;
-module.exports.final = defs.final;
+module.exports.none = chain.none = defs.none;
+module.exports.stop = chain.stop = defs.stop;
+module.exports.Stop = chain.Stop = defs.Stop;
+module.exports.finalSymbol = chain.finalSymbol = defs.finalSymbol;
+module.exports.manySymbol = chain.manySymbol = defs.manySymbol;
+module.exports.flushSymbol = chain.flushSymbol = defs.flushSymbol;
+module.exports.finalValue = chain.finalValue = defs.finalValue;
+module.exports.many = chain.many = defs.many;
+module.exports.flushable = chain.flushable = defs.flushable;
+module.exports.isFinalValue = chain.isFinalValue = defs.isFinalValue;
+module.exports.isMany = chain.isMany = defs.isMany;
+module.exports.isFlushable = chain.isFlushable = defs.isFlushable;
+module.exports.getFinalValue = chain.getFinalValue = defs.getFinalValue;
+module.exports.getManyValues = chain.getManyValues = defs.getManyValues;
+module.exports.final = chain.final = defs.final;
+module.exports.make = chain.make = Chain.make;
 
-module.exports.chain = Chain.make;
-module.exports.gen = gen;
-module.exports.asStream = asStream;
+module.exports.chain = chain.chain = chain; // for compatibility with 2.x
+module.exports.Chain = chain.Chain = Chain;
+module.exports.gen = chain.gen = gen;
+module.exports.asStream = chain.asStream = asStream;
