@@ -10,6 +10,8 @@ const take = require('../src/utils/take');
 const takeWhile = require('../src/utils/takeWhile');
 const takeWithSkip = require('../src/utils/takeWithSkip');
 
+const {stop} = Chain;
+
 unit.add(module, [
   function test_take(t) {
     const async = t.startAsync('test_take');
@@ -52,6 +54,28 @@ unit.add(module, [
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 2])'));
+      async.done();
+    });
+  },
+  function test_takeStop(t) {
+    const async = t.startAsync('test_takeStop');
+
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3, 4, 5]), take(2, stop), streamToArray(output)]);
+
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [1, 2])'));
+      async.done();
+    });
+  },
+  function test_takeStopWithSkip(t) {
+    const async = t.startAsync('test_takeStopWithSkip');
+
+    const output = [],
+      chain = new Chain([fromIterable([1, 2, 3, 4, 5]), takeWithSkip(2, 2, stop), streamToArray(output)]);
+
+    chain.on('end', () => {
+      eval(t.TEST('t.unify(output, [3, 4])'));
       async.done();
     });
   }
