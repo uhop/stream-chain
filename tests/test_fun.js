@@ -2,34 +2,33 @@
 
 const unit = require('heya-unit');
 
-const Chain = require('../index');
 const {streamToArray, delay} = require('./helpers');
+const Chain = require('../src/index');
 
 const {fromIterable} = require('../utils/FromIterable');
-const comp = require('../utils/comp');
-const asFun = require('../utils/asFun');
+const fun = require('../src/fun');
 
 const {none, finalValue, many} = Chain;
 
 unit.add(module, [
-  function test_comp(t) {
-    const async = t.startAsync('test_comp');
+  function test_fun(t) {
+    const async = t.startAsync('test_fun');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), comp(x => x * x, x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([fromIterable([1, 2, 3]), fun(x => x * x, x => 2 * x + 1), streamToArray(output)]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
   },
-  function test_compFinal(t) {
-    const async = t.startAsync('test_compFinal');
+  function test_funFinal(t) {
+    const async = t.startAsync('test_funFinal');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        comp(x => x * x, x => finalValue(x), x => 2 * x + 1),
+        fun(x => x * x, x => finalValue(x), x => 2 * x + 1),
         streamToArray(output)
       ]);
 
@@ -38,46 +37,46 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_compNothing(t) {
-    const async = t.startAsync('test_compNothing');
+  function test_funNothing(t) {
+    const async = t.startAsync('test_funNothing');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), comp(x => x * x, () => none, x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([fromIterable([1, 2, 3]), fun(x => x * x, () => none, x => 2 * x + 1), streamToArray(output)]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [])'));
       async.done();
     });
   },
-  function test_compEmpty(t) {
-    const async = t.startAsync('test_compEmpty');
+  function test_funEmpty(t) {
+    const async = t.startAsync('test_funEmpty');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, comp(), streamToArray(output)]);
+      chain = new Chain([fromIterable([1, 2, 3]), x => x * x, fun(), streamToArray(output)]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [1, 4, 9])'));
       async.done();
     });
   },
-  function test_compAsync(t) {
-    const async = t.startAsync('test_compAsync');
+  function test_funAsync(t) {
+    const async = t.startAsync('test_funAsync');
 
     const output = [],
-      chain = new Chain([fromIterable([1, 2, 3]), comp(delay(x => x * x), x => 2 * x + 1), streamToArray(output)]);
+      chain = new Chain([fromIterable([1, 2, 3]), fun(delay(x => x * x), x => 2 * x + 1), streamToArray(output)]);
 
     chain.on('end', () => {
       eval(t.TEST('t.unify(output, [3, 9, 19])'));
       async.done();
     });
   },
-  function test_compGenerator(t) {
-    const async = t.startAsync('test_compGenerator');
+  function test_funGenerator(t) {
+    const async = t.startAsync('test_funGenerator');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        comp(
+        fun(
           x => x * x,
           function*(x) {
             yield x;
@@ -94,13 +93,13 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_compMany(t) {
-    const async = t.startAsync('test_compMany');
+  function test_funMany(t) {
+    const async = t.startAsync('test_funMany');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2, 3]),
-        comp(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1),
+        fun(x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1),
         streamToArray(output)
       ]);
 
@@ -109,13 +108,13 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_compCombined(t) {
-    const async = t.startAsync('test_compCombined');
+  function test_funCombined(t) {
+    const async = t.startAsync('test_funCombined');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        comp(
+        fun(
           delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
@@ -132,13 +131,13 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_compCombinedFinal(t) {
-    const async = t.startAsync('test_compCombinedFinal');
+  function test_funCombinedFinal(t) {
+    const async = t.startAsync('test_funCombinedFinal');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        comp(
+        fun(
           delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {
@@ -155,13 +154,13 @@ unit.add(module, [
       async.done();
     });
   },
-  function test_compAsFun(t) {
-    const async = t.startAsync('test_compAsFun');
+  function test_funAsFun(t) {
+    const async = t.startAsync('test_funAsFun');
 
     const output = [],
       chain = new Chain([
         fromIterable([1, 2]),
-        asFun(
+        fun(
           delay(x => -x),
           x => many([x, x * 10]),
           function*(x) {

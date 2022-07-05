@@ -9,7 +9,7 @@ require('./test_readWrite');
 require('./test_errors');
 
 require('./test_transducers');
-// require('./test_comp');
+require('./test_fun');
 require('./test_gen');
 
 require('./test_take');
