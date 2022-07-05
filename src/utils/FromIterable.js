@@ -7,7 +7,7 @@ class FromIterable extends Readable {
   static resolved = Promise.resolve();
 
   constructor(options) {
-    super(Object.assign({}, options, {objectMode: true}));
+    super(Object.assign({}, {objectMode: true}, options));
     const fn = options && options.iterable;
     if (typeof fn == 'function') {
       this._fn = fn;

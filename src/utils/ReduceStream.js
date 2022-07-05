@@ -7,7 +7,7 @@ const defaultReducer = (acc, value) => value;
 
 class ReduceStream extends Writable {
   constructor(options) {
-    super(Object.assign({}, options, {objectMode: true}));
+    super(Object.assign({}, {objectMode: true}, options));
     this.accumulator = defaultInitial;
     this._reducer = defaultReducer;
     if (options) {
@@ -31,7 +31,7 @@ class ReduceStream extends Writable {
     }
   }
   static make(reducer, initial) {
-    return new ReduceStream(typeof reducer == 'object' ? reducer : {reducer, initial});
+    return new ReduceStream(typeof reducer == 'object' && reducer.reducer ? reducer : {reducer, initial});
   }
 }
 ReduceStream.reduceStream = ReduceStream.make;
