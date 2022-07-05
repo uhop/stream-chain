@@ -86,7 +86,7 @@ const wrapFunctions = (fn, index, fns) => {
 
 class Chain extends Duplex {
   constructor(fns, options) {
-    super(options || {writableObjectMode: true, readableObjectMode: true});
+    super(Object.assign({}, {writableObjectMode: true, readableObjectMode: true}, options));
 
     if (!(fns instanceof Array) || !fns.length) {
       throw TypeError("Chain's argument should be a non-empty array.");
