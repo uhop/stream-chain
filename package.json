@@ -4,6 +4,25 @@
   "description": "Chain functions as transform streams.",
   "type": "commonjs",
   "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./*.js": "./src/*.js",
+    "./utils/*": "./src/utils/*.js",
+    "./asStream.js": "./src/asStream.js",
+    "./defs.js": "./src/defs.js",
+    "./fun.js": "./src/fun.js",
+    "./gen.js": "./src/gen.js",
+    "./utils/fold.js": "./src/utils/fold.js",
+    "./utils/fromIterable.js": "./src/utils/fromIterable.js",
+    "./utils/reduce.js": "./src/utils/reduce.js",
+    "./utils/reduceStream.js": "./src/utils/reduceStream.js",
+    "./utils/scan.js": "./src/utils/scan.js",
+    "./utils/skip.js": "./src/utils/skip.js",
+    "./utils/skipWhile.js": "./src/utils/skipWhile.js",
+    "./utils/take.js": "./src/utils/take.js",
+    "./utils/takeWhile.js": "./src/utils/takeWhile.js",
+    "./utils/takeWithSkip.js": "./src/utils/takeWithSkip.js"
+  },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
     "test": "node tests/tests.js"
@@ -24,9 +43,5 @@
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "devDependencies": {
     "heya-unit": "^0.3.0"
-  },
-  "files": [
-    "/*.js",
-    "/utils"
-  ]
+  }
 }
