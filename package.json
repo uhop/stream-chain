@@ -43,5 +43,6 @@
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "devDependencies": {
     "heya-unit": "^0.3.0"
-  }
+  },
+  "files": ["src/*.js", "src/utils/*.js"]
 }
