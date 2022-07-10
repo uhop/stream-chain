@@ -119,8 +119,8 @@ const chain = (fns, options) => {
 
   const streams = (
       options && options.noGrouping
-        ? fns.reduce(groupFunctions, []).map(produceStreams)
-        : fns.map(wrapFunctions)
+        ? fns.map(wrapFunctions)
+        : fns.reduce(groupFunctions, []).map(produceStreams)
     ).filter(s => s),
     input = streams[0],
     output = streams.reduce((output, item) => (output && output.pipe(item)) || item);
@@ -166,7 +166,7 @@ const chain = (fns, options) => {
 
 module.exports = chain;
 
-// to keep ESM happy:
+// to keep ESM happy
 module.exports.none = chain.none = defs.none;
 module.exports.stop = chain.stop = defs.stop;
 module.exports.Stop = chain.Stop = defs.Stop;
