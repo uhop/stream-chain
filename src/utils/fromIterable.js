@@ -117,7 +117,7 @@ const fromIterable = options => {
   };
 
   stream = new Readable(
-    Object.assign({}, {objectMode: true}, options, {
+    Object.assign({objectMode: true}, options, {
       read() {
         resume();
       }

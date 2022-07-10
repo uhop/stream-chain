@@ -112,7 +112,7 @@ const asStream = (fn, options) => {
   };
 
   stream = new Duplex(
-    Object.assign({}, {writableObjectMode: true, readableObjectMode: true}, options, {
+    Object.assign({writableObjectMode: true, readableObjectMode: true}, options, {
       write(chunk, encoding, callback) {
         processChunk(chunk, encoding).then(
           () => callback(null),

@@ -17,8 +17,8 @@ const reduceStream = (options, initial) => {
   }
 
   const stream = new Writable(
-    Object.assign({}, {objectMode: true}, options, {
-      write(chunk, encoding, callback) {
+    Object.assign({objectMode: true}, options, {
+      write(chunk, _, callback) {
         const result = reducer.call(this, this.accumulator, chunk);
         if (result && typeof result.then == 'function') {
           result.then(
