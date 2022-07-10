@@ -41,9 +41,6 @@
     "url": "https://github.com/uhop/stream-chain/issues"
   },
   "homepage": "https://github.com/uhop/stream-chain#readme",
-  "devDependencies": {
-    "tape6": "file:../tape6"
-  },
   "files": [
     "src/*.js",
     "src/utils/*.js"
@@ -53,7 +50,7 @@
       "/tests/test-*.mjs"
     ]
   },
-  "dependencies": {
+  "devDependencies": {
     "tape-six": "^0.9.1"
   }
 }
