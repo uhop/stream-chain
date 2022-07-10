@@ -59,7 +59,7 @@ const asStream = (fn, options) => {
         queue.pop();
         continue;
       }
-      const value = result.value;
+      let value = result.value;
       if (value && typeof value.then == 'function') {
         value = await value;
       }
