@@ -1,17 +1,17 @@
 'use strict';
 
-const {Writable} = require('stream');
+import {Writable} from 'stream';
 
-const streamToArray = array =>
+export const streamToArray = array =>
   new Writable({
     objectMode: true,
-    write(chunk, encoding, callback) {
+    write(chunk, _, callback) {
       array.push(chunk);
       callback(null);
     }
   });
 
-const delay = (fn, ms = 20) => async (...args) =>
+export const delay = (fn, ms = 20) => async (...args) =>
   new Promise((resolve, reject) => {
     setTimeout(() => {
       try {
@@ -21,5 +21,3 @@ const delay = (fn, ms = 20) => async (...args) =>
       }
     }, ms);
   });
-
-module.exports = {streamToArray, delay};

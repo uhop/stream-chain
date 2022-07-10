@@ -25,7 +25,7 @@
   },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
-    "test": "node tests/tests.js"
+    "test": "tape6 --flags DO"
   },
   "repository": {
     "type": "git",
@@ -42,7 +42,18 @@
   },
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "devDependencies": {
-    "heya-unit": "^0.3.0"
+    "tape6": "file:../tape6"
   },
-  "files": ["src/*.js", "src/utils/*.js"]
+  "files": [
+    "src/*.js",
+    "src/utils/*.js"
+  ],
+  "tape6": {
+    "tests": [
+      "/tests/test_*.mjs"
+    ]
+  },
+  "dependencies": {
+    "tape-six": "^0.9.1"
+  }
 }
