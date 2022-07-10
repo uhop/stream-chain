@@ -25,7 +25,7 @@
   },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
-    "test": "tape6 --flags DO"
+    "test": "tape6 --flags DOF"
   },
   "repository": {
     "type": "git",
@@ -50,7 +50,7 @@
   ],
   "tape6": {
     "tests": [
-      "/tests/test_*.mjs"
+      "/tests/test-*.mjs"
     ]
   },
   "dependencies": {
