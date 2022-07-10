@@ -133,3 +133,8 @@ fun.asArray = asArray;
 Object.assign(fun, defs);
 
 module.exports = fun;
+
+// to keep ESM happy
+module.exports.next = next;
+module.exports.collect = collect;
+module.exports.asArray = asArray;

@@ -86,5 +86,5 @@ Object.assign(gen, defs);
 
 module.exports = gen;
 
-// to keep ESM happy:
+// to keep ESM happy
 module.exports.next = next;
