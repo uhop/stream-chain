@@ -47,9 +47,7 @@
   },
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "files": [
-    "src/*.js",
-    "src/jsonl/*.js",
-    "src/utils/*.js"
+    "src"
   ],
   "tape6": {
     "tests": [
