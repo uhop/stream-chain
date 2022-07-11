@@ -37,7 +37,8 @@ const groupFunctions = (output, fn, index, fns) => {
     output.push(fn);
     return output;
   }
-  if (typeof fn != 'function') throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
+  if (typeof fn != 'function')
+    throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
   if (!output.length) output.push([]);
   const last = output[output.length - 1];
   if (Array.isArray(last)) {
@@ -118,7 +119,7 @@ const chain = (fns, options) => {
 
   if (!isWritableNodeStream(input)) {
     writeMethod = (_1, _2, callback) => callback(null);
-    finalMethod = callback => callback(null); // unavailable in Node 6
+    finalMethod = callback => callback(null);
     input.on('end', () => stream.end());
   }
 
@@ -131,7 +132,9 @@ const chain = (fns, options) => {
   }
 
   stream = new Duplex(
-    Object.assign({}, {writableObjectMode: true, readableObjectMode: true}, options, {
+    Object.assign({writableObjectMode: true, readableObjectMode: true}, options, {
+      readable: isReadableNodeStream(output),
+      writable: isWritableNodeStream(input),
       write: writeMethod,
       final: finalMethod,
       read: readMethod

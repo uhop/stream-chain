@@ -3,7 +3,7 @@
 import test from 'tape-six';
 
 import {streamToArray} from './helpers.mjs';
-import chain from '../src/index.js';
+import chain, {dataSource} from '../src/index.js';
 import fromIterable from '../src/utils/readableFrom.js';
 
 test.asPromise('readWrite: readable', (t, resolve) => {
@@ -70,16 +70,17 @@ test.asPromise('readWrite: single writable', (t, resolve) => {
   });
 });
 
-test.asPromise('readWrite: pipeable', (t, resolve) => {
+test.asPromise('readWrite: pipeable', (t, resolve, reject) => {
   const output1 = [],
     output2 = [],
-    c = chain([fromIterable([1, 2, 3]), streamToArray(output1)]);
+    c = chain([dataSource([1, 2, 3]), streamToArray(output1)]);
 
   fromIterable([4, 5, 6]).pipe(c).pipe(streamToArray(output2));
 
   c.on('end', () => {
-    t.deepEqual(output1, [1, 2, 3]);
+    t.deepEqual(output1, [1, 2, 3, 1, 2, 3, 1, 2, 3]);
     t.deepEqual(output2, []);
     resolve();
   });
+  c.on('error', error => reject(error));
 });

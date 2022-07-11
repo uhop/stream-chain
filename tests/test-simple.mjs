@@ -110,6 +110,4 @@ test.asPromise('simple: factory', (t, resolve) => {
     t.deepEqual(output, [1, 1, 2, 4, 8, 4, 9, 27, 6]);
     resolve();
   });
-
-  c.end(0); // start the chain
 });
