@@ -4,18 +4,9 @@ const {Duplex} = require('stream');
 const defs = require('./defs');
 
 const asStream = (fn, options) => {
-  if (fn && typeof fn != 'function') {
-    if (typeof fn[Symbol.asyncIterator] == 'function') {
-      fn = fn[Symbol.asyncIterator].bind(fn);
-    } else if (typeof fn[Symbol.iterator] == 'function') {
-      fn = fn[Symbol.iterator].bind(fn);
-    } else {
-      fn = null;
-    }
-  }
-  if (!fn)
+  if (typeof fn != 'function')
     throw TypeError(
-      'Only a function or an object with an iterator is accepted as the first argument'
+      'Only a function is accepted as the first argument'
     );
 
   // pump variables
