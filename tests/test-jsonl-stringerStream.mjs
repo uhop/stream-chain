@@ -6,10 +6,10 @@ import {Writable, Transform} from 'stream';
 
 import {readString} from './helpers.mjs';
 
-import parser from '../src/jsonl/parser.js';
-import stringer from '../src/jsonl/stringer.js';
+import parserStream from '../src/jsonl/parserStream.js';
+import stringerStream from '../src/jsonl/stringerStream.js';
 
-test.asPromise('jsonl stringer: smoke test', (t, resolve) => {
+test.asPromise('jsonl stringerStream: smoke test', (t, resolve) => {
   const pattern = {
       a: [[[]]],
       b: {a: 1},
@@ -27,7 +27,7 @@ test.asPromise('jsonl stringer: smoke test', (t, resolve) => {
 
   let buffer = '';
   readString(string)
-    .pipe(parser())
+    .pipe(parserStream())
     .pipe(
       new Transform({
         writableObjectMode: true,
@@ -38,7 +38,7 @@ test.asPromise('jsonl stringer: smoke test', (t, resolve) => {
         }
       })
     )
-    .pipe(stringer())
+    .pipe(stringerStream())
     .pipe(
       new Writable({
         write(chunk, _, callback) {
@@ -54,7 +54,7 @@ test.asPromise('jsonl stringer: smoke test', (t, resolve) => {
     );
 });
 
-test.asPromise('jsonl stringer: multiple', (t, resolve) => {
+test.asPromise('jsonl stringerStream: multiple', (t, resolve) => {
   const pattern = {
     a: [[[]]],
     b: {a: 1},
@@ -74,7 +74,7 @@ test.asPromise('jsonl stringer: multiple', (t, resolve) => {
   string = string + '\n' + string + '\n' + string;
 
   readString(string + '\n')
-    .pipe(parser())
+    .pipe(parserStream())
     .pipe(
       new Transform({
         writableObjectMode: true,
@@ -85,7 +85,7 @@ test.asPromise('jsonl stringer: multiple', (t, resolve) => {
         }
       })
     )
-    .pipe(stringer())
+    .pipe(stringerStream())
     .pipe(
       new Writable({
         write(chunk, _, callback) {

@@ -8,6 +8,7 @@ import zlib from 'zlib';
 import {Writable} from 'stream';
 
 import {readString} from './helpers.mjs';
+import chain from '../src/index.js';
 
 import parser from '../src/jsonl/parser.js';
 
@@ -28,22 +29,22 @@ const roundtrip = (t, resolve, len, quant) => {
 
   const input = json.join('\n'),
     result = [];
-  readString(input, quant)
-    .pipe(parser())
-    .pipe(
-      new Writable({
-        objectMode: true,
-        write(chunk, _, callback) {
-          result.push(chunk.value);
-          callback(null);
-        },
-        final(callback) {
-          t.deepEqual(objects, result);
-          resolve();
-          callback(null);
-        }
-      })
-    );
+  chain([
+    readString(input, quant),
+    parser(),
+    new Writable({
+      objectMode: true,
+      write(chunk, _, callback) {
+        result.push(chunk.value);
+        callback(null);
+      },
+      final(callback) {
+        t.deepEqual(objects, result);
+        resolve();
+        callback(null);
+      }
+    })
+  ]);
 };
 
 test.asPromise('jsonl parser: smoke test', (t, resolve) => roundtrip(t, resolve));
@@ -106,28 +107,28 @@ test.asPromise('jsonl parser: read file', (t, resolve) => {
   if (!/^file:\/\//.test(import.meta.url)) throw Error('Cannot get the current working directory');
   const fileName = path.join(path.dirname(import.meta.url.substring(7)), './data/sample.jsonl.gz');
   let count = 0;
-  fs.createReadStream(fileName)
-    .pipe(zlib.createGunzip())
-    .pipe(parser())
-    .pipe(
-      new Writable({
-        objectMode: true,
-        write(chunk, _, callback) {
-          t.equal(count, chunk.key);
-          ++count;
-          callback(null);
-        },
-        final(callback) {
-          t.equal(count, 100);
-          resolve();
-          callback(null);
-        }
-      })
-    );
+  chain([
+    fs.createReadStream(fileName),
+    zlib.createGunzip(),
+    parser(),
+    new Writable({
+      objectMode: true,
+      write(chunk, _, callback) {
+        t.equal(count, chunk.key);
+        ++count;
+        callback(null);
+      },
+      final(callback) {
+        t.equal(count, 100);
+        resolve();
+        callback(null);
+      }
+    })
+  ]);
 });
 
 test.asPromise('jsonl parser: bad json', (t, resolve) => {
-  const pipeline = readString(' not json ').pipe(parser());
+  const pipeline = chain([readString(' not json '), parser()]);
 
   pipeline.on('data', () => t.fail("We shouldn't be here."));
   pipeline.on('error', e => {
