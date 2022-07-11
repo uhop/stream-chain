@@ -96,11 +96,11 @@ test.asPromise('jsonl parserStream: roundtrip with 12 sets of objects', (t, reso
   roundtrip(t, resolve, 12);
 });
 
-test.asPromise('jsonl parserStream: roundtrip with different window sizes', (t, resolve) => {
-  for (let i = 1; i <= 12; ++i) {
+for (let i = 1; i <= 12; ++i) {
+  test.asPromise('jsonl parserStream: roundtrip with different window sizes - ' + i, (t, resolve) => {
     roundtrip(t, resolve, 10, i);
-  }
-});
+  });
+}
 
 test.asPromise('jsonl parserStream: read file', (t, resolve) => {
   if (!/^file:\/\//.test(import.meta.url)) throw Error('Cannot get the current working directory');
