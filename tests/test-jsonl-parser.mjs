@@ -49,7 +49,7 @@ const roundtrip = (t, resolve, len, quant) => {
 test.asPromise('jsonl parser: smoke test', (t, resolve) => roundtrip(t, resolve));
 
 test.asPromise('jsonl parser: roundtrip with 1 set of objects', (t, resolve) => {
-  roundtrip(t, resolve, 1)
+  roundtrip(t, resolve, 1);
 });
 
 test.asPromise('jsonl parser: roundtrip with 2 sets of objects', (t, resolve) => {
@@ -97,7 +97,7 @@ test.asPromise('jsonl parser: roundtrip with 12 sets of objects', (t, resolve) =
 });
 
 test.asPromise('jsonl parser: roundtrip with different window sizes', (t, resolve) => {
-  for (let i = 1; i <=12; ++i) {
+  for (let i = 1; i <= 12; ++i) {
     roundtrip(t, resolve, 10, i);
   }
 });
@@ -124,4 +124,18 @@ test.asPromise('jsonl parser: read file', (t, resolve) => {
         }
       })
     );
+});
+
+test.asPromise('jsonl parser: bad json', (t, resolve) => {
+  const pipeline = readString(' not json ').pipe(parser());
+
+  pipeline.on('data', () => t.fail("We shouldn't be here."));
+  pipeline.on('error', e => {
+    t.ok(e);
+    resolve();
+  });
+  pipeline.on('end', value => {
+    t.fail("We shouldn't be here.");
+    resolve();
+  });
 });
