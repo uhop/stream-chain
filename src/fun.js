@@ -73,13 +73,7 @@ const flush = async (fns, index, collect) => {
 
 const collect = (collect, fns) => {
   fns = fns.filter(fn => fn);
-  if (fns.length) {
-    if (Symbol.asyncIterator && fns[0][Symbol.asyncIterator]) {
-      fns[0] = fns[0][Symbol.asyncIterator].bind(fns[0]);
-    } else if (Symbol.iterator && fns[0][Symbol.iterator]) {
-      fns[0] = fns[0][Symbol.iterator].bind(fns[0]);
-    }
-  } else {
+  if (!fns.length) {
     fns = [x => x];
   }
   let flushed = false;

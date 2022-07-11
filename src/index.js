@@ -28,13 +28,6 @@ const isDuplexNodeStream = obj =>
   typeof obj.on === 'function' &&
   typeof obj.write === 'function';
 
-const getIterator = x => {
-  if (!x) return null;
-  if (typeof x[Symbol.asyncIterator] == 'function') return x[Symbol.asyncIterator].bind(x);
-  if (typeof x[Symbol.iterator] == 'function') return x[Symbol.iterator].bind(x);
-  return null;
-};
-
 const groupFunctions = (output, fn, index, fns) => {
   if (
     isDuplexNodeStream(fn) ||
@@ -44,12 +37,7 @@ const groupFunctions = (output, fn, index, fns) => {
     output.push(fn);
     return output;
   }
-  if (typeof fn != 'function') {
-    const iterator = getIterator(fn);
-    if (!iterator)
-      throw TypeError('Item #' + index + ' is not a proper stream, function, nor iterable.');
-    fn = iterator;
-  }
+  if (typeof fn != 'function') throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
   if (!output.length) output.push([]);
   const last = output[output.length - 1];
   if (Array.isArray(last)) {
@@ -78,10 +66,7 @@ const wrapFunctions = (fn, index, fns) => {
     return fn; // an acceptable stream
   }
   if (typeof fn == 'function') return chain.asStream(fn); // a function
-  const iterator = getIterator(fn);
-  if (!iterator)
-    throw TypeError('Item #' + index + ' is not a proper stream, function, nor iterable.');
-  return chain.asStream(iterator);
+  throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
 };
 
 // default implementation of required stream methods

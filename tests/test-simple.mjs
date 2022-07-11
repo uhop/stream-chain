@@ -97,7 +97,7 @@ test.asPromise('simple: stream', (t, resolve) => {
 test.asPromise('simple: factory', (t, resolve) => {
   const output = [],
     c = chain([
-      [1, 2, 3],
+      fromIterable([1, 2, 3]),
       function* (x) {
         yield x * x;
         yield x * x * x;
