@@ -2,8 +2,6 @@
 
 const {Transform} = require('stream');
 
-const stringify = (replacer, space) => value => JSON.stringify(value, replacer, space);
-
 const stringer = options => {
   let first = true,
     prefix = '',
@@ -47,9 +45,4 @@ const stringer = options => {
   );
 };
 
-stringer.stringify = stringify;
-
 module.exports = stringer;
-
-// to keep ESM happy
-module.exports.stringify = stringify;

@@ -5,8 +5,6 @@ const asStream = require('../asStream');
 const fixUtf8Stream = require('../utils/fixUtf8Stream');
 const lines = require('../utils/lines');
 
-const parse = reviver => string => JSON.parse(string, reviver);
-
 const parser = options => {
   const reviver = options && options.reviver;
   let counter = 0;
@@ -16,9 +14,4 @@ const parser = options => {
   );
 };
 
-parser.parse = parse;
-
 module.exports = parser;
-
-// to keep ESM happy
-module.exports.parse = parse;
