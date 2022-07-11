@@ -34,7 +34,7 @@ const roundtrip = (t, resolve, len, quant) => {
       new Writable({
         objectMode: true,
         write(chunk, _, callback) {
-          result.push(chunk);
+          result.push(chunk.value);
           callback(null);
         },
         final(callback) {
@@ -112,7 +112,8 @@ test.asPromise('jsonl parser: read file', (t, resolve) => {
     .pipe(
       new Writable({
         objectMode: true,
-        write(_1, _2, callback) {
+        write(chunk, _, callback) {
+          t.equal(count, chunk.key);
           ++count;
           callback(null);
         },

@@ -33,7 +33,7 @@ test.asPromise('jsonl stringer: smoke test', (t, resolve) => {
         writableObjectMode: true,
         readableObjectMode: true,
         transform(chunk, _, callback) {
-          this.push(chunk);
+          this.push(chunk.value);
           callback(null);
         }
       })
@@ -80,7 +80,7 @@ test.asPromise('jsonl stringer: multiple', (t, resolve) => {
         writableObjectMode: true,
         readableObjectMode: true,
         transform(chunk, _, callback) {
-          this.push(chunk);
+          this.push(chunk.value);
           callback(null);
         }
       })

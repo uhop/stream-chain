@@ -7,11 +7,14 @@ const lines = require('../utils/lines');
 
 const parse = reviver => string => JSON.parse(string, reviver);
 
-const parser = options =>
-  asStream(
-    gen(fixUtf8Stream(), lines(), parse(options && options.reviver)),
+const parser = options => {
+  const reviver = options && options.reviver;
+  let counter = 0;
+  return asStream(
+    gen(fixUtf8Stream(), lines(), string => ({key: counter++, value: JSON.parse(string, reviver)})),
     Object.assign({writableObjectMode: false, readableObjectMode: true}, options)
   );
+};
 
 parser.parse = parse;
 
