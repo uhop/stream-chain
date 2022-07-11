@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import {Transform} from 'stream';
 import chain from '../src/index.js';
-import fromIterable from '../src/utils/fromIterable.js';
+import readableFrom from '../src/utils/readableFrom.js';
 
 const getTotalFromDatabaseByKey = async x =>
   new Promise(resolve => {
@@ -45,7 +45,7 @@ test.asPromise('demo: default', (t, resolve) => {
     resolve();
   });
 
-  fromIterable([1, 2, 3]).pipe(c);
+  readableFrom([1, 2, 3]).pipe(c);
 });
 
 test.asPromise('demo: no grouping', (t, resolve) => {
@@ -83,5 +83,5 @@ test.asPromise('demo: no grouping', (t, resolve) => {
     resolve();
   });
 
-  fromIterable([1, 2, 3]).pipe(c);
+  readableFrom([1, 2, 3]).pipe(c);
 });

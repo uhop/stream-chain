@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import {streamToArray} from './helpers.mjs';
 import chain from '../src/index.js';
-import fromIterable from '../src/utils/fromIterable.js';
+import fromIterable from '../src/utils/readableFrom.js';
 
 test.asPromise('readWrite: readable', (t, resolve) => {
   const output1 = [],

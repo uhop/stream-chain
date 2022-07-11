@@ -5,7 +5,7 @@ import test from 'tape-six';
 import {Transform} from 'stream';
 import {streamToArray, delay} from './helpers.mjs';
 import chain from '../src/index.js';
-import fromIterable from '../src/utils/fromIterable.js';
+import fromIterable from '../src/utils/readableFrom.js';
 
 test.asPromise('simple: smoke test', (t, resolve) => {
   const c = chain([x => x * x]),

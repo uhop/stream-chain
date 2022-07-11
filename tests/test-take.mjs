@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import {streamToArray, delay} from './helpers.mjs';
 import chain, {stop} from '../src/index.js';
-import fromIterable from '../src/utils/fromIterable.js';
+import fromIterable from '../src/utils/readableFrom.js';
 
 import take from '../src/utils/take.js';
 import takeWhile from '../src/utils/takeWhile.js';

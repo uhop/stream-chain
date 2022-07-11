@@ -5,11 +5,11 @@ import test from 'tape-six';
 import {streamToArray, delay} from './helpers.mjs';
 import chain from '../src/index.js';
 
-import fromIterable from '../src/utils/fromIterable.js';
+import readableFrom from '../src/utils/readableFrom.js';
 
-test.asPromise('fromIterable: smoke test', (t, resolve) => {
+test.asPromise('readableFrom: smoke test', (t, resolve) => {
   const output = [],
-    c = chain([fromIterable([1, 2, 3]), streamToArray(output)]);
+    c = chain([readableFrom([1, 2, 3]), streamToArray(output)]);
 
   c.on('end', () => {
     t.deepEqual(output, [1, 2, 3]);
@@ -17,9 +17,9 @@ test.asPromise('fromIterable: smoke test', (t, resolve) => {
   });
 });
 
-test.asPromise('fromIterable: function', (t, resolve) => {
+test.asPromise('readableFrom: function', (t, resolve) => {
   const output = [],
-    c = chain([fromIterable(() => 0), streamToArray(output)]);
+    c = chain([readableFrom(() => 0), streamToArray(output)]);
 
   c.on('end', () => {
     t.deepEqual(output, [0]);
@@ -27,9 +27,9 @@ test.asPromise('fromIterable: function', (t, resolve) => {
   });
 });
 
-test.asPromise('fromIterable: async function', (t, resolve) => {
+test.asPromise('readableFrom: async function', (t, resolve) => {
   const output = [],
-    c = chain([fromIterable(delay(() => 0)), streamToArray(output)]);
+    c = chain([readableFrom(delay(() => 0)), streamToArray(output)]);
 
   c.on('end', () => {
     t.deepEqual(output, [0]);
@@ -37,10 +37,10 @@ test.asPromise('fromIterable: async function', (t, resolve) => {
   });
 });
 
-test.asPromise('fromIterable: generator', (t, resolve) => {
+test.asPromise('readableFrom: generator', (t, resolve) => {
   const output = [],
     c = chain([
-      fromIterable(function* () {
+      readableFrom(function* () {
         yield 0;
         yield 1;
       }),
@@ -53,10 +53,10 @@ test.asPromise('fromIterable: generator', (t, resolve) => {
   });
 });
 
-test.asPromise('fromIterable: async generator', (t, resolve) => {
+test.asPromise('readableFrom: async generator', (t, resolve) => {
   const output = [],
     c = chain([
-      fromIterable(async function* () {
+      readableFrom(async function* () {
         yield delay(() => 0)();
         yield delay(() => 1)();
       }),
@@ -69,10 +69,10 @@ test.asPromise('fromIterable: async generator', (t, resolve) => {
   });
 });
 
-test.asPromise('fromIterable: nextable', (t, resolve) => {
+test.asPromise('readableFrom: nextable', (t, resolve) => {
   const output = [],
     c = chain([
-      fromIterable(
+      readableFrom(
         (function* () {
           yield 0;
           yield 1;

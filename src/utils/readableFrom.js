@@ -3,7 +3,7 @@
 const {Readable} = require('stream');
 const defs = require('../defs');
 
-const fromIterable = options => {
+const readableFrom = options => {
   if (!options || !options.iterable) {
     options = {iterable: options};
   }
@@ -128,4 +128,4 @@ const fromIterable = options => {
   return stream;
 };
 
-module.exports = fromIterable;
+module.exports = readableFrom;
