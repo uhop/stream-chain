@@ -72,7 +72,7 @@ const flush = async (fns, index, collect) => {
 };
 
 const collect = (collect, fns) => {
-  fns = fns.filter(fn => fn);
+  fns = fns.filter(fn => fn).flat(Infinity);
   if (!fns.length) {
     fns = [x => x];
   }

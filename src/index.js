@@ -97,10 +97,10 @@ const read = output => {
 
 const chain = (fns, options) => {
   if (!Array.isArray(fns) || !fns.length) {
-    throw TypeError("Chain's argument should be a non-empty array.");
+    throw TypeError("Chain's first argument should be a non-empty array.");
   }
 
-  fns = fns.filter(fn => fn); // remove nulls
+  fns = fns.filter(fn => fn).flat(Infinity); // remove nulls and flatten
 
   const streams = (
       options && options.noGrouping

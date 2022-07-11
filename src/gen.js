@@ -51,7 +51,7 @@ const next = async function* (value, fns, index) {
 };
 
 const gen = (...fns) => {
-  fns = fns.filter(fn => fn);
+  fns = fns.filter(fn => fn).flat(Infinity);
   if (!fns.length) {
     fns = [x => x];
   }
