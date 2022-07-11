@@ -7,6 +7,7 @@ const batch = (n = 100) => {
   return flushable(value => {
     if (value === none) {
       // clean up buffer
+      if (!buffer.length) return none;
       const result = buffer;
       buffer = null;
       return result;
