@@ -153,6 +153,15 @@ const chain = (fns, options) => {
   return stream;
 };
 
+const dataSource = fn => {
+  if (typeof fn == 'function') return fn;
+  if (fn) {
+    if (typeof fn[Symbol.asyncIterator] == 'function') return fn[Symbol.asyncIterator].bind(fn);
+    if (typeof fn[Symbol.iterator] == 'function') return fn[Symbol.iterator].bind(fn);
+  }
+  throw new TypeError('The argument should be a function or an iterable object.');
+};
+
 module.exports = chain;
 
 // to keep ESM happy
@@ -175,3 +184,5 @@ module.exports.final = chain.final = defs.final;
 module.exports.chain = chain.chain = chain; // for compatibility with 2.x
 module.exports.gen = chain.gen = gen;
 module.exports.asStream = chain.asStream = asStream;
+
+module.exports.dataSource = dataSource;
