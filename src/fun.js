@@ -120,12 +120,6 @@ const fun = (...fns) => {
   return g;
 };
 
-fun.next = next;
-fun.collect = collect;
-fun.asArray = asArray;
-
-Object.assign(fun, defs);
-
 module.exports = fun;
 
 // to keep ESM happy

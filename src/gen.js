@@ -74,10 +74,6 @@ const gen = (...fns) => {
   return needToFlush ? defs.flushable(g) : g;
 };
 
-gen.next = next;
-
-Object.assign(gen, defs);
-
 module.exports = gen;
 
 // to keep ESM happy
