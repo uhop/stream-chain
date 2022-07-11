@@ -152,6 +152,10 @@ const chain = (fns, options) => {
       read: readMethod
     })
   );
+  stream.streams = streams;
+  stream.input = input;
+  stream.output = output;
+
   if (!isReadableNodeStream(output)) {
     stream.resume();
   }
