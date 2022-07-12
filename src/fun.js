@@ -122,7 +122,6 @@ const fun = (...fns) => {
 
 module.exports = fun;
 
-// to keep ESM happy
 module.exports.next = next;
 module.exports.collect = collect;
 module.exports.asArray = asArray;

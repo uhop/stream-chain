@@ -56,7 +56,7 @@ const gen = (...fns) => {
     fns = [x => x];
   }
   let flushed = false;
-  const g = async function* (value) {
+  let g = async function* (value) {
     if (flushed) throw Error('Call to a flushed pipe.');
     if (value !== defs.none) {
       yield* next(value, fns, 0);
@@ -71,10 +71,10 @@ const gen = (...fns) => {
     }
   };
   const needToFlush = fns.some(fn => fn[defs.flushSymbol] === 1);
-  return needToFlush ? defs.flushable(g) : g;
+  if (needToFlush) g = defs.flushable(g);
+  return g;
 };
 
 module.exports = gen;
 
-// to keep ESM happy
 module.exports.next = next;
