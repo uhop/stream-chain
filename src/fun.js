@@ -106,7 +106,7 @@ const asArray = (...fns) => {
 
 const fun = (...fns) => {
   const f = asArray(...fns);
-  let g = async value =>
+  let g = value =>
     f(value).then(results => {
       switch (results.length) {
         case 0:
