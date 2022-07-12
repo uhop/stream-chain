@@ -39,7 +39,7 @@ export const writeToArray = array => new Writable({
   }
 });
 
-export const delay = (fn, ms = 20) => async (...args) =>
+export const delay = (fn, ms = 20) => (...args) =>
   new Promise((resolve, reject) => {
     setTimeout(() => {
       try {
