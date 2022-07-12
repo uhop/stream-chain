@@ -15,12 +15,12 @@ const next = async (value, fns, index, collect) => {
         cleanIndex = i - 1;
         throw new defs.Stop();
       }
-      if (value && value[defs.finalSymbol] === 1) {
-        collect(value.value);
+      if (defs.isFinalValue(value)) {
+        collect(defs.getFinalValue(value));
         break;
       }
-      if (value && value[defs.manySymbol] === 1) {
-        const values = value.values;
+      if (defs.isMany(value)) {
+        const values = defs.getManyValues(value);
         if (i == fns.length) {
           values.forEach(val => collect(val));
         } else {
@@ -65,7 +65,7 @@ const next = async (value, fns, index, collect) => {
 const flush = async (fns, index, collect) => {
   for (let i = index; i < fns.length; ++i) {
     const f = fns[i];
-    if (f[defs.flushSymbol] === 1) {
+    if (defs.isFlushable(f)) {
       await next(f(defs.none), fns, i + 1, collect);
     }
   }

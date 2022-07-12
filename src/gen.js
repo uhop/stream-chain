@@ -10,12 +10,12 @@ const next = async function* (value, fns, index) {
     }
     if (value === defs.none) break;
     if (value === defs.stop) throw new defs.Stop();
-    if (value && value[defs.finalSymbol] === 1) {
-      yield value.value;
+    if (defs.isFinalValue(value)) {
+      yield defs.getFinalValue(value);
       break;
     }
-    if (value && value[defs.manySymbol] === 1) {
-      const values = value.values;
+    if (defs.isMany(value)) {
+      const values = defs.getManyValues(value);
       if (i == fns.length) {
         yield* values;
       } else {
@@ -68,13 +68,13 @@ const gen = (...fns) => {
       flushed = true;
       for (let i = 0; i < fns.length; ++i) {
         const f = fns[i];
-        if (f[defs.flushSymbol] === 1) {
+        if (defs.isFlushable(f)) {
           yield* next(f(defs.none), fns, i + 1);
         }
       }
     }
   };
-  const needToFlush = fns.some(fn => fn[defs.flushSymbol] === 1);
+  const needToFlush = fns.some(fn => defs.isFlushable(fn));
   if (needToFlush) g = defs.flushable(g);
   return defs.setFunctionList(g, fns);
 };
