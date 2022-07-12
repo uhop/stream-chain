@@ -18,7 +18,7 @@ const isFunctionList = o => o && o[fListSymbol] === 1;
 
 const getFinalValue = o => o.value;
 const getManyValues = o => o.values;
-const getFunctionList = o => o.fns;
+const getFunctionList = o => o.fList;
 
 const flushable = (write, final = null) => {
   const fn = final ? value => (value === none ? final() : write(value)) : write;
@@ -27,7 +27,7 @@ const flushable = (write, final = null) => {
 };
 
 const setFunctionList = (o, fns) => {
-  o.fns = fns;
+  o.fList = fns;
   o[fListSymbol] = 1;
   return o;
 }
