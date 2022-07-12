@@ -13,7 +13,7 @@ export const streamToArray = array =>
 
 export const readString = (string, quant) => new Readable({
   read() {
-    if (isNaN(quant)) {
+    if (isNaN(quant) || quant < 1) {
       this.push(string);
     } else if (string instanceof Buffer) {
       for (let i = 0; i < string.length; i += quant) {
