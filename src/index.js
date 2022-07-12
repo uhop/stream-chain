@@ -167,25 +167,34 @@ const dataSource = fn => {
 
 module.exports = chain;
 
-// to keep ESM happy
-module.exports.none = chain.none = defs.none;
-module.exports.stop = chain.stop = defs.stop;
-module.exports.Stop = chain.Stop = defs.Stop;
-module.exports.finalSymbol = chain.finalSymbol = defs.finalSymbol;
-module.exports.manySymbol = chain.manySymbol = defs.manySymbol;
-module.exports.flushSymbol = chain.flushSymbol = defs.flushSymbol;
-module.exports.finalValue = chain.finalValue = defs.finalValue;
-module.exports.many = chain.many = defs.many;
-module.exports.flushable = chain.flushable = defs.flushable;
-module.exports.isFinalValue = chain.isFinalValue = defs.isFinalValue;
-module.exports.isMany = chain.isMany = defs.isMany;
-module.exports.isFlushable = chain.isFlushable = defs.isFlushable;
-module.exports.getFinalValue = chain.getFinalValue = defs.getFinalValue;
-module.exports.getManyValues = chain.getManyValues = defs.getManyValues;
-module.exports.final = chain.final = defs.final;
+// from defs.js
+module.exports.none = defs.none;
+module.exports.stop = defs.stop;
+module.exports.Stop = defs.Stop;
 
-module.exports.chain = chain.chain = chain; // for compatibility with 2.x
-module.exports.gen = chain.gen = gen;
-module.exports.asStream = chain.asStream = asStream;
+module.exports.finalSymbol = defs.finalSymbol;
+module.exports.finalValue = defs.finalValue;
+module.exports.final = defs.final;
+module.exports.isFinalValue = defs.isFinalValue;
+module.exports.getFinalValue = defs.getFinalValue;
+
+module.exports.manySymbol = defs.manySymbol;
+module.exports.many = defs.many;
+module.exports.isMany = defs.isMany;
+module.exports.getManyValues = defs.getManyValues;
+module.exports.getFunctionList = defs.getFunctionList;
+
+module.exports.flushSymbol = defs.flushSymbol;
+module.exports.flushable = defs.flushable;
+module.exports.isFlushable = defs.isFlushable;
+
+module.exports.fListSymbol = defs.fListSymbol;
+module.exports.isFunctionList = defs.isFunctionList;
+module.exports.getFunctionList = defs.getFunctionList;
+module.exports.setFunctionList = defs.setFunctionList;
+
+module.exports.chain = chain; // for compatibility with 2.x
+module.exports.gen = gen;
+module.exports.asStream = asStream;
 
 module.exports.dataSource = dataSource;
