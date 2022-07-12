@@ -101,7 +101,11 @@ const chain = (fns, options) => {
     throw TypeError("Chain's first argument should be a non-empty array.");
   }
 
-  fns = fns.filter(fn => fn).flat(Infinity); // remove nulls and flatten
+  fns = fns
+    .filter(fn => fn)
+    .flat(Infinity)
+    .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
+    .flat(Infinity);
 
   const streams = (
       options && options.noGrouping
