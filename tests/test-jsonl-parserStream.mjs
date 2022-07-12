@@ -48,58 +48,19 @@ const roundtrip = (t, resolve, len, quant) => {
 
 test.asPromise('jsonl parserStream: smoke test', (t, resolve) => roundtrip(t, resolve));
 
-test.asPromise('jsonl parserStream: roundtrip with 1 set of objects', (t, resolve) => {
-  roundtrip(t, resolve, 1);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 2 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 2);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 3 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 3);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 4 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 4);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 5 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 5);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 6 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 6);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 7 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 7);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 8 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 8);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 9 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 9);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 10 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 10);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 11 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 11);
-});
-
-test.asPromise('jsonl parserStream: roundtrip with 12 sets of objects', (t, resolve) => {
-  roundtrip(t, resolve, 12);
-});
+for (let i = 1; i <= 12; ++i) {
+  test.asPromise('jsonl parserStream: roundtrip with a set of objects - ' + i, (t, resolve) => {
+    roundtrip(t, resolve, i);
+  });
+}
 
 for (let i = 1; i <= 12; ++i) {
-  test.asPromise('jsonl parserStream: roundtrip with different window sizes - ' + i, (t, resolve) => {
-    roundtrip(t, resolve, 10, i);
-  });
+  test.asPromise(
+    'jsonl parserStream: roundtrip with different window sizes - ' + i,
+    (t, resolve) => {
+      roundtrip(t, resolve, 10, i);
+    }
+  );
 }
 
 test.asPromise('jsonl parserStream: read file', (t, resolve) => {
