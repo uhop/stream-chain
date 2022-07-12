@@ -213,3 +213,23 @@ test.asPromise('gen: async iterator', (t, resolve) => {
     resolve();
   });
 });
+
+test.asPromise('gen: array', (t, resolve) => {
+  const output = [],
+    c = chain([fromIterable([1, 2, 3]), [x => x * x, x => 2 * x + 1], streamToArray(output)]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [3, 9, 19]);
+    resolve();
+  });
+});
+
+test.asPromise('gen: embedded arrays', (t, resolve) => {
+  const output = [],
+    c = chain([fromIterable([1, 2, 3]), [x => x * x, [x => 2 * x + 1, []]], streamToArray(output)]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [3, 9, 19]);
+    resolve();
+  });
+});

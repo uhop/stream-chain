@@ -3,7 +3,7 @@
 import test from 'tape-six';
 
 import {streamToArray} from './helpers.mjs';
-import chain, {gen} from '../src/index.js';
+import chain, {gen, none, finalValue} from '../src/index.js';
 import fromIterable from '../src/utils/readableFrom.js';
 
 test.asPromise('transducers: smoke test', (t, resolve) => {
@@ -29,7 +29,7 @@ test.asPromise('transducers: final', (t, resolve) => {
       fromIterable([1, 2, 3]),
       gen(
         x => x * x,
-        x => chain.finalValue(x),
+        x => finalValue(x),
         x => 2 * x + 1
       ),
       streamToArray(output)
@@ -47,7 +47,7 @@ test.asPromise('transducers: nothing', (t, resolve) => {
       fromIterable([1, 2, 3]),
       gen(
         x => x * x,
-        () => chain.none,
+        () => none,
         x => 2 * x + 1
       ),
       streamToArray(output)
@@ -72,6 +72,26 @@ test.asPromise('transducers: empty', (t, resolve) => {
 test.asPromise('transducers: one', (t, resolve) => {
   const output = [],
     c = chain([fromIterable([1, 2, 3]), x => x * x, gen(x => 2 * x + 1), streamToArray(output)]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [3, 9, 19]);
+    resolve();
+  });
+});
+
+test.asPromise('transducers: array', (t, resolve) => {
+  const output = [],
+    c = chain([fromIterable([1, 2, 3]), [x => x * x, x => 2 * x + 1], streamToArray(output)]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [3, 9, 19]);
+    resolve();
+  });
+});
+
+test.asPromise('transducers: embedded arrays', (t, resolve) => {
+  const output = [],
+    c = chain([fromIterable([1, 2, 3]), [x => x * x, [x => 2 * x + 1, []]], streamToArray(output)]);
 
   c.on('end', () => {
     t.deepEqual(output, [3, 9, 19]);
