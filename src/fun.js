@@ -72,7 +72,11 @@ const flush = async (fns, index, collect) => {
 };
 
 const collect = (collect, fns) => {
-  fns = fns.filter(fn => fn).flat(Infinity);
+  fns = fns
+    .filter(fn => fn)
+    .flat(Infinity)
+    .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
+    .flat(Infinity);
   if (!fns.length) {
     fns = [x => x];
   }
@@ -102,8 +106,7 @@ const asArray = (...fns) => {
     return r;
   };
   if (defs.isFlushable(f)) g = defs.flushable(g);
-  if (defs.isFunctionList(f)) defs.setFunctionList(g, f.fns);
-  return g;
+  return defs.setFunctionList(g, defs.getFunctionList(f));
 };
 
 const fun = (...fns) => {
@@ -119,8 +122,7 @@ const fun = (...fns) => {
       return {[defs.manySymbol]: 1, values: results};
     });
   if (defs.isFlushable(f)) g = defs.flushable(g);
-  if (defs.isFunctionList(f)) defs.setFunctionList(g, f.fns);
-  return g;
+  return defs.setFunctionList(g, defs.getFunctionList(f));
 };
 
 module.exports = fun;
