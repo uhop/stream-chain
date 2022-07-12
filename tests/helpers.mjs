@@ -28,6 +28,17 @@ export const readString = (string, quant) => new Readable({
   }
 });
 
+export const writeToArray = array => new Writable({
+  write(chunk, _, callback) {
+    if (typeof chunk == 'string') {
+      array.push(chunk);
+    } else {
+      array.push(chunk.toString('utf8'));
+    }
+    callback(null);
+  }
+});
+
 export const delay = (fn, ms = 20) => async (...args) =>
   new Promise((resolve, reject) => {
     setTimeout(() => {

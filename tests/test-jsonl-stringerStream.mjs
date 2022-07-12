@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import {Writable, Transform} from 'stream';
 
-import {readString} from './helpers.mjs';
+import {readString, writeToArray} from './helpers.mjs';
 
 import parserStream from '../src/jsonl/parserStream.js';
 import stringerStream from '../src/jsonl/stringerStream.js';
@@ -99,4 +99,57 @@ test.asPromise('jsonl stringerStream: multiple', (t, resolve) => {
         }
       })
     );
+});
+
+test.asPromise('jsonl stringerStream: custom separators - one value', (t, resolve) => {
+  const output = [],
+    stringer = stringerStream({emptyValue: '{}', prefix: '[', suffix: ']', separator: ','}),
+    pipeline = stringer.pipe(writeToArray(output));
+
+  pipeline.on('finish', () => {
+    t.equal(output.join(''), '[1]');
+    resolve();
+  });
+
+  stringer.end(1);
+});
+
+test.asPromise('jsonl stringerStream: custom separators - two value', (t, resolve) => {
+  const output = [],
+    stringer = stringerStream({emptyValue: '{}', prefix: '[', suffix: ']', separator: ','}),
+    pipeline = stringer.pipe(writeToArray(output));
+
+  pipeline.on('finish', () => {
+    t.equal(output.join(''), '[2,1]');
+    resolve();
+  });
+
+  stringer.write(2);
+  stringer.end(1);
+});
+
+test.asPromise('jsonl stringerStream: custom separators - no value', (t, resolve) => {
+  const output = [],
+    stringer = stringerStream({emptyValue: '{}', prefix: '[', suffix: ']', separator: ','}),
+    pipeline = stringer.pipe(writeToArray(output));
+
+  pipeline.on('finish', () => {
+    t.equal(output.join(''), '{}');
+    resolve();
+  });
+
+  stringer.end();
+});
+
+test.asPromise('jsonl stringerStream: custom separators - no value (default)', (t, resolve) => {
+  const output = [],
+    stringer = stringerStream({prefix: '[', suffix: ']', separator: ','}),
+    pipeline = stringer.pipe(writeToArray(output));
+
+  pipeline.on('finish', () => {
+    t.equal(output.join(''), '[]');
+    resolve();
+  });
+
+  stringer.end();
 });
