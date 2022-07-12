@@ -72,7 +72,7 @@ const gen = (...fns) => {
   };
   const needToFlush = fns.some(fn => fn[defs.flushSymbol] === 1);
   if (needToFlush) g = defs.flushable(g);
-  return g;
+  return defs.setFunctionList(g, fns);
 };
 
 module.exports = gen;

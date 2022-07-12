@@ -77,7 +77,7 @@ const collect = (collect, fns) => {
     fns = [x => x];
   }
   let flushed = false;
-  const g = async value => {
+  let g = async value => {
     if (flushed) throw Error('Call to a flushed pipe.');
     if (value !== defs.none) {
       await next(value, fns, 0, collect);
@@ -86,8 +86,9 @@ const collect = (collect, fns) => {
       await flush(fns, 0, collect);
     }
   };
-  const needToFlush = fns.some(fn => fn[defs.flushSymbol] === 1);
-  return needToFlush ? defs.flushable(g) : g;
+  const needToFlush = fns.some(fn => defs.isFlushable(fn));
+  if (needToFlush) g = defs.flushable(g);
+  return defs.setFunctionList(g, fns);
 };
 
 const asArray = (...fns) => {
@@ -100,7 +101,8 @@ const asArray = (...fns) => {
     results = null;
     return r;
   };
-  if (f[defs.flushSymbol] === 1) g = defs.flushable(g);
+  if (defs.isFlushable(f)) g = defs.flushable(g);
+  if (defs.isFunctionList(f)) defs.setFunctionList(g, f.fns);
   return g;
 };
 
@@ -116,7 +118,8 @@ const fun = (...fns) => {
       }
       return {[defs.manySymbol]: 1, values: results};
     });
-  if (f[defs.flushSymbol] === 1) g = defs.flushable(g);
+  if (defs.isFlushable(f)) g = defs.flushable(g);
+  if (defs.isFunctionList(f)) defs.setFunctionList(g, f.fns);
   return g;
 };
 
