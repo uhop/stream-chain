@@ -55,6 +55,6 @@
     ]
   },
   "devDependencies": {
-    "tape-six": "^0.9.1"
+    "tape-six": "^0.9.2"
   }
 }
