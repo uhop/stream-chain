@@ -30,7 +30,7 @@
   },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
-    "test": "tape6 --flags DOF"
+    "test": "tape6 --flags FO"
   },
   "repository": {
     "type": "git",
