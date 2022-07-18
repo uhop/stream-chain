@@ -65,7 +65,11 @@ for (let i = 1; i <= 12; ++i) {
 
 test.asPromise('jsonl parserStream: read file', (t, resolve) => {
   if (!/^file:\/\//.test(import.meta.url)) throw Error('Cannot get the current working directory');
-  const fileName = path.join(path.dirname(import.meta.url.substring(7)), './data/sample.jsonl.gz');
+  const isWindows = path.sep === '\\',
+    fileName = path.join(
+      path.dirname(import.meta.url.substring(isWindows ? 8 : 7)),
+      './data/sample.jsonl.gz'
+    );
   let count = 0;
   fs.createReadStream(fileName)
     .pipe(zlib.createGunzip())
