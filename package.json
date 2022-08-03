@@ -40,7 +40,7 @@
     "stream",
     "chain"
   ],
-  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (http://lazutkin.com/)",
+  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/uhop/stream-chain/issues"
