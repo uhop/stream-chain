@@ -1,11 +1,36 @@
 {
   "name": "stream-chain",
-  "version": "2.2.5",
+  "version": "3.0.0",
   "description": "Chain functions as transform streams.",
-  "main": "index.js",
+  "type": "commonjs",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./*.js": "./src/*.js",
+    "./utils/*": "./src/utils/*.js",
+    "./asStream.js": "./src/asStream.js",
+    "./defs.js": "./src/defs.js",
+    "./fun.js": "./src/fun.js",
+    "./gen.js": "./src/gen.js",
+    "./jsonl/parser.js": "./src/jsonl/parser.js",
+    "./jsonl/stringer.js": "./src/jsonl/stringer.js",
+    "./utils/batch.js": "./src/utils/batch.js",
+    "./utils/fixUtf8Stream.js": "./src/utils/fixUtf8Stream.js",
+    "./utils/fold.js": "./src/utils/fold.js",
+    "./utils/fromIterable.js": "./src/utils/fromIterable.js",
+    "./utils/lines.js": "./src/utils/lines.js",
+    "./utils/reduce.js": "./src/utils/reduce.js",
+    "./utils/reduceStream.js": "./src/utils/reduceStream.js",
+    "./utils/scan.js": "./src/utils/scan.js",
+    "./utils/skip.js": "./src/utils/skip.js",
+    "./utils/skipWhile.js": "./src/utils/skipWhile.js",
+    "./utils/take.js": "./src/utils/take.js",
+    "./utils/takeWhile.js": "./src/utils/takeWhile.js",
+    "./utils/takeWithSkip.js": "./src/utils/takeWithSkip.js"
+  },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
-    "test": "node tests/tests.js"
+    "test": "tape6 --flags FO"
   },
   "repository": {
     "type": "git",
@@ -15,17 +40,21 @@
     "stream",
     "chain"
   ],
-  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (http://lazutkin.com/)",
+  "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/uhop/stream-chain/issues"
   },
   "homepage": "https://github.com/uhop/stream-chain#readme",
-  "devDependencies": {
-    "heya-unit": "^0.3.0"
-  },
   "files": [
-    "/*.js",
-    "/utils"
-  ]
+    "src"
+  ],
+  "tape6": {
+    "tests": [
+      "/tests/test-*.mjs"
+    ]
+  },
+  "devDependencies": {
+    "tape-six": "^0.9.3"
+  }
 }
