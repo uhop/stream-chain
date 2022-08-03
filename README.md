@@ -12,20 +12,24 @@ Originally `stream-chain` was used internally with [stream-fork](https://www.npm
 ## Intro
 
 ```js
-const Chain = require('stream-chain');
+import chain from 'stream-chain';
+// or: const chain = require('stream-chain');
 
-const fs = require('fs');
-const zlib = require('zlib');
-const {Transform} = require('stream');
+import fs from 'fs';
+import zlib from 'zlib';
+import {Transform} from 'stream';
 
 // the chain will work on a stream of number objects
-const chain = new Chain([
+const pipeline = new chain([
   // transforms a value
   x => x * x,
+
   // returns several values
-  x => [x - 1, x, x + 1],
+  x => chain.many([x - 1, x, x + 1]),
+
   // waits for an asynchronous operation
   async x => await getTotalFromDatabaseByKey(x),
+
   // returns multiple values with a generator
   function* (x) {
     for (let i = x; i > 0; --i) {
@@ -33,23 +37,30 @@ const chain = new Chain([
     }
     return 0;
   },
+
   // filters out even values
   x => x % 2 ? x : null,
+
   // uses an arbitrary transform stream
   new Transform({
-    writableObjectMode: true,
+    objectMode: true,
     transform(x, _, callback) {
-      // transform to text
-      callback(null, x.toString());
+      callback(null, x + 1);
     }
   }),
+
+  // transform to strings
+  x => '' + x,
+
   // compress
   zlib.createGzip()
 ]);
+
 // log errors
-chain.on('error', error => console.log(error));
+pipeline.on('error', error => console.log(error));
+
 // use the chain, and save the result to a file
-dataSource.pipe(chain).pipe(fs.createWriteStream('output.txt.gz'));
+dataSource.pipe(pipeline).pipe(fs.createWriteStream('output.txt.gz'));
 ```
 
 Making processing pipelines appears to be easy: just chain functions one after another, and we are done. Real life pipelines filter objects out and/or produce more objects out of a few ones. On top of that we have to deal with asynchronous operations, while processing or producing data: networking, databases, files, user responses, and so on. Unequal number of values per stage, and unequal throughput of stages introduced problems like [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/), which requires algorithms implemented by [streams](https://nodejs.org/api/stream.html).
@@ -65,37 +76,29 @@ npm i --save stream-chain
 
 ## Documentation
 
-`Chain`, which is returned by `require('stream-chain')`, is based on [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex). It chains its dependents in a single pipeline optionally binding `error` events.
+All documentation can be found in the [wiki](https://github.com/uhop/stream-chain/wiki). It document in details the main function and various utilities and helpers that can simplify stream programming. Additionally it includes a support for JSONL (line-separated JSON files).
 
-Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`index.js`).
+An object that is returned by `chain()` is based on [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex). It chains its dependents in a single pipeline optionally binding `error` events.
 
-### Constructor: `new Chain(fns[, options])`
+Many details about this package can be discovered by looking at test files located in `tests/` and in the source code (`src/`).
 
-The constructor accepts the following arguments:
+### `chain(fns[, options])`
 
-* `fns` is an array of functions arrays or stream instances.
-  * If a value is a function, a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream is created, which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters. The function will be called in the context of the created stream.
+The factory function accepts the following arguments:
+
+* `fns` is an array of functions, arrays or stream instances.
+  * If a value is a function, it is a candidate for a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream (see below for more details), which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters.
     * If it is a regular function, it can return:
       * Regular value:
-        * *(deprecated since 2.1.0)* Array of values to pass several or zero values to the next stream as they are.
-          ```js
-          // produces no values:
-          x => []
-          // produces two values:
-          x => [x, x + 1]
-          // produces one array value:
-          x => [[x, x + 1]]
-          ```
-        * Single value.
-          * If it is `undefined` or `null`, no value shall be passed.
-          * Otherwise, the value will be passed to the next stream.
-          ```js
-          // produces no values:
-          x => null
-          x => undefined
-          // produces one value:
-          x => x
-          ```
+        * If it is `undefined` or `null`, no value shall be passed.
+        * Otherwise, the value will be passed to the next stream.
+        ```js
+        // produces no values:
+        x => null
+        x => undefined
+        // produces one value:
+        x => x
+        ```
       * Special value:
         * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
           ```js
@@ -146,7 +149,7 @@ The constructor accepts the following arguments:
       return x;
     }
     ```
-  * *(since 2.2.0)* If it is an asynchronous generator function, each yield should produce a regular value.
+  * If it is an asynchronous generator function, each yield should produce a regular value.
     * In essence, it is covered under "special values" as a function that returns a generator object.
     ```js
     // produces multiple values:
@@ -160,13 +163,8 @@ The constructor accepts the following arguments:
       return x;
     }
     ```
-  * *(since 2.1.0)* If a value is an array, it is assumed to be an array of regular functions.
-    Their values are passed in a chain. All values (including `null`, `undefined`, and arrays) are allowed
-    and passed without modifications. The last value is a subject to processing defined above for regular functions.
-    * Empty arrays are ignored.
-    * If any function returns a value produced by `Chain.final(value)` (see below), it terminates the chain using
-      `value` as the final value of the chain.
-    * This feature bypasses streams. It is implemented for performance reasons.
+  * If a value is an array, its items are assumed to be functions, streams or other such arrays. The array is flattened, all individual items are included in a chain sequentially.
+    * It is a provision to create lightweight bundles from pipeline items.
   * If a value is a valid stream, it is included as is in the pipeline.
     * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform).
     * [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex).
@@ -178,142 +176,24 @@ The constructor accepts the following arguments:
         * [Two modes](https://nodejs.org/api/stream.html#stream_two_modes).
         * [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
 * `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
-  * If `options` is not specified, or falsy, it is assumed to be:
+  * The default options is this object:
     ```js
     {writableObjectMode: true, readableObjectMode: true}
     ```
+    If `options` is specified it is copied over the default options.
   * Always make sure that `writableObjectMode` is the same as the corresponding object mode of the first stream, and `readableObjectMode` is the same as the corresponding object mode of the last stream.
     * Eventually both these modes can be deduced, but Node does not define the standard way to determine it, so currently it cannot be done reliably.
   * Additionally the following custom properties are recognized:
-    * `skipEvents` is an optional flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
+    * `skipEvents` is an optional boolean flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
+    * `noGrouping` is an optional boolean flag. If it is falsy (the default), all subsequent functions are grouped together using the `gen()` utility for improved performance. If it is specified and truthy, all functions will be wrapped as streams individually. This mode is compatible with how the 2.x version works.
 
 An instance can be used to attach handlers for stream events.
 
 ```js
-const chain = new Chain([x => x * x, x => [x - 1, x, x + 1]]);
-chain.on('error', error => console.error(error));
-dataSource.pipe(chain);
+const pipeline = chain([x => x * x, x => [x - 1, x, x + 1]]);
+pipeline.on('error', error => console.error(error));
+dataSource.pipe(pipeline);
 ```
-
-### Properties
-
-Following public properties are available:
-
-* `streams` is an array of streams created by a constructor. Its values either [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) streams that use corresponding functions from a constructor parameter, or user-provided streams. All streams are piped sequentially starting from the beginning.
-* `input` is the beginning of the pipeline. Effectively it is the first item of `streams`.
-* `output` is the end of the pipeline. Effectively it is the last item of `streams`.
-
-Generally, a `Chain` instance should be used to represent a chain:
-
-```js
-const chain = new Chain([
-  x => x * x,
-  x => [x - 1, x, x + 1],
-  new Transform({
-    writableObjectMode: true,
-    transform(chunk, _, callback) {
-      callback(null, chunk.toString());
-    }
-  })
-]);
-dataSource
-  .pipe(chain);
-  .pipe(zlib.createGzip())
-  .pipe(fs.createWriteStream('output.txt.gz'));
-```
-
-But in some cases `input` and `output` provide a better control over how a data processing pipeline should be organized:
-
-```js
-chain.output
-  .pipe(zlib.createGzip())
-  .pipe(fs.createWriteStream('output.txt.gz'));
-dataSource.pipe(chain.input);
-```
-
-Please select what style you want to use, and never mix them together with the same object.
-
-### Static methods
-
-Following static methods are available:
-
-* `chain(fns[, options)` is a helper factory function, which has the same arguments as the constructor and returns a `Chain` instance.
-  ```js
-  const {chain} = require('stream-chain');
-
-  // simple
-  dataSource
-    .pipe(chain([x => x * x, x => [x - 1, x, x + 1]]));
-
-  // all inclusive
-  chain([
-    dataSource,
-    x => x * x,
-    x => [x - 1, x, x + 1],
-    zlib.createGzip(),
-    fs.createWriteStream('output.txt.gz')
-  ])
-  ```
-* *(since 2.1.0)* `final(value)` is a helper factory function, which can be used in by chained functions (see above the array of functions).
-  It returns a special value, which terminates the chain and uses the passed value as the result of the chain.
-  ```js
-  const {chain, final} = require('stream-chain');
-
-  // simple
-  dataSource
-    .pipe(chain([[x => x * x, x => 2 * x + 1]]));
-  // faster than [x => x * x, x => 2 * x + 1]
-
-  // final
-  dataSource
-    .pipe(chain([[
-      x => x * x,
-      x => final(x),
-      x => 2 * x + 1
-    ]]));
-  // the same as [[x => x * x, x => x]]
-  // the same as [[x => x * x]]
-  // the same as [x => x * x]
-
-  // final as a terminator
-  dataSource
-    .pipe(chain([[
-      x => x * x,
-      x => final(),
-      x => 2 * x + 1
-    ]]));
-  // produces no values, because the final value is undefined,
-  // which is interpreted as "no value shall be passed"
-  // see the doc above
-
-  // final() as a filter
-  dataSource
-    .pipe(chain([[
-      x => x * x,
-      x => x % 2 ? final() : x,
-      x => 2 * x + 1
-    ]]));
-  // only even values are passed, odd values are ignored
-
-  // if you want to be really performant...
-  const none = final();
-  dataSource
-    .pipe(chain([[
-      x => x * x,
-      x => x % 2 ? none : x,
-      x => 2 * x + 1
-    ]]));
-  ```
-* *(since 2.1.0)* `many(array)` is a helper factory function, which is used to wrap arrays to be interpreted as multiple values returned from a function.
-  At the moment it is redundant: you can use a simple array to indicate that, but a naked array is being deprecated and in future versions it will be passed as is.
-  The thinking is that using `many()` is better indicates the intention. Additionally, in the future versions it will be used by array of functions (see above).
-  ```js
-  const {chain, many} = require('stream-chain');
-
-  dataSource
-    .pipe(chain([x => many([x, x + 1, x + 2])]));
-  // currently the same as [x => [x, x + 1, x + 2]]
-  ```
 
 ## Release History
 
