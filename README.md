@@ -19,7 +19,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 import {Transform} from 'stream';
 
-// the chain will work on a stream of number objects
+// this pipeline will work on a stream of numbers
 const pipeline = new chain([
   // transforms a value
   x => x * x,
@@ -55,6 +55,9 @@ const pipeline = new chain([
   // compress
   zlib.createGzip()
 ]);
+
+// the chain is a regular stream
+// it can be used with normal stream methods
 
 // log errors
 pipeline.on('error', error => console.log(error));
