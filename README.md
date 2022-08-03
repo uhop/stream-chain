@@ -19,7 +19,7 @@ import fs from 'fs';
 import zlib from 'zlib';
 import {Transform} from 'stream';
 
-// this pipeline will work on a stream of numbers
+// this chain object will work on a stream of numbers
 const pipeline = new chain([
   // transforms a value
   x => x * x,
@@ -56,13 +56,13 @@ const pipeline = new chain([
   zlib.createGzip()
 ]);
 
-// the chain is a regular stream
+// the chain object is a regular stream
 // it can be used with normal stream methods
 
 // log errors
 pipeline.on('error', error => console.log(error));
 
-// use the chain, and save the result to a file
+// use the chain object, and save the result to a file
 dataSource.pipe(pipeline).pipe(fs.createWriteStream('output.txt.gz'));
 ```
 
