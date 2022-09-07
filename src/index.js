@@ -101,7 +101,7 @@ const chain = (fns, options) => {
     throw TypeError("Chain's first argument should be a non-empty array.");
   }
 
-  fns = fns.filter(fn => fn).flat(Infinity);
+  fns = fns.flat(Infinity).filter(fn => fn);
 
   const streams = (
       options && options.noGrouping
