@@ -20,7 +20,7 @@ import zlib from 'zlib';
 import {Transform} from 'stream';
 
 // this chain object will work on a stream of numbers
-const pipeline = new chain([
+const pipeline = chain([
   // transforms a value
   x => x * x,
 
