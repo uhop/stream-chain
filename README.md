@@ -198,6 +198,10 @@ pipeline.on('error', error => console.error(error));
 dataSource.pipe(pipeline);
 ```
 
+## License
+
+BSD-3-Clause
+
 ## Release History
 
 - 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*

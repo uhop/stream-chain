@@ -1,6 +1,6 @@
 {
   "name": "stream-chain",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Chain functions as transform streams.",
   "type": "commonjs",
   "main": "src/index.js",
@@ -55,6 +55,6 @@
     ]
   },
   "devDependencies": {
-    "tape-six": "^0.9.3"
+    "tape-six": "^0.9.6"
   }
 }
