@@ -2,10 +2,10 @@
 
 import test from 'tape-six';
 
-import fs from 'fs';
-import path from 'path';
-import zlib from 'zlib';
-import {Writable} from 'stream';
+import fs from 'node:fs';
+import path from 'node:path';
+import zlib from 'node:zlib';
+import {Writable} from 'node:stream';
 
 import {readString} from './helpers.mjs';
 

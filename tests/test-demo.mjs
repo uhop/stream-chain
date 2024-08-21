@@ -2,7 +2,7 @@
 
 import test from 'tape-six';
 
-import {Transform} from 'stream';
+import {Transform} from 'node:stream';
 import chain from '../src/index.js';
 import readableFrom from '../src/utils/readableFrom.js';
 
