@@ -3,7 +3,7 @@
 [npm-img]:      https://img.shields.io/npm/v/stream-chain.svg
 [npm-url]:      https://npmjs.org/package/stream-chain
 
-`stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
+`stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, and existing streams, while properly handling [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
 
 Originally `stream-chain` was used internally with [stream-fork](https://www.npmjs.com/package/stream-fork) and [stream-json](https://www.npmjs.com/package/stream-json) to create flexible data processing pipelines.
 
@@ -66,7 +66,7 @@ pipeline.on('error', error => console.log(error));
 dataSource.pipe(pipeline).pipe(fs.createWriteStream('output.txt.gz'));
 ```
 
-Making processing pipelines appears to be easy: just chain functions one after another, and we are done. Real life pipelines filter objects out and/or produce more objects out of a few ones. On top of that we have to deal with asynchronous operations, while processing or producing data: networking, databases, files, user responses, and so on. Unequal number of values per stage, and unequal throughput of stages introduced problems like [backpressure](https://nodejs.org/en/docs/guides/backpressuring-in-streams/), which requires algorithms implemented by [streams](https://nodejs.org/api/stream.html).
+Making processing pipelines appears to be easy: just chain functions one after another, and we are done. Real life pipelines filter objects out and/or produce more objects out of a few ones. On top of that we have to deal with asynchronous operations, while processing or producing data: networking, databases, files, user responses, and so on. Unequal number of values per stage, and unequal throughput of stages introduced problems like [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams), which requires algorithms implemented by [streams](https://nodejs.org/api/stream.html).
 
 While a lot of API improvements were made to make streams easy to use, in reality, a lot of boilerplate is required when creating a pipeline. `stream-chain` eliminates most of it.
 
@@ -172,11 +172,12 @@ The factory function accepts the following arguments:
     * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform).
     * [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex).
     * The very first stream can be [Readable](https://nodejs.org/api/stream.html#stream_class_stream_readable).
-      * In this case a `Chain` instance ignores all possible writes to the front, and ends when the first stream ends.
+      * In this case the pipeline ignores all possible writes to the front, and ends when the first stream ends.
     * The very last stream can be [Writable](https://nodejs.org/api/stream.html#stream_class_stream_writable).
-      * In this case a `Chain` instance does not produce any output, and finishes when the last stream finishes.
+      * In this case the pipeline does not produce any output, and finishes when the last stream finishes.
       * Because `'data'` event is not used in this case, the instance resumes itself automatically. Read about it in Node's documentation:
-        * [Two modes](https://nodejs.org/api/stream.html#stream_two_modes).
+        * [Two reading modes](https://nodejs.org/api/stream.html#two-reading-modes).
+        * [Three states](https://nodejs.org/api/stream.html#three-states).
         * [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
 * `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
   * The default options is this object:
@@ -204,6 +205,8 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
+- 3.0.0 *New major version. Unreleased.*
 - 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*
 - 2.2.4 *Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang)).*
 - 2.2.3 *Technical release. No need to upgrade.*
