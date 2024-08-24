@@ -1,6 +1,6 @@
 'use strict';
 
-const {Transform} = require('stream');
+const {Transform} = require('node:stream');
 
 const stringer = options => {
   let first = true,

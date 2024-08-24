@@ -1,6 +1,6 @@
 'use strict';
 
-const {Duplex} = require('stream');
+const {Duplex} = require('node:stream');
 const defs = require('./defs');
 
 const asStream = (fn, options) => {

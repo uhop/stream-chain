@@ -1,5 +1,5 @@
 
-const {PassThrough} = require('stream');
+const {PassThrough} = require('node:stream');
 
 const defs = require('../../src/defs');
 const asStream = require('../../src/AsStream');

@@ -1,6 +1,6 @@
 'use strict';
 
-const {Readable} = require('stream');
+const {Readable} = require('node:stream');
 const defs = require('../defs');
 
 const readableFrom = options => {

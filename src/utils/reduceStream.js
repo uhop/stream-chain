@@ -1,6 +1,6 @@
 'use strict';
 
-const {Writable} = require('stream');
+const {Writable} = require('node:stream');
 
 const defaultInitial = 0;
 const defaultReducer = (acc, value) => value;

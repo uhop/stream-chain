@@ -15,9 +15,9 @@ Originally `stream-chain` was used internally with [stream-fork](https://www.npm
 import chain from 'stream-chain';
 // or: const chain = require('stream-chain');
 
-import fs from 'fs';
-import zlib from 'zlib';
-import {Transform} from 'stream';
+import fs from 'node:fs';
+import zlib from 'node:zlib';
+import {Transform} from 'node:stream';
 
 // this chain object will work on a stream of numbers
 const pipeline = chain([

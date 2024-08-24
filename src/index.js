@@ -1,6 +1,6 @@
 'use strict';
 
-const {Readable, Writable,Duplex} = require('stream');
+const {Readable, Writable, Duplex} = require('node:stream');
 const defs = require('./defs');
 const gen = require('./gen');
 const asStream = require('./asStream');
