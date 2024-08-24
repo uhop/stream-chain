@@ -179,6 +179,8 @@ The factory function accepts the following arguments:
         * [Two reading modes](https://nodejs.org/api/stream.html#two-reading-modes).
         * [Three states](https://nodejs.org/api/stream.html#three-states).
         * [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
+  * *(Since 3.1.0)* If a value is a web stream object (like `ReadableStream` or `WritableStream`), it is adapted to a corresponding Node stream and included in the pipeline.
+    * Note that the support of web streams is still experimental in Node.
 * `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
   * The default options is this object:
     ```js
@@ -205,6 +207,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.1.0 *Added a seamless support for web streams.*
 - 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
 - 3.0.0 *New major version. Unreleased.*
 - 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*
