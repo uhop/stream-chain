@@ -1,6 +1,6 @@
 'use strict';
 
-const {Duplex} = require('stream');
+const {Readable, Writable,Duplex} = require('stream');
 const defs = require('./defs');
 const gen = require('./gen');
 const asStream = require('./asStream');
@@ -28,6 +28,19 @@ const isDuplexNodeStream = obj =>
   typeof obj.on === 'function' &&
   typeof obj.write === 'function';
 
+const isReadableWebStream = obj =>
+  obj && globalThis.ReadableStream && obj instanceof globalThis.ReadableStream;
+
+const isWritableWebStream = obj =>
+  obj && globalThis.WritableStream && obj instanceof globalThis.WritableStream;
+
+const isDuplexWebStream = obj =>
+  obj &&
+  globalThis.ReadableStream &&
+  obj.readable instanceof globalThis.ReadableStream &&
+  globalThis.WritableStream &&
+  obj.writable instanceof globalThis.WritableStream;
+
 const groupFunctions = (output, fn, index, fns) => {
   if (
     isDuplexNodeStream(fn) ||
@@ -35,6 +48,18 @@ const groupFunctions = (output, fn, index, fns) => {
     (index === fns.length - 1 && isWritableNodeStream(fn))
   ) {
     output.push(fn);
+    return output;
+  }
+  if (isDuplexWebStream(fn)) {
+    output.push(Duplex.fromWeb(fn, {objectMode: true}));
+    return output;
+  }
+  if (!index && isReadableWebStream(fn)) {
+    output.push(Readable.fromWeb(fn, {objectMode: true}));
+    return output;
+  }
+  if (index === fns.length - 1 && isWritableWebStream(fn)) {
+    output.push(Writable.fromWeb(fn, {objectMode: true}));
     return output;
   }
   if (typeof fn != 'function')
@@ -65,6 +90,15 @@ const wrapFunctions = (fn, index, fns) => {
     (index === fns.length - 1 && isWritableNodeStream(fn))
   ) {
     return fn; // an acceptable stream
+  }
+  if (isDuplexWebStream(fn)) {
+    return Duplex.fromWeb(fn, {objectMode: true});
+  }
+  if (!index && isReadableWebStream(fn)) {
+    return Readable.fromWeb(fn, {objectMode: true});
+  }
+  if (index === fns.length - 1 && isWritableWebStream(fn)) {
+    return Writable.fromWeb(fn, {objectMode: true});
   }
   if (typeof fn == 'function') return chain.asStream(fn); // a function
   throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
