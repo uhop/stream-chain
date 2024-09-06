@@ -2,7 +2,7 @@
 
 const {none, flushable} = require('../defs');
 
-const fold = (f, acc) =>
+const fold = (fn, acc) =>
   flushable(value => {
     if (value === none) {
       // clean up acc
@@ -10,7 +10,7 @@ const fold = (f, acc) =>
       acc = null;
       return result;
     }
-    const result = f(acc, value);
+    const result = fn(acc, value);
     if (result && typeof result.then == 'function') {
       return result.then(result => {
         acc = result;

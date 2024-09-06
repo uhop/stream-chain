@@ -2,11 +2,11 @@
 
 const {none} = require('../defs');
 
-const skipWhile = f => {
+const skipWhile = fn => {
   let test = true;
   return value => {
     if (!test) return value;
-    const result = f(value);
+    const result = fn(value);
     if (result && typeof result.then == 'function') {
       return result.then(result => {
         if (result) return none;

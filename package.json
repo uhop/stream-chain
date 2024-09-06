@@ -10,7 +10,8 @@
   },
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
-    "test": "tape6 --flags FO"
+    "test": "tape6 --flags FO",
+    "ts-test": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -27,7 +28,9 @@
   },
   "homepage": "https://github.com/uhop/stream-chain#readme",
   "files": [
-    "src"
+    "src",
+    "LICENSE",
+    "README.md"
   ],
   "tape6": {
     "tests": [
@@ -35,6 +38,8 @@
     ]
   },
   "devDependencies": {
-    "tape-six": "^0.9.6"
+    "@types/node": "^22.5.4",
+    "tape-six": "^0.9.6",
+    "typescript": "^5.5.4"
   }
 }
