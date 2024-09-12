@@ -1,58 +1,45 @@
-export = Gen.gen;
+import type {OutputType, First, Last, Flatten} from './defs';
 
-declare namespace Gen {
-  type First<L extends readonly unknown[]> = L extends readonly [infer T, ...readonly unknown[]] ? T : never;
-  type Last<L extends readonly unknown[]> = L extends readonly [...readonly unknown[], infer T] ? T : never;
-  type Flatten<L extends readonly unknown[]> = L extends readonly [infer T, ...infer R]
-    ? T extends readonly unknown[]
-      ? readonly [...Flatten<T>, ...Flatten<R>]
-      : readonly [T, ...Flatten<R>]
-    : L;
+export = gen;
 
-  type Fn<I = any, O = any> = (arg: I, ...rest: readonly unknown[]) => O;
+export type Arg0<F> = F extends readonly unknown[]
+  ? Flatten<F> extends readonly [infer F1, ...(readonly unknown[])]
+    ? Arg0<F1>
+    : Flatten<F> extends readonly (infer F1)[]
+    ? Arg0<F1>
+    : never
+  : F extends (...args: readonly any[]) => unknown
+  ? Parameters<F>[0]
+  : never;
 
-  type Arg0<F> = F extends readonly unknown[]
-    ? Flatten<F> extends readonly [infer F1, ...readonly unknown[]]
-      ? Arg0<F1>
-      : Flatten<F> extends readonly (infer F1)[]
-      ? Arg0<F1>
-      : never
-    : F extends (...args: readonly any[]) => unknown
-    ? Parameters<F>[0]
-    : never;
+export type Ret<F> = F extends readonly unknown[]
+  ? Flatten<F> extends readonly [...unknown[], infer F1]
+    ? Ret<F1>
+    : never
+  : F extends function
+  ? OutputType<F>
+  : never;
 
-  type Ret<F> = F extends readonly unknown[]
-    ? Flatten<F> extends readonly [...unknown[], infer F1]
-      ? Ret<F1>
-      : never
-    : F extends Fn
-    ? ReturnType<F> extends Generator<infer O, unknown, unknown>
-      ? O
-      : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
-      ? O
-      : ReturnType<F> extends Promise<infer O>
-      ? O
-      : ReturnType<F>
-    : never;
+export type FnItem<I, F> = F extends readonly [infer F1, ...infer R]
+  ? readonly [FnItem<I, F1>, ...FnList<Ret<F1>, R>]
+  : F extends function[]
+  ? readonly [FnItem<I, F[number]>]
+  : F extends function
+  ? I extends Arg0<F>
+    ? F
+    : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
+  : never;
 
-  type FnItem<I, F> = F extends readonly [infer F1, ...infer R]
-    ? readonly [FnItem<I, F1>, ...FnList<Ret<F1>, R>]
-    : F extends Fn<any, unknown>[]
-    ? readonly [FnItem<I, F[number]>]
-    : F extends Fn<any, unknown>
-    ? I extends Arg0<F>
-      ? F
-      : (arg: I, ...rest: unknown[]) => ReturnType<F>
-    : never;
+export type FnList<I, L> = L extends readonly [infer F1, ...infer R]
+  ? readonly [FnItem<I, F1>, ...FnList<Ret<F1>, R>]
+  : L;
 
-  type FnList<I, L> = L extends readonly [infer F1, ...infer R] ? readonly [FnItem<I, F1>, ...FnList<Ret<F1>, R>] : L;
-
-  function gen(): (arg: any) => AsyncGenerator<any, void, unknown>;
-  function gen<L extends unknown[]>(
-    ...fns: FnList<Arg0<L>, L>
-  ): Flatten<L> extends readonly [Fn, ...Fn[]]
-    ? (arg: Arg0<L>) => AsyncGenerator<Ret<L>, void, unknown>
-    : Flatten<L> extends Fn[]
-    ? (arg: any) => AsyncGenerator<any, void, unknown>
-    : never;
-}
+declare function gen(): (arg: any) => AsyncGenerator<any, void, unknown>;
+declare function gen<L extends readonly unknown[]>(
+  ...fns: FnList<Arg0<L>, L>
+): Flatten<L> extends readonly [function, ...function[]]
+  ? (arg: Arg0<L>) => AsyncGenerator<Ret<L>, void, unknown>
+  : (arg: any) => AsyncGenerator<any, void, unknown>;
+  // : Flatten<L> extends function[]
+  // ? (arg: any) => AsyncGenerator<any, void, unknown>
+  // : never;
