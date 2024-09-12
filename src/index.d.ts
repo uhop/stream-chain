@@ -1,5 +1,26 @@
 /// <reference types="node" />
 
+import {
+  none,
+  stop,
+  Stop,
+  finalSymbol,
+  finalValue,
+  final,
+  isFinalValue,
+  getFinalValue,
+  manySymbol,
+  many,
+  isMany,
+  getManyValues,
+  getFunctionList,
+  flushSymbol,
+  flushable,
+  isFlushable,
+  fListSymbol,
+  isFunctionList,
+  setFunctionList
+} from './defs';
 import gen, {type Fn, type Iter} from './gen';
 import asStream from './asStream';
 import {Duplex, DuplexOptions, Readable, Transform, Writable} from 'node:stream';

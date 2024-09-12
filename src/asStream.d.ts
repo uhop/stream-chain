@@ -2,8 +2,13 @@
 
 import {Duplex, DuplexOptions} from 'node:stream';
 
-export = asStream;
+export = asStream.asStream;
 
-export type Fn = (chunk: unknown, encoding?: string) => unknown;
+declare namespace AsStream {
+  type Fn = (chunk: any, encoding?: string) => unknown;
 
-declare function asStream(fn: Fn, options?: DuplexOptions): Duplex;
+  declare function asStream<F extends Fn>(
+    fn: F,
+    options?: DuplexOptions
+  ): Duplex<Parameters<F>[0], any>;
+}
