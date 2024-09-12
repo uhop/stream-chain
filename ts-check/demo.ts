@@ -1,4 +1,4 @@
-import chain from 'stream-chain';
+import chain, {many} from 'stream-chain';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 import {Transform} from 'node:stream';
@@ -14,7 +14,7 @@ const c = chain([
     // transforms a value
     (x: number) => x * x,
     // returns several values
-    (x: number) => chain.many([x - 1, x, x + 1]),
+    (x: number) => many([x - 1, x, x + 1]),
     // waits for an asynchronous operation
     async (x: number) => await getTotalFromDatabaseByKey(x),
     // returns multiple values with a generator

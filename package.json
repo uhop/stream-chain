@@ -3,7 +3,8 @@
   "version": "3.1.0",
   "description": "Chain functions as transform streams.",
   "type": "commonjs",
-  "main": "src/index.js",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
   "exports": {
     ".": "./src/index.js",
     "./*": "./src/*"
@@ -11,7 +12,7 @@
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
     "test": "tape6 --flags FO",
-    "ts-test": "tsc --noEmit"
+    "ts-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
