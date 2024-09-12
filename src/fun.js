@@ -111,16 +111,7 @@ const asArray = (...fns) => {
 
 const fun = (...fns) => {
   const f = asArray(...fns);
-  let g = value =>
-    f(value).then(results => {
-      switch (results.length) {
-        case 0:
-          return defs.none;
-        case 1:
-          return results[0];
-      }
-      return {[defs.manySymbol]: 1, values: results};
-    });
+  let g = value => f(value).then(results => defs.many(results));
   if (defs.isFlushable(f)) g = defs.flushable(g);
   return defs.setFunctionList(g, defs.getFunctionList(f));
 };
