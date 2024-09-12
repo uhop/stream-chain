@@ -83,3 +83,23 @@ export type Flatten<L extends readonly unknown[]> = L extends readonly [infer T,
     ? readonly [...Flatten<T>, ...Flatten<R>]
     : readonly [T, ...Flatten<R>]
   : L;
+
+// generic utilities: working with functions
+
+export type Arg0<F> = F extends readonly unknown[]
+  ? Flatten<F> extends readonly [infer F1, ...(readonly unknown[])]
+    ? Arg0<F1>
+    : Flatten<F> extends readonly (infer F1)[]
+    ? Arg0<F1>
+    : never
+  : F extends (...args: readonly any[]) => unknown
+  ? Parameters<F>[0]
+  : never;
+
+export type Ret<F> = F extends readonly unknown[]
+  ? Flatten<F> extends readonly [...unknown[], infer F1]
+    ? Ret<F1>
+    : never
+  : F extends function
+  ? OutputType<F>
+  : never;
