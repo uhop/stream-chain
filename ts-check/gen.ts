@@ -46,3 +46,9 @@ const g7 = gen(
 
 void g5;
 void g7;
+
+const g8 = gen(...[g3, (x: boolean) => Number(x), g4]);
+const g9 = gen(...[g3, (x: boolean) => Number(x), g4] as ((arg: any) => any)[]);
+
+void g8;
+void g9;
