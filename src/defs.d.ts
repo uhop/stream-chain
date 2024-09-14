@@ -34,17 +34,17 @@ export declare function flushable<I, O>(
   final?: () => O
 ): Flushable<I, O>;
 
-export interface FunctionList<T extends function> {
+export interface FunctionList<T extends (...args: readonly any[]) => unknown> {
   [fListSymbol]: 1;
   fList: T[];
 }
 export declare function isFunctionList(o: object): o is FunctionList;
-export declare function setFunctionList<T extends function>(o: any, fns: T[]): FunctionList<T>;
-export declare function getFunctionList<T extends function>(o: FunctionList<T>): T[];
+export declare function setFunctionList<T extends (...args: readonly any[]) => unknown>(o: any, fns: T[]): FunctionList<T>;
+export declare function getFunctionList<T extends (...args: readonly any[]) => unknown>(o: FunctionList<T>): T[];
 
 // generic utilities: unpacking types
 
-export type UnpackReturnType<F extends function> = ReturnType<F> extends Promise<infer O>
+export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> = ReturnType<F> extends Promise<infer O>
   ? O
   : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
   ? O
@@ -56,11 +56,7 @@ export type UnpackType<T> = T extends Many<infer U>
   ? U
   : T extends FinalValue<infer U>
   ? U
-  : T extends typeof none
-  ? void
-  : T extends typeof stop
-  ? void
-  : T;
+  : Exclude<T, typeof none | typeof stop>;
 
 export type OutputType<F extends function> = UnpackType<UnpackReturnType<F>>;
 
