@@ -1,7 +1,12 @@
-import {none} from './defs';
+import {none, stop} from './defs';
 
 export = takeWhile;
 
-type Fn = (value: unknown) => boolean | Promise<boolean>;
-
-declare function takeWhile(fn: Fn, finalValue?: unknown): (value: unknown) => unknown | none;
+declare function takeWhile<T = unknown>(
+  fn: (value: T) => boolean,
+  finalValue?: typeof none | typeof stop = none
+): (value: unknown) => T | typeof finalValue;
+declare function takeWhile<T = unknown>(
+  fn: (value: T) => Promise<boolean>,
+  finalValue?: typeof none | typeof stop = none
+): (value: unknown) => Promise<T | typeof finalValue>;

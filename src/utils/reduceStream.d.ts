@@ -1,19 +1,25 @@
 /// <reference types="node" />
 
-import { Writable, WritableOptions } from "stream";
+import {Writable, WritableOptions} from 'stream';
 
 export = reduceStream;
 
-type Reducer = (this: ReduceStreamOutput, acc: unknown, value: unknown) => unknown;
+type Reducer<A = unknown, T = A> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => A;
+type ReducerPromise<A = unknown, T = A> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => Promise<A>;
 
-interface ReduceStreamOptions extends WritableOptions {
-  reducer?: Reducer;
-  initial?: unknown;
+interface ReduceStreamOptions<A = unknown, T = A> extends WritableOptions {
+  reducer?: Reducer<A, T> | ReducerPromise<A, T>;
+  initial?: A;
 }
 
-interface ReduceStreamOutput extends Writable {
-  accumulator: unknown;
+interface ReduceStreamOutput<A = unknown> extends Writable {
+  accumulator: A;
 }
 
-declare function reduceStream(options: ReduceStreamOptions): ReduceStreamOutput;
-declare function reduceStream(reducer: Reducer, initial: unknown): ReduceStreamOutput;
+declare function reduceStream<A = unknown, T = A>(
+  options: ReduceStreamOptions<A, T>
+): ReduceStreamOutput<A>;
+declare function reduceStream<A = unknown, T = A>(
+  reducer: Reducer<A, T> | ReducerPromise<A, T>,
+  initial: A
+): ReduceStreamOutput<A>;

@@ -2,4 +2,4 @@ import {none} from '../defs';
 
 export = skip;
 
-declare function skip(n: number): (value: unknown) => unknown | none;
+declare function skip<T = unknown>(n: number): (value: T) => T | none;

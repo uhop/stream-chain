@@ -2,6 +2,7 @@ import {none} from '../defs';
 
 export = skipWhile;
 
-type Fn = (value: unknown) => boolean | Promise<boolean>;
-
-declare function skipWhile(fn: Fn): (value: unknown) => unknown | none;
+declare function skipWhile<T = unknown>(fn: (value: T) => boolean): (value: T) => T | none;
+declare function skipWhile<T = unknown>(
+  fn: (value: T) => Promise<boolean>
+): (value: T) => Promise<T | none>;

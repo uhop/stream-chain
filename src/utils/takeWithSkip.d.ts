@@ -1,9 +1,9 @@
-import {none} from '../defs';
+import {none, stop} from '../defs';
 
 export = takeWithSkip;
 
-declare function takeWithSkip(
+declare function takeWithSkip<T = unknown>(
   n: number,
   skip?: number,
-  finalValue?: unknown
-): (value: unknown) => unknown | none;
+  finalValue?: typeof none | typeof stop = none
+): (value: T) => T | typeof finalValue;

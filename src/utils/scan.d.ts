@@ -1,7 +1,7 @@
 export = scan;
 
-type FnArg = (acc: unknown, value: unknown) => unknown;
-
-type ScanOutput = (value: unknown) => unknown;
-
-declare function scan(fn: FnArg, acc: unknown): ScanOutput;
+declare function scan<A = unknown, T = A>(fn: (acc: A, value: T) => A, acc: A): (value: T) => A;
+declare function scan<A = unknown, T = A>(
+  fn: (acc: A, value: T) => Promise<A>,
+  acc: A
+): (value: T) => Promise<A>;

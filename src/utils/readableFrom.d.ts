@@ -4,10 +4,10 @@ import {Readable, ReadableOptions} from 'node:stream';
 
 export = readableFrom;
 
-type Iter = (() => unknown) | Iterable<unknown> | AsyncIterable<unknown>;
+type Iter<T = unknown> = (() => T) | (() => Promise<T>) | Iterable<T> | AsyncIterable<T>;
 
-interface ReadableFromOptions extends ReadableOptions {
-  iterable?: Iter;
+interface ReadableFromOptions<T = unknown> extends ReadableOptions {
+  iterable?: Iter<T>;
 }
 
-declare function readableFrom(options: Iter | ReadableFromOptions): Readable;
+declare function readableFrom<T>(options: Iter<T> | ReadableFromOptions<T>): Readable;
