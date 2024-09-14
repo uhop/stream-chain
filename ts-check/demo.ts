@@ -4,7 +4,7 @@ import readableFrom from 'stream-chain/utils/readableFrom.js';
 import {Transform} from 'node:stream';
 
 const getTotalFromDatabaseByKey = async (x: number) =>
-  new Promise(resolve => {
+  new Promise<number>(resolve => {
     setTimeout(() => {
       resolve(Math.min(x % 10, 3));
     }, 20);
@@ -16,7 +16,7 @@ const c = chain([
     // returns several values
     (x: number) => many([x - 1, x, x + 1]),
     // waits for an asynchronous operation
-    async (x: number) => await getTotalFromDatabaseByKey(x),
+    (x: number) => getTotalFromDatabaseByKey(x),
     // returns multiple values with a generator
     function* (x: number) {
       for (let i = x; i > 0; --i) {
@@ -33,8 +33,8 @@ const c = chain([
         callback(null, x + 1);
       }
     })
-  ]),
+  ] as const),
   output: number[] = [];
-c.on('data', data => output.push(data));
+c.on('data', (data: number) => output.push(data));
 
 readableFrom([1, 2, 3]).pipe(c);
