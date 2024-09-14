@@ -1,3 +1,5 @@
+// @ts-self-types="./fixUtf8Stream.d.ts"
+
 'use strict';
 
 const {StringDecoder} = require('string_decoder');

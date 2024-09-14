@@ -1,3 +1,5 @@
+// @ts-self-types="./readableFrom.d.ts"
+
 'use strict';
 
 const {Readable} = require('node:stream');

@@ -1,3 +1,5 @@
+// @ts-self-types="./skipWhile.d.ts"
+
 'use strict';
 
 const {none} = require('../defs');

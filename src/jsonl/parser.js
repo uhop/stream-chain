@@ -1,3 +1,5 @@
+// @ts-self-types="./parser.d.ts"
+
 'use strict';
 
 const gen = require('../gen.js');

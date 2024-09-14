@@ -1,3 +1,5 @@
+// @ts-self-types="./skip.d.ts"
+
 'use strict';
 
 const {none} = require('../defs');

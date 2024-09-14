@@ -1,3 +1,5 @@
+// @ts-self-types="./takeWhile.d.ts"
+
 'use strict';
 
 const {none} = require('../defs');

@@ -1,3 +1,5 @@
+// @ts-self-types="./reduceStream.d.ts"
+
 'use strict';
 
 const {Writable} = require('node:stream');

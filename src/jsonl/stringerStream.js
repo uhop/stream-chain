@@ -1,3 +1,5 @@
+// @ts-self-types="./stringerStream.d.ts"
+
 'use strict';
 
 const {Transform} = require('node:stream');

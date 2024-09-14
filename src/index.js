@@ -1,3 +1,5 @@
+// @ts-self-types="./index.d.ts"
+
 'use strict';
 
 const {Readable, Writable, Duplex} = require('node:stream');

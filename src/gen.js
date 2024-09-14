@@ -1,3 +1,5 @@
+// @ts-self-types="./gen.d.ts"
+
 'use strict';
 
 const defs = require('./defs');

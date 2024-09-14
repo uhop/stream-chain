@@ -1,3 +1,5 @@
+// @ts-self-types="./defs.d.ts"
+
 'use strict';
 
 const none = Symbol.for('object-stream.none');

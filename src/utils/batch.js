@@ -1,3 +1,5 @@
+// @ts-self-types="./batch.d.ts"
+
 'use strict';
 
 const {none, flushable} = require('../defs');

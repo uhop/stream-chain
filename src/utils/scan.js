@@ -1,3 +1,5 @@
+// @ts-self-types="./scan.d.ts"
+
 'use strict';
 
 const scan = (fn, acc) => value => {

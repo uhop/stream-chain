@@ -1,3 +1,5 @@
+// @ts-self-types="./asStream.d.ts"
+
 'use strict';
 
 const {Duplex} = require('node:stream');
