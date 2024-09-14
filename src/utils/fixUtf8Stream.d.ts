@@ -1,3 +1,5 @@
+/// <reference types="node" />
+
 export = fixUtf8Stream;
 
 type FixOutput = (chunk: string | Buffer) => string;
