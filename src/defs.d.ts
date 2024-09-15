@@ -44,8 +44,8 @@ export declare function getFunctionList<T extends (...args: readonly any[]) => u
 
 // generic utilities: unpacking types
 
-export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> = ReturnType<F> extends Promise<infer O>
-  ? O
+export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> = ReturnType<F> extends Promise<unknown>
+  ? Awaited<ReturnType<F>>
   : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
   ? O
   : ReturnType<F> extends Generator<infer O, unknown, unknown>
