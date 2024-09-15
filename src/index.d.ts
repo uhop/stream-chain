@@ -27,7 +27,7 @@ import {
   type Fn,
   type OutputType
 } from './defs';
-import gen, {type FnItem} from './gen';
+import gen from './gen';
 import asStream from './asStream';
 
 export = chain;

@@ -1,4 +1,4 @@
-import chain, {asStream, many, TypedTransform} from 'stream-chain';
+import chain, {asStream, many, none, TypedTransform} from 'stream-chain';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 import {Transform} from 'node:stream';
@@ -25,7 +25,7 @@ const c = chain([
       }
     },
     // filters out even values
-    (x: number) => (x % 2 ? x : null),
+    (x: number) => (x % 2 ? x : none),
     // uses an arbitrary transform stream
     new Transform({
       objectMode: true,
@@ -43,7 +43,7 @@ const c = chain([
     // uses a wrapped function
     asStream((x: string) => !x)
   ] as const),
-  output: number[] = [];
-c.on('data', (data: number) => output.push(data));
+  output: boolean[] = [];
+c.on('data', (data: boolean) => output.push(data));
 
 readableFrom([1, 2, 3]).pipe(c);
