@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
 import {Readable, ReadableOptions} from 'node:stream';
+import {TypedReadable} from '../typed-streams';
 
 export = readableFrom;
 
@@ -10,4 +11,4 @@ interface ReadableFromOptions<T = unknown> extends ReadableOptions {
   iterable?: Iter<T>;
 }
 
-declare function readableFrom<T>(options: Iter<T> | ReadableFromOptions<T>): Readable;
+declare function readableFrom<T>(options: Iter<T> | ReadableFromOptions<T>): TypedReadable<T>;

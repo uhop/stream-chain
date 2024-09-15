@@ -1,4 +1,4 @@
-import chain, {many} from 'stream-chain';
+import chain, {asStream, many, TypedTransform} from 'stream-chain';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 import {Transform} from 'node:stream';
@@ -16,13 +16,13 @@ const c = chain([
     // returns several values
     (x: number) => many([x - 1, x, x + 1]),
     // waits for an asynchronous operation
-    (x: number) => getTotalFromDatabaseByKey(x),
+    async (x: number) => await getTotalFromDatabaseByKey(x),
+    // or: (x: number) => getTotalFromDatabaseByKey(x),
     // returns multiple values with a generator
     function* (x: number) {
-      for (let i = x; i > 0; --i) {
+      for (let i = x; i >= 0; --i) {
         yield i;
       }
-      return 0;
     },
     // filters out even values
     (x: number) => (x % 2 ? x : null),
@@ -32,7 +32,16 @@ const c = chain([
       transform(x, _, callback) {
         callback(null, x + 1);
       }
-    })
+    }),
+    // uses a typed transform stream
+    new TypedTransform<number, string>({
+      objectMode: true,
+      transform(x, _, callback) {
+        callback(null, String(x + 1));
+      }
+    }),
+    // uses a wrapped function
+    asStream((x: string) => !x)
   ] as const),
   output: number[] = [];
 c.on('data', (data: number) => output.push(data));

@@ -1,5 +1,8 @@
 /// <reference types="node" />
 
+import {Duplex, DuplexOptions, Readable, Transform, Writable} from 'node:stream';
+import {TypedDuplex, TypedReadable, TypedTransform, TypedWritable} from './typed-streams';
+
 import {
   none,
   stop,
@@ -26,9 +29,9 @@ import {
 } from './defs';
 import gen, {type FnItem} from './gen';
 import asStream from './asStream';
-import {Duplex, DuplexOptions, Readable, Transform, Writable} from 'node:stream';
 
 export = chain;
+export {TypedDuplex, TypedReadable, TypedTransform, TypedWritable};
 
 export type DuplexStream<W = any, R = any> = {
   readable: ReadableStream<R>;
@@ -53,7 +56,16 @@ export interface ChainOutput<W, R> extends Duplex {
   output: Readable | Writable | Duplex | Transform;
 }
 
-export type Arg0<F> = F extends Writable | Transform | Duplex
+export type Arg0<F> =
+  F extends TypedTransform<infer W, any>
+  ? W
+  : F extends TypedDuplex<infer W, any>
+  ? W
+  : F extends TypedReadable
+  ? never
+  : F extends TypedWritable<infer W>
+  ? W
+  : F extends Writable | Transform | Duplex
   ? any
   : F extends Readable
   ? never
@@ -75,7 +87,16 @@ export type Arg0<F> = F extends Writable | Transform | Duplex
   ? Parameters<F>[0]
   : never;
 
-export type Ret<F> = F extends Readable | Transform | Duplex
+export type Ret<F> =
+  F extends TypedTransform<any, infer R>
+  ? R
+  : F extends TypedDuplex<any, infer R>
+  ? R
+  : F extends TypedReadable<infer R>
+  ? R
+  : F extends TypedWritable<any>
+  ? never
+  : F extends Readable | Transform | Duplex
   ? any
   : F extends Writable
   ? never
@@ -95,20 +116,37 @@ export type Ret<F> = F extends Readable | Transform | Duplex
   ? OutputType<F>
   : never;
 
-export type ChainItem<I, F> = F extends Writable | Transform | Duplex
+export type ChainItem<I, F> =
+  F extends TypedTransform<infer W, infer R>
+  ? I extends W
+    ? F
+    : TypedTransform<I, R>
+  : F extends TypedDuplex<infer W, infer R>
+  ? I extends W
+    ? F
+    : TypedDuplex<I, R>
+  : F extends TypedReadable
+  ? I extends never
+    ? F
+    : never
+  : F extends TypedWritable<infer W>
+  ? I extends W
+    ? F
+    : TypedWritable<I>
+  : F extends Writable | Transform | Duplex
   ? F
   : F extends Readable
   ? I extends never
     ? F
     : never
-  : F extends TransformStream<infer W, any>
+  : F extends TransformStream<infer W, infer R>
   ? I extends W
     ? F
-    : never
-  : F extends DuplexStream<infer W, any>
+    : TransformStream<I, R>
+  : F extends DuplexStream<infer W, infer R>
   ? I extends W
     ? F
-    : never
+    : DuplexStream<I, R>
   : F extends ReadableStream
   ? I extends never
     ? F
@@ -116,7 +154,7 @@ export type ChainItem<I, F> = F extends Writable | Transform | Duplex
   : F extends WritableStream<infer W>
   ? I extends W
     ? F
-    : never
+    : WritableStream<I>
   : F extends readonly [infer F1, ...infer R]
   ? readonly [ChainItem<I, F1>, ...ChainList<Ret<F1>, R>]
   : F extends readonly unknown[]

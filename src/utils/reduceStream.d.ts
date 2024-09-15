@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
 import {Writable, WritableOptions} from 'stream';
+import {TypedWritable} from '../typed-streams';
 
 export = reduceStream;
 
@@ -12,14 +13,14 @@ interface ReduceStreamOptions<A = unknown, T = A> extends WritableOptions {
   initial?: A;
 }
 
-interface ReduceStreamOutput<A = unknown> extends Writable {
+interface ReduceStreamOutput<A = unknown, T = A> extends TypedWritable<T, A> {
   accumulator: A;
 }
 
 declare function reduceStream<A = unknown, T = A>(
   options: ReduceStreamOptions<A, T>
-): ReduceStreamOutput<A>;
+): ReduceStreamOutput<A, T>;
 declare function reduceStream<A = unknown, T = A>(
   reducer: Reducer<A, T> | ReducerPromise<A, T>,
   initial: A
-): ReduceStreamOutput<A>;
+): ReduceStreamOutput<A, T>;

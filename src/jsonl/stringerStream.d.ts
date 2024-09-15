@@ -1,6 +1,7 @@
 /// <reference types="node" />
 
 import {Transform} from 'node:stream';
+import {TypedTransform} from '../typed-streams';
 
 export = stringer;
 
@@ -13,4 +14,4 @@ interface StringerOptions {
   space?: string | number;
 }
 
-declare function stringer(options: any): Transform;
+declare function stringer<T>(options: any): TypedTransform<T, string>;
