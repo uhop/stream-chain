@@ -10,6 +10,7 @@ const f3 = fun(
   (x: number) => x * x,
   [f0, f1, f2] as const,
   (x: string[]) => x[0],
+  [null, undefined] as const,
   (x: string) => !x.split(' '),
   (x: boolean) => !x
 );
@@ -17,6 +18,7 @@ const f4 = fun([
   (x: number) => x * x,
   [f0, f1, f2],
   (x: string[]) => x[0],
+  [null, undefined],
   (x: string) => !x.split(' '),
   (x: boolean) => !x
 ] as const);

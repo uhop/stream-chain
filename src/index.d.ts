@@ -23,7 +23,7 @@ import {
   fListSymbol,
   isFunctionList,
   setFunctionList,
-  type Flatten,
+  type AsFlatList,
   type Fn,
   type OutputType
 } from './defs';
@@ -77,16 +77,18 @@ export type Arg0<F> = F extends TypedTransform<infer W, any>
   : F extends ReadableStream<any>
   ? never
   : F extends readonly unknown[]
-  ? Flatten<F> extends readonly [infer F1, ...(readonly unknown[])]
+  ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
     ? Arg0<F1>
-    : Flatten<F> extends readonly (infer F1)[]
+    : AsFlatList<F> extends readonly []
+    ? any
+    : AsFlatList<F> extends readonly (infer F1)[]
     ? Arg0<F1>
     : never
   : F extends (...args: readonly any[]) => unknown
   ? Parameters<F>[0]
   : never;
 
-export type Ret<F> = F extends TypedTransform<any, infer R>
+export type Ret<F, Default = any> = F extends TypedTransform<any, infer R>
   ? R
   : F extends TypedDuplex<any, infer R>
   ? R
@@ -107,8 +109,12 @@ export type Ret<F> = F extends TypedTransform<any, infer R>
   : F extends WritableStream<any>
   ? never
   : F extends readonly unknown[]
-  ? Flatten<F> extends readonly [...unknown[], infer F1]
-    ? Ret<F1>
+  ? AsFlatList<F> extends readonly [...unknown[], infer F1]
+    ? Ret<F1, Default>
+    : AsFlatList<F> extends readonly []
+    ? Default
+    : AsFlatList<F> extends readonly (infer F1)[]
+    ? Ret<F1, Default>
     : never
   : F extends Fn
   ? OutputType<F>
@@ -154,7 +160,9 @@ export type ChainItem<I, F> =
     ? F
     : WritableStream<I>
   : F extends readonly [infer F1, ...infer R]
-  ? readonly [ChainItem<I, F1>, ...ChainList<Ret<F1>, R>]
+  ? F1 extends (null | undefined)
+    ? readonly [F1, ...ChainList<I, R>]
+    : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
   : F extends readonly unknown[]
   ? readonly [ChainItem<I, any>]
   : F extends Fn
@@ -164,7 +172,9 @@ export type ChainItem<I, F> =
   : never;
 
 export type ChainList<I, L> = L extends readonly [infer F1, ...infer R]
-  ? readonly [ChainItem<I, F1>, ...ChainList<Ret<F1>, R>]
+  ? F1 extends (null | undefined)
+    ? readonly [F1, ...ChainList<I, R>]
+    : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
   : L;
 
 declare function dataSource<F>(

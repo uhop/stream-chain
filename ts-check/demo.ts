@@ -33,6 +33,8 @@ const c = chain([
         callback(null, x + 1);
       }
     }),
+    // can skip falsy values
+    [null, undefined],
     // uses a typed transform stream
     new TypedTransform<number, string>({
       objectMode: true,

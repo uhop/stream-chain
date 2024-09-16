@@ -39,18 +39,24 @@ export interface FunctionList<T extends (...args: readonly any[]) => unknown> {
   fList: T[];
 }
 export declare function isFunctionList(o: object): o is FunctionList;
-export declare function setFunctionList<T extends (...args: readonly any[]) => unknown>(o: any, fns: T[]): FunctionList<T>;
-export declare function getFunctionList<T extends (...args: readonly any[]) => unknown>(o: FunctionList<T>): T[];
+export declare function setFunctionList<T extends (...args: readonly any[]) => unknown>(
+  o: any,
+  fns: T[]
+): FunctionList<T>;
+export declare function getFunctionList<T extends (...args: readonly any[]) => unknown>(
+  o: FunctionList<T>
+): T[];
 
 // generic utilities: unpacking types
 
-export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> = ReturnType<F> extends Promise<unknown>
-  ? Awaited<ReturnType<F>>
-  : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
-  ? O
-  : ReturnType<F> extends Generator<infer O, unknown, unknown>
-  ? O
-  : ReturnType<F>;
+export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> =
+  ReturnType<F> extends Promise<unknown>
+    ? Awaited<ReturnType<F>>
+    : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
+    ? O
+    : ReturnType<F> extends Generator<infer O, unknown, unknown>
+    ? O
+    : ReturnType<F>;
 
 export type UnpackType<T> = T extends Many<infer U>
   ? U
@@ -80,23 +86,37 @@ export type Flatten<L extends readonly unknown[]> = L extends readonly [infer T,
     : readonly [T, ...Flatten<R>]
   : L;
 
+export type Filter<L extends readonly unknown[], X> = L extends readonly [infer T, ...infer R]
+  ? T extends X
+    ? Filter<R, X>
+    : readonly [T, ...Filter<R, X>]
+  : L;
+
+export type AsFlatList<L extends readonly unknown[]> = Filter<Flatten<L>, null | undefined>;
+
 // generic utilities: working with functions
 
 export type Fn = (arg: any, ...args: readonly unknown[]) => unknown;
 
 export type Arg0<F> = F extends readonly unknown[]
-  ? Flatten<F> extends readonly [infer F1, ...(readonly unknown[])]
+  ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
     ? Arg0<F1>
-    : Flatten<F> extends readonly (infer F1)[]
+    : AsFlatList<F> extends readonly []
+    ? any
+    : AsFlatList<F> extends readonly (infer F1)[]
     ? Arg0<F1>
     : never
   : F extends (...args: readonly any[]) => unknown
   ? Parameters<F>[0]
   : never;
 
-export type Ret<F> = F extends readonly unknown[]
-  ? Flatten<F> extends readonly [...unknown[], infer F1]
-    ? Ret<F1>
+export type Ret<F, Default = any> = F extends readonly unknown[]
+  ? AsFlatList<F> extends readonly [...unknown[], infer F1]
+    ? Ret<F1, Default>
+    : AsFlatList<F> extends readonly []
+    ? Default
+    : AsFlatList<F> extends readonly (infer F1)[]
+    ? Ret<F1, Default>
     : never
   : F extends Fn
   ? OutputType<F>

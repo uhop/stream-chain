@@ -10,6 +10,7 @@ const g3 = gen(
   (x: number) => x * x,
   [g0, g1, g2] as const,
   (x: string[]) => x[0],
+  [null, undefined] as const,
   (x: string) => !x.split(' '),
   (x: boolean) => !x
 );
@@ -17,6 +18,7 @@ const g4 = gen([
   (x: number) => x * x,
   [g0, g1, g2],
   (x: string[]) => x[0],
+  [null, undefined],
   (x: string) => !x.split(' '),
   (x: boolean) => !x
 ] as const);
@@ -52,3 +54,9 @@ const g9 = gen(...[g3, (x: boolean) => Number(x), g4] as ((arg: any) => any)[]);
 
 void g8;
 void g9;
+
+const g10 = gen(null);
+const g11 = gen(undefined, null);
+
+void g10;
+void g11;
