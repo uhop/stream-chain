@@ -34,6 +34,12 @@ const setFunctionList = (o, fns) => {
   return o;
 }
 
+const clearFunctionList = o => {
+  delete o.fList;
+  delete o[fListSymbol];
+  return o;
+}
+
 class Stop extends Error {}
 
 // old aliases
@@ -63,3 +69,4 @@ module.exports.fListSymbol = fListSymbol;
 module.exports.isFunctionList = isFunctionList;
 module.exports.getFunctionList = getFunctionList;
 module.exports.setFunctionList = setFunctionList;
+module.exports.clearFunctionList = clearFunctionList;

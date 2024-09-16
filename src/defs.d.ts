@@ -25,27 +25,42 @@ export declare function many<T>(values: T[]): Many<T>;
 export declare function getManyValues<T>(o: Many<T>): T[];
 
 export interface Flushable<I = any, O = unknown> {
-  [flushSymbol]: 1;
   (value: I, ...rest: any[]): O;
+  [flushSymbol]: 1;
 }
-export declare function isFlushable<I, O>(o: (value: I, ...rest: any[]) => O): o is Flushable<I, O>;
+export declare function isFlushable<I = any, O = unknown>(
+  o: (value: I, ...rest: any[]) => O
+): o is Flushable<I, O>;
 export declare function flushable<I, O>(
   write: (value: I, ...rest: any[]) => O,
   final?: () => O
 ): Flushable<I, O>;
 
-export interface FunctionList<T extends (...args: readonly any[]) => unknown> {
+export interface FunctionList<
+  T extends (...args: readonly any[]) => unknown,
+  I = any,
+  O = unknown
+> {
+  (value: I, ...rest: any[]): O;
   [fListSymbol]: 1;
   fList: T[];
 }
-export declare function isFunctionList(o: object): o is FunctionList;
-export declare function setFunctionList<T extends (...args: readonly any[]) => unknown>(
-  o: any,
+export declare function isFunctionList<I, O>(
+  o: (value: I, ...rest: readonly any[]) => O
+): o is FunctionList<(...args: readonly any[]) => unknown, I, O>;
+export declare function setFunctionList<
+  T extends (...args: readonly any[]) => unknown,
+  F extends (...args: readonly any[]) => unknown
+>(
+  o: F,
   fns: T[]
-): FunctionList<T>;
+): F extends (value: infer I, ...rest: any[]) => infer O ? FunctionList<T, I, O> : never;
 export declare function getFunctionList<T extends (...args: readonly any[]) => unknown>(
   o: FunctionList<T>
 ): T[];
+export declare function clearFunctionList<F>(
+  o: F
+): F extends (value: infer I, ...rest: any[]) => infer O ? (value: I, ...rest: any[]) => O : never;
 
 // generic utilities: unpacking types
 
