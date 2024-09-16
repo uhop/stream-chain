@@ -1,10 +1,16 @@
+/// <reference types="node" />
+
+import {Buffer} from 'node:buffer';
+
 export = parser;
 
 interface OutputItem {
   key: number;
-  value: unknown;
+  value: any;
 }
 
 type Reviver = (this: unknown, key: string, value: unknown) => unknown;
 
-declare function parser(reviver?: Reviver): AsyncIterableIterator<OutputItem>;
+declare function parser(
+  reviver?: Reviver
+): (x: string | Buffer) => AsyncGenerator<OutputItem, void, unknown>;

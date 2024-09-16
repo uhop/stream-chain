@@ -14,4 +14,4 @@ interface StringerOptions {
   space?: string | number;
 }
 
-declare function stringer<T>(options: any): TypedTransform<T, string>;
+declare function stringer<T>(options?: any): TypedTransform<T, string>;

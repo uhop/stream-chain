@@ -9,4 +9,6 @@ interface ParserOptions extends DuplexOptions {
   reviver?: (this: unknown, key: string, value: unknown) => unknown;
 }
 
-declare function parserStream<T>(options: ParserOptions): TypedDuplex<string | Uint8Array, T>;
+declare function parserStream<T = any>(
+  options?: ParserOptions
+): TypedDuplex<string | Uint8Array, T>;
