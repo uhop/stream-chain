@@ -12,7 +12,8 @@
   "scripts": {
     "debug": "node --inspect-brk tests/tests.js",
     "test": "tape6 --flags FO",
-    "ts-check": "tsc --noEmit"
+    "ts-check": "tsc --noEmit",
+    "ts-demo": "node --experimental-strip-types ts-test/demo.mts"
   },
   "repository": {
     "type": "git",
