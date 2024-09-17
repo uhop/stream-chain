@@ -1,4 +1,5 @@
-import chain, {asStream, many, none, TypedTransform} from 'stream-chain';
+import chain, {asStream, many, none} from 'stream-chain';
+import {TypedTransform} from 'stream-chain/typed-streams.js';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 import {Transform} from 'node:stream';

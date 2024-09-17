@@ -31,7 +31,6 @@ import gen from './gen';
 import asStream from './asStream';
 
 export = chain;
-export {TypedDuplex, TypedReadable, TypedTransform, TypedWritable};
 
 export type DuplexStream<W = any, R = any> = {
   readable: ReadableStream<R>;
