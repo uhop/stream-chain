@@ -5,22 +5,22 @@ import {TypedWritable} from '../typed-streams';
 
 export = reduceStream;
 
-type Reducer<A = unknown, T = A> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => A;
-type ReducerPromise<A = unknown, T = A> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => Promise<A>;
+type Reducer<A, T> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => A;
+type ReducerPromise<A, T> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => Promise<A>;
 
-interface ReduceStreamOptions<A = unknown, T = A> extends WritableOptions {
+interface ReduceStreamOptions<A, T> extends WritableOptions {
   reducer?: Reducer<A, T> | ReducerPromise<A, T>;
   initial?: A;
 }
 
-interface ReduceStreamOutput<A = unknown, T = A> extends TypedWritable<T, A> {
+interface ReduceStreamOutput<A, T> extends TypedWritable<T> {
   accumulator: A;
 }
 
-declare function reduceStream<A = unknown, T = A>(
+declare function reduceStream<A, T>(
   options: ReduceStreamOptions<A, T>
 ): ReduceStreamOutput<A, T>;
-declare function reduceStream<A = unknown, T = A>(
+declare function reduceStream<A, T>(
   reducer: Reducer<A, T> | ReducerPromise<A, T>,
   initial: A
 ): ReduceStreamOutput<A, T>;

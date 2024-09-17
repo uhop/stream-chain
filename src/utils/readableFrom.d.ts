@@ -5,9 +5,9 @@ import {TypedReadable} from '../typed-streams';
 
 export = readableFrom;
 
-type Iter<T = unknown> = (() => T) | (() => Promise<T>) | Iterable<T> | AsyncIterable<T>;
+type Iter<T> = (() => T) | (() => Promise<T>) | Iterable<T> | AsyncIterable<T>;
 
-interface ReadableFromOptions<T = unknown> extends ReadableOptions {
+interface ReadableFromOptions<T> extends ReadableOptions {
   iterable?: Iter<T>;
 }
 

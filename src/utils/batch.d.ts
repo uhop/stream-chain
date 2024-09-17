@@ -2,6 +2,6 @@ import {none} from '../defs';
 
 export = batch;
 
-type BatchOutput<T = unknown> = (value: T) => (T[] | none);
+type BatchOutput<T> = (value: T) => (T[] | typeof none);
 
-declare function batch<T = unknown>(n?: number): BatchOutput<T>;
+declare function batch<T = any>(n?: number): BatchOutput<T>;
