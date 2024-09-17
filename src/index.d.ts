@@ -32,29 +32,52 @@ import asStream from './asStream';
 
 export = chain;
 
+/**
+ * Represents a typed duplex stream as a pair of readable and writable streams.
+ */
 export type DuplexStream<W = any, R = any> = {
   readable: ReadableStream<R>;
   writable: WritableStream<W>;
 };
 
+/**
+ * Options for the chain function, which is based on `DuplexOptions`.
+ */
 export interface ChainOptions extends DuplexOptions {
+  /** If `true`, no groupings will be done. Each function will be a separate stream object. */
   noGroupings?: boolean;
+  /** If `true`, event bindings to the chain stream object will be skipped. */
   skipEvents?: boolean;
 }
 
+/**
+ * The tuple type for a chain function with one item.
+ */
 type ChainSteams1 = [Readable | Writable | Duplex | Transform];
+/**
+ * The tuple type for a chain function with multiple items.
+ */
 type ChainSteams = [
   Readable | Duplex | Transform,
   ...(Duplex | Transform)[],
   Writable | Duplex | Transform
 ];
 
+/**
+ * Represents the output of the chain function. It is based on `Duplex` with extra properties.
+ */
 export interface ChainOutput<W, R> extends Duplex {
+  /** Internal list of streams. */
   streams: ChainSteams1 | ChainSteams;
+  /** The first stream, which can be used to feed the chain and to attach event handlers. */
   input: Readable | Writable | Duplex | Transform;
+  /** The last stream, which can be used to consume results and to attach event handlers. */
   output: Readable | Writable | Duplex | Transform;
 }
 
+/**
+ * Returns the first argument of a chain, a stream, or a function.
+ */
 export type Arg0<F> = F extends TypedTransform<infer W, any>
   ? W
   : F extends TypedDuplex<infer W, any>
@@ -87,6 +110,9 @@ export type Arg0<F> = F extends TypedTransform<infer W, any>
   ? Parameters<F>[0]
   : never;
 
+/**
+ * Returns the return type of a chain, a stream, or a function.
+ */
 export type Ret<F, Default = any> = F extends TypedTransform<any, infer R>
   ? R
   : F extends TypedDuplex<any, infer R>
@@ -119,6 +145,10 @@ export type Ret<F, Default = any> = F extends TypedTransform<any, infer R>
   ? OutputType<F>
   : never;
 
+/**
+ * Represents an item in the chain function.
+ * It is used to highlight mismatches between argument types and return types in a list.
+ */
 export type ChainItem<I, F> =
   F extends TypedTransform<infer W, infer R>
   ? I extends W
@@ -170,12 +200,22 @@ export type ChainItem<I, F> =
     : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
   : never;
 
+/**
+ * Replicates a tuple verifying the types of the list items so arguments match returns.
+ * The replicated tuple is used to highlight mismatches between list items.
+ */
 export type ChainList<I, L> = L extends readonly [infer F1, ...infer R]
   ? F1 extends (null | undefined)
     ? readonly [F1, ...ChainList<I, R>]
     : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
   : L;
 
+/**
+ * Takes a function or an iterable and returns the underlying function.
+ * @param fn function or iterable
+ * @returns the underlying function
+ * @remarks In the case of a function, it returns the argument. For iterables it returns the function associated with `Symbol.iterator` or `Symbol.asyncIterator`.
+ */
 declare function dataSource<F>(
   fn: F
 ): F extends AsyncIterable<infer T>
@@ -186,6 +226,12 @@ declare function dataSource<F>(
   ? F
   : never;
 
+/**
+ * Creates a stream object out of a list of functions and streams.
+ * @param fns array of functions, streams, or other arrays
+ * @returns a duplex stream with additional properties
+ * @remarks This is the main function of this library.
+ */
 declare function chain<L extends readonly unknown[]>(
   ...fns: ChainList<Arg0<L>, L>
 ): ChainOutput<Arg0<L>, Ret<L>>;
