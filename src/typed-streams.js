@@ -1,8 +1,10 @@
 // @ts-self-types="./typed-streams.d.ts"
 
-import {Duplex, Readable, Transform, Writable} from 'node:stream';
+const {Duplex, Readable, Transform, Writable} = require('stream');
 
-module.exports.TypedDuplex = class TypedDuplex extends Duplex {};
-module.exports.TypedReadable = class TypedReadable extends Readable {};
-module.exports.TypedTransform = class TypedTransform extends Transform {};
-module.exports.TypedWritable = class TypedWritable extends Writable {};
+class TypedDuplex extends Duplex {};
+class TypedReadable extends Readable {};
+class TypedTransform extends Transform {};
+class TypedWritable extends Writable {};
+
+module.exports = {TypedDuplex, TypedReadable, TypedTransform, TypedWritable};
