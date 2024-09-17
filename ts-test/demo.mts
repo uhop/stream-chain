@@ -1,10 +1,8 @@
 import chain, {asStream, many, none} from 'stream-chain';
-import TypedStreams from 'stream-chain/typed-streams.js';
+import {TypedTransform} from 'stream-chain/typed-streams.js';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 import {Transform} from 'node:stream';
-
-const {TypedTransform} = TypedStreams;
 
 const getTotalFromDatabaseByKey = async (x: number) =>
   new Promise<number>(resolve => {
