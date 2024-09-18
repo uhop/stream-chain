@@ -232,6 +232,7 @@ module.exports.fListSymbol = defs.fListSymbol;
 module.exports.isFunctionList = defs.isFunctionList;
 module.exports.getFunctionList = defs.getFunctionList;
 module.exports.setFunctionList = defs.setFunctionList;
+module.exports.clearFunctionList = defs.clearFunctionList;
 
 module.exports.chain = chain; // for compatibility with 2.x
 module.exports.gen = gen;

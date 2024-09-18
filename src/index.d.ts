@@ -23,6 +23,7 @@ import {
   fListSymbol,
   isFunctionList,
   setFunctionList,
+  clearFunctionList,
   type AsFlatList,
   type Fn,
   type OutputType
@@ -257,6 +258,7 @@ declare namespace chain {
     fListSymbol,
     isFunctionList,
     setFunctionList,
+    clearFunctionList,
     chain,
     gen,
     asStream,
