@@ -95,6 +95,7 @@ The factory function accepts the following arguments:
       * Regular value:
         * If it is `undefined` or `null`, no value shall be passed.
         * Otherwise, the value will be passed to the next stream.
+
         ```js
         // produces no values:
         x => null
@@ -102,14 +103,18 @@ The factory function accepts the following arguments:
         // produces one value:
         x => x
         ```
+
       * Special value:
         * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
+
           ```js
           // delays by 0.5s:
           x => new Promise(
             resolve => setTimeout(() => resolve(x), 500))
           ```
+
         * If it is an instance of a generator or "nextable" (an object with a method called `next()`), it will be iterated according to the [generator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator) protocol. The results should be regular values.
+
           ```js
           // produces multiple values:
           class Nextable {
@@ -126,14 +131,18 @@ The factory function accepts the following arguments:
           }
           x => new Nextable(x)
           ```
+
           `next()` can return a `Promise` according to the [asynchronous generator](https://zaiste.net/nodejs_10_asynchronous_iteration_async_generators/) protocol.
       * Any thrown exception will be caught and passed to a callback function effectively generating an error event.
+
         ```js
         // fails
         x => { throw new Error('Bad!'); }
         ```
+
   * If it is an asynchronous function, it can return a regular value.
     * In essence, it is covered under "special values" as a function that returns a promise.
+
     ```js
     // delays by 0.5s:
     async x => {
@@ -141,8 +150,10 @@ The factory function accepts the following arguments:
       return x;
     }
     ```
+
   * If it is a generator function, each yield should produce a regular value.
     * In essence, it is covered under "special values" as a function that returns a generator object.
+
     ```js
     // produces multiple values:
     function* (x) {
@@ -152,8 +163,10 @@ The factory function accepts the following arguments:
       return x;
     }
     ```
+
   * If it is an asynchronous generator function, each yield should produce a regular value.
     * In essence, it is covered under "special values" as a function that returns a generator object.
+
     ```js
     // produces multiple values:
     async function* (x) {
@@ -166,6 +179,7 @@ The factory function accepts the following arguments:
       return x;
     }
     ```
+
   * If a value is an array, its items are assumed to be functions, streams or other such arrays. The array is flattened, all individual items are included in a chain sequentially.
     * It is a provision to create lightweight bundles from pipeline items.
   * If a value is a valid stream, it is included as is in the pipeline.
@@ -183,9 +197,11 @@ The factory function accepts the following arguments:
     * Note that the support of web streams is still experimental in Node.
 * `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
   * The default options is this object:
+
     ```js
     {writableObjectMode: true, readableObjectMode: true}
     ```
+
     If `options` is specified it is copied over the default options.
   * Always make sure that `writableObjectMode` is the same as the corresponding object mode of the first stream, and `readableObjectMode` is the same as the corresponding object mode of the last stream.
     * Eventually both these modes can be deduced, but Node does not define the standard way to determine it, so currently it cannot be done reliably.
@@ -207,21 +223,22 @@ BSD-3-Clause
 
 ## Release History
 
-- 3.1.0 *Added a seamless support for web streams.*
-- 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
-- 3.0.0 *New major version. Unreleased.*
-- 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*
-- 2.2.4 *Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang)).*
-- 2.2.3 *Technical release. No need to upgrade.*
-- 2.2.2 *Technical release. No need to upgrade.*
-- 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
-- 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
-- 2.1.0 *Added simple transducers, dropped Node 6.*
-- 2.0.3 *Added TypeScript typings and the badge.*
-- 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*
-- 2.0.1 *Improved documentation.*
-- 2.0.0 *Upgraded to use Duplex instead of EventEmitter as the base.*
-- 1.0.3 *Improved documentation.*
-- 1.0.2 *Better README.*
-- 1.0.1 *Fixed the README.*
-- 1.0.0 *The initial release.*
+* 3.2.0 *Added TS typings and `clearFunctionList()`*
+* 3.1.0 *Added a seamless support for web streams.*
+* 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
+* 3.0.0 *New major version. Unreleased.*
+* 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*
+* 2.2.4 *Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang)).*
+* 2.2.3 *Technical release. No need to upgrade.*
+* 2.2.2 *Technical release. No need to upgrade.*
+* 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
+* 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
+* 2.1.0 *Added simple transducers, dropped Node 6.*
+* 2.0.3 *Added TypeScript typings and the badge.*
+* 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*
+* 2.0.1 *Improved documentation.*
+* 2.0.0 *Upgraded to use Duplex instead of EventEmitter as the base.*
+* 1.0.3 *Improved documentation.*
+* 1.0.2 *Better README.*
+* 1.0.1 *Fixed the README.*
+* 1.0.0 *The initial release.*
