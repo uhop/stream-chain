@@ -3,7 +3,7 @@
 import test from 'tape-six';
 
 import {streamToArray} from './helpers.mjs';
-import chain, {gen, none, finalValue} from '../src/index.js';
+import chain, {gen, none, finalValue, clearFunctionList} from '../src/index.js';
 import fromIterable from '../src/utils/readableFrom.js';
 
 test.asPromise('transducers: smoke test', (t, resolve) => {
@@ -95,6 +95,46 @@ test.asPromise('transducers: embedded arrays', (t, resolve) => {
 
   c.on('end', () => {
     t.deepEqual(output, [3, 9, 19]);
+    resolve();
+  });
+});
+
+test.asPromise('transducers: optimize function lists', (t, resolve) => {
+  const output = [],
+    c = chain([
+      fromIterable([1, 2, 3]),
+      gen(
+        x => x * x,
+        x => finalValue(x),
+        x => 2 * x + 1
+      ),
+      x => x + 1,
+      streamToArray(output)
+    ]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [1, 4, 9]);
+    resolve();
+  });
+});
+
+test.asPromise("transducers: don't optimize function lists", (t, resolve) => {
+  const output = [],
+    c = chain([
+      fromIterable([1, 2, 3]),
+      clearFunctionList(
+        gen(
+          x => x * x,
+          x => finalValue(x),
+          x => 2 * x + 1
+        )
+      ),
+      x => x + 1,
+      streamToArray(output)
+    ]);
+
+  c.on('end', () => {
+    t.deepEqual(output, [2, 5, 10]);
     resolve();
   });
 });
