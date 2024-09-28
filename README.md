@@ -223,7 +223,8 @@ BSD-3-Clause
 
 ## Release History
 
-* 3.2.0 *Added TS typings and `clearFunctionList()`*
+* 3.3.0 *Added a way to ignore JSON parsing errors silently.*
+* 3.2.0 *Added TS typings and `clearFunctionList()`.*
 * 3.1.0 *Added a seamless support for web streams.*
 * 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
 * 3.0.0 *New major version. Unreleased.*

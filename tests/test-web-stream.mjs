@@ -5,6 +5,12 @@ import test from 'tape-six';
 import chain from '../src/index.js';
 
 test.asPromise('web stream: transform', (t, resolve) => {
+  if (typeof Bun == 'object') {
+    // these tests are only for Node.js
+    resolve();
+    return;
+  }
+
   if (!globalThis.ReadableStream) {
     resolve();
     return;
