@@ -20,12 +20,19 @@ interface OutputItem {
  */
 type Reviver = (this: unknown, key: string, value: unknown) => unknown;
 
+type ParserOptions = {
+  /** An optional reviver function for `JSON.parse()`. */
+  reviver?: Reviver;
+  /** Whether to ignore errors silently. It defaults to `false`. */
+  ignoreErrors?: boolean;
+};
+
 /**
  * The JSONL parser as a streamable generator.
- * @param reviver an optional reviver function (see {@link Reviver})
+ * @param reviver an optional reviver function (see {@link Reviver}) or an {@link ParserOptions}
  * @returns an asynchronous generator
  * @remark parsers JSON lines items returning them as {@link OutputItem}.
  */
 declare function parser(
-  reviver?: Reviver
+  reviver?: Reviver | ParserOptions
 ): (x: string | Buffer) => AsyncGenerator<OutputItem, void, unknown>;

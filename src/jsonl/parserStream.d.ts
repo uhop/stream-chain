@@ -14,6 +14,8 @@ interface ParserOptions extends DuplexOptions {
    * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse
    */
   reviver?: (this: unknown, key: string, value: unknown) => unknown;
+  /** Whether to ignore errors silently. It defaults to `false`. */
+  ignoreErrors?: boolean;
 }
 
 /**
