@@ -14,7 +14,7 @@ const lines = () => {
       yield result;
       return;
     }
-    const lines = value.split('\n');
+    const lines = value.split(/\r?\n/g);
     rest += lines[0];
     if (lines.length < 2) return;
     lines[0] = rest;
