@@ -13,6 +13,8 @@
     "debug": "node --inspect-brk tests/tests.js",
     "test": "tape6 --flags FO",
     "test:bun": "tape6-bun --flags FO",
+    "test:proc": "tape6-proc --flags FO",
+    "test:proc:bun": "bun run `npx tape6-proc --self` --flags FO",
     "ts-check": "tsc --noEmit",
     "ts-demo": "node --experimental-strip-types ts-test/demo.mts"
   },
@@ -42,9 +44,10 @@
     ]
   },
   "devDependencies": {
-    "@types/node": "^22.7.4",
-    "nano-benchmark": "^1.0.3",
-    "tape-six": "^0.12.3",
-    "typescript": "^5.6.2"
+    "@types/node": "^22.7.5",
+    "nano-benchmark": "^1.0.4",
+    "tape-six": "^1.0.2",
+    "tape-six-proc": "^1.0.0",
+    "typescript": "^5.6.3"
   }
 }
