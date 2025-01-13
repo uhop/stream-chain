@@ -67,7 +67,7 @@ export interface Many<T = any> {
  * @param o object to test
  * @returns `true` if `o` is a `Many`
  */
-export declare function isMany(o: object): o is Many;
+export declare function isMany(o: unknown): o is Many;
 /**
  * Creates a `Many`
  * @param values the wrapped values
@@ -162,6 +162,53 @@ export declare function clearFunctionList<
   I = any,
   O = unknown
 >(o: FunctionList<T, I, O>): (value: I, ...rest: any[]) => O;
+
+/**
+ * Convert a value to `Many`.
+ * @param value the value to convert
+ * @returns a `Many` containing the value
+ * @remarks `Many` is used to return multiple values from a regular (non-generator) function.
+ */
+export declare function toMany<T>(value: readonly Many<T>): Many<T>;
+export declare function toMany(value: typeof none): Many<never>;
+export declare function toMany<T>(value: readonly T): Many<T>;
+/**
+ * Normalize a value by unbundling it if it is a `Many`.
+ * @param value the value to normalize
+ * @returns the normalized value
+ */
+export declare function normalizeMany(value: readonly unknown): unknown;
+/**
+ * Combine two values into a `Many`.
+ * @param a the first value
+ * @param b the second value
+ * @returns a `Many` containing both values
+ */
+export declare function combineMany(a: typeof none, b: typeof none): Many<never>;
+export declare function combineMany<T>(a: typeof none, b: readonly Many<T>): Many<T>;
+export declare function combineMany<T>(a: readonly Many<T>, b: typeof none): Many<T>;
+export declare function combineMany<T>(a: typeof none, b: readonly T): Many<T>;
+export declare function combineMany<T>(a: readonly T, b: typeof none): Many<T>;
+export declare function combineMany<T, U>(a: readonly Many<T>, b: readonly Many<U>): Many<T | U>;
+export declare function combineMany<T, U>(a: readonly T, b: readonly Many<U>): Many<T | U>;
+export declare function combineMany<T, U>(a: readonly Many<T>, b: readonly U): Many<T | U>;
+export declare function combineMany<T, U>(a: readonly T, b: readonly U): Many<T | U>;
+/**
+ * Combine two values into a `Many` mutably.
+ * @param a the first value
+ * @param b the second value
+ * @returns a `Many` containing both values
+ * @remarks if `a` or `b` are `Many`, they can be modified in-place
+ */
+export declare function combineManyMut(a: typeof none, b: typeof none): Many<never>;
+export declare function combineManyMut<T>(a: typeof none, b: readonly Many<T>): Many<T>;
+export declare function combineManyMut<T>(a: readonly Many<T>, b: typeof none): Many<T>;
+export declare function combineManyMut<T>(a: typeof none, b: readonly T): Many<T>;
+export declare function combineManyMut<T>(a: readonly T, b: typeof none): Many<T>;
+export declare function combineManyMut<T, U>(a: readonly Many<T>, b: readonly Many<U>): Many<T | U>;
+export declare function combineManyMut<T, U>(a: readonly T, b: readonly Many<U>): Many<T | U>;
+export declare function combineManyMut<T, U>(a: readonly Many<T>, b: readonly U): Many<T | U>;
+export declare function combineManyMut<T, U>(a: readonly T, b: readonly U): Many<T | U>;
 
 // generic utilities: unpacking types
 

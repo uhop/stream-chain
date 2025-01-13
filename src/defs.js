@@ -32,15 +32,54 @@ const setFunctionList = (o, fns) => {
   o.fList = fns;
   o[fListSymbol] = 1;
   return o;
-}
+};
 
 const clearFunctionList = o => {
   delete o.fList;
   delete o[fListSymbol];
   return o;
-}
+};
 
 class Stop extends Error {}
+
+const toMany = value =>
+  value === none ? many([]) : value && value[manySymbol] === 1 ? value : many([value]);
+
+const normalizeMany = o => {
+  if (o?.[manySymbol] === 1) {
+    switch (o.values.length) {
+      case 0:
+        return none;
+      case 1:
+        return o.values[0];
+    }
+  }
+  return o;
+};
+
+const combineMany = (a, b) => {
+  const values = a === none ? [] : a?.[manySymbol] === 1 ? a.values.slice() : [a];
+  if (b === none) {
+    // do nothing
+  } else if (b?.[manySymbol] === 1) {
+    values.push(...b.values);
+  } else {
+    values.push(b);
+  }
+  return many(values);
+};
+
+const combineManyMut = (a, b) => {
+  const values = a === none ? [] : a?.[manySymbol] === 1 ? a.values : [a];
+  if (b === none) {
+    // do nothing
+  } else if (b?.[manySymbol] === 1) {
+    values.push(...b.values);
+  } else {
+    values.push(b);
+  }
+  return many(values);
+};
 
 // old aliases
 const final = finalValue;
@@ -70,3 +109,8 @@ module.exports.isFunctionList = isFunctionList;
 module.exports.getFunctionList = getFunctionList;
 module.exports.setFunctionList = setFunctionList;
 module.exports.clearFunctionList = clearFunctionList;
+
+module.exports.toMany = toMany;
+module.exports.normalizeMany = normalizeMany;
+module.exports.combineMany = combineMany;
+module.exports.combineManyMut = combineManyMut;
