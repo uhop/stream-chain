@@ -234,6 +234,11 @@ module.exports.getFunctionList = defs.getFunctionList;
 module.exports.setFunctionList = defs.setFunctionList;
 module.exports.clearFunctionList = defs.clearFunctionList;
 
+module.exports.toMany = defs.toMany;
+module.exports.normalizeMany = defs.normalizeMany;
+module.exports.combineMany = defs.combineMany;
+module.exports.combineManyMut = defs.combineManyMut;
+
 module.exports.chain = chain; // for compatibility with 2.x
 module.exports.gen = gen;
 module.exports.asStream = asStream;
