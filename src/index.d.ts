@@ -241,6 +241,10 @@ declare function chain<L extends readonly unknown[]>(
   ...fns: ChainList<Arg0<L>, L>
 ): ChainOutput<Arg0<L>, Ret<L>>;
 
+declare function chainUnchecked<W = any, R = any>(
+  fns: readonly any[]
+): ChainOutput<W, R>;
+
 declare namespace chain {
   export {
     none,
@@ -268,6 +272,7 @@ declare namespace chain {
     combineMany,
     combineManyMut,
     chain,
+    chainUnchecked,
     gen,
     asStream,
     dataSource

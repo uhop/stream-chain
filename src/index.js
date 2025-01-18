@@ -239,7 +239,8 @@ module.exports.normalizeMany = defs.normalizeMany;
 module.exports.combineMany = defs.combineMany;
 module.exports.combineManyMut = defs.combineManyMut;
 
-module.exports.chain = chain; // for compatibility with 2.x
+module.exports.chain = chain;          // for compatibility with 2.x
+module.exports.chainUnchecked = chain; // for TypeScript to bypass type checks
 module.exports.gen = gen;
 module.exports.asStream = asStream;
 
