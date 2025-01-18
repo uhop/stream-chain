@@ -44,10 +44,10 @@
     ]
   },
   "devDependencies": {
-    "@types/node": "^22.7.5",
+    "@types/node": "^22.10.7",
     "nano-benchmark": "^1.0.4",
     "tape-six": "^1.0.2",
     "tape-six-proc": "^1.0.0",
-    "typescript": "^5.6.3"
+    "typescript": "^5.7.3"
   }
 }
