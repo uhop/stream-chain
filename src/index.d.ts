@@ -238,11 +238,13 @@ declare function dataSource<F>(
  * @remarks This is the main function of this library.
  */
 declare function chain<L extends readonly unknown[]>(
-  ...fns: ChainList<Arg0<L>, L>
+  ...fns: ChainList<Arg0<L>, L>,
+  options?: ChainOptions
 ): ChainOutput<Arg0<L>, Ret<L>>;
 
 declare function chainUnchecked<W = any, R = any>(
-  fns: readonly any[]
+  fns: readonly any[],
+  options?: ChainOptions
 ): ChainOutput<W, R>;
 
 declare namespace chain {
