@@ -223,6 +223,7 @@ BSD-3-Clause
 
 ## Release History
 
+* 3.4.0 *Added `Many`-related helpers and `chainUnchecked()` for TS.*
 * 3.3.2 *Technical release: updated deps, more tests.*
 * 3.3.1 *Minor enhancement: more flexible split on lines.*
 * 3.3.0 *Added a way to ignore JSON parsing errors silently.*

@@ -1,6 +1,6 @@
 {
   "name": "stream-chain",
-  "version": "3.3.2",
+  "version": "3.4.0",
   "description": "Chain functions as transform streams.",
   "type": "commonjs",
   "main": "./src/index.js",
