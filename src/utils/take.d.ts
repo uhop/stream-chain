@@ -10,5 +10,5 @@ export = take;
  */
 declare function take<T = any>(
   n: number,
-  finalValue?: typeof none | typeof stop = none
+  finalValue?: typeof none | typeof stop
 ): (value: T) => T | typeof finalValue;

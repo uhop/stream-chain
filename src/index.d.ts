@@ -35,8 +35,6 @@ import {
 import gen from './gen';
 import asStream from './asStream';
 
-export = chain;
-
 /**
  * Represents a typed duplex stream as a pair of readable and writable streams.
  */
@@ -238,7 +236,7 @@ declare function dataSource<F>(
  * @remarks This is the main function of this library.
  */
 declare function chain<L extends readonly unknown[]>(
-  ...fns: ChainList<Arg0<L>, L>,
+  fns: ChainList<Arg0<L>, L>,
   options?: ChainOptions
 ): ChainOutput<Arg0<L>, Ret<L>>;
 
@@ -247,36 +245,35 @@ declare function chainUnchecked<W = any, R = any>(
   options?: ChainOptions
 ): ChainOutput<W, R>;
 
-declare namespace chain {
-  export {
-    none,
-    stop,
-    Stop,
-    finalSymbol,
-    finalValue,
-    final,
-    isFinalValue,
-    getFinalValue,
-    manySymbol,
-    many,
-    isMany,
-    getManyValues,
-    getFunctionList,
-    flushSymbol,
-    flushable,
-    isFlushable,
-    fListSymbol,
-    isFunctionList,
-    setFunctionList,
-    clearFunctionList,
-    toMany,
-    normalizeMany,
-    combineMany,
-    combineManyMut,
-    chain,
-    chainUnchecked,
-    gen,
-    asStream,
-    dataSource
-  };
-}
+export default chain;
+export {
+  none,
+  stop,
+  Stop,
+  finalSymbol,
+  finalValue,
+  final,
+  isFinalValue,
+  getFinalValue,
+  manySymbol,
+  many,
+  isMany,
+  getManyValues,
+  getFunctionList,
+  flushSymbol,
+  flushable,
+  isFlushable,
+  fListSymbol,
+  isFunctionList,
+  setFunctionList,
+  clearFunctionList,
+  toMany,
+  normalizeMany,
+  combineMany,
+  combineManyMut,
+  chain,
+  chainUnchecked,
+  gen,
+  asStream,
+  dataSource
+};

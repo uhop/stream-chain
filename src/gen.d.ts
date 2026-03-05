@@ -1,6 +1,6 @@
 import type {Arg0, Ret, AsFlatList, Fn} from './defs';
 
-export = gen;
+export default gen;
 
 /**
  * Returns a type, which was expected from a list item.

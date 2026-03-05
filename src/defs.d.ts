@@ -52,7 +52,7 @@ export declare function getFinalValue<T>(o: FinalValue<T>): T;
 /**
  * Alias for {@link finalValue}
  */
-export declare const final = finalValue;
+export declare const final: typeof finalValue;
 
 /**
  * Interface for a value that has been marked as multiple values.
@@ -169,15 +169,15 @@ export declare function clearFunctionList<
  * @returns a `Many` containing the value
  * @remarks `Many` is used to return multiple values from a regular (non-generator) function.
  */
-export declare function toMany<T>(value: readonly Many<T>): Many<T>;
+export declare function toMany<T>(value:  Readonly<Many<T>>): Many<T>;
 export declare function toMany(value: typeof none): Many<never>;
-export declare function toMany<T>(value: readonly T): Many<T>;
+export declare function toMany<T>(value: Readonly<T>): Many<T>;
 /**
  * Normalize a value by unbundling it if it is a `Many`.
  * @param value the value to normalize
  * @returns the normalized value
  */
-export declare function normalizeMany(value: readonly unknown): unknown;
+export declare function normalizeMany(value:  Readonly<unknown>): unknown;
 /**
  * Combine two values into a `Many`.
  * @param a the first value
@@ -185,14 +185,14 @@ export declare function normalizeMany(value: readonly unknown): unknown;
  * @returns a `Many` containing both values
  */
 export declare function combineMany(a: typeof none, b: typeof none): Many<never>;
-export declare function combineMany<T>(a: typeof none, b: readonly Many<T>): Many<T>;
-export declare function combineMany<T>(a: readonly Many<T>, b: typeof none): Many<T>;
-export declare function combineMany<T>(a: typeof none, b: readonly T): Many<T>;
-export declare function combineMany<T>(a: readonly T, b: typeof none): Many<T>;
-export declare function combineMany<T, U>(a: readonly Many<T>, b: readonly Many<U>): Many<T | U>;
-export declare function combineMany<T, U>(a: readonly T, b: readonly Many<U>): Many<T | U>;
-export declare function combineMany<T, U>(a: readonly Many<T>, b: readonly U): Many<T | U>;
-export declare function combineMany<T, U>(a: readonly T, b: readonly U): Many<T | U>;
+export declare function combineMany<T>(a: typeof none, b:  Readonly<Many<T>>): Many<T>;
+export declare function combineMany<T>(a: Readonly<Many<T>>, b: typeof none): Many<T>;
+export declare function combineMany<T>(a: typeof none, b:  Readonly<T>): Many<T>;
+export declare function combineMany<T>(a: Readonly<T>, b: typeof none): Many<T>;
+export declare function combineMany<T, U>(a:  Readonly<Many<T>>, b:  Readonly<Many<U>>): Many<T | U>;
+export declare function combineMany<T, U>(a:  Readonly<T>, b:  Readonly<Many<U>>): Many<T | U>;
+export declare function combineMany<T, U>(a:  Readonly<Many<T>>, b:  Readonly<U>): Many<T | U>;
+export declare function combineMany<T, U>(a:  Readonly<T>, b:  Readonly<U>): Many<T | U>;
 /**
  * Combine two values into a `Many` mutably.
  * @param a the first value
@@ -201,14 +201,14 @@ export declare function combineMany<T, U>(a: readonly T, b: readonly U): Many<T 
  * @remarks if `a` or `b` are `Many`, they can be modified in-place
  */
 export declare function combineManyMut(a: typeof none, b: typeof none): Many<never>;
-export declare function combineManyMut<T>(a: typeof none, b: readonly Many<T>): Many<T>;
-export declare function combineManyMut<T>(a: readonly Many<T>, b: typeof none): Many<T>;
-export declare function combineManyMut<T>(a: typeof none, b: readonly T): Many<T>;
-export declare function combineManyMut<T>(a: readonly T, b: typeof none): Many<T>;
-export declare function combineManyMut<T, U>(a: readonly Many<T>, b: readonly Many<U>): Many<T | U>;
-export declare function combineManyMut<T, U>(a: readonly T, b: readonly Many<U>): Many<T | U>;
-export declare function combineManyMut<T, U>(a: readonly Many<T>, b: readonly U): Many<T | U>;
-export declare function combineManyMut<T, U>(a: readonly T, b: readonly U): Many<T | U>;
+export declare function combineManyMut<T>(a: typeof none, b:  Readonly<Many<T>>): Many<T>;
+export declare function combineManyMut<T>(a:  Readonly<Many<T>>, b: typeof none): Many<T>;
+export declare function combineManyMut<T>(a: typeof none, b:  Readonly<T>): Many<T>;
+export declare function combineManyMut<T>(a:  Readonly<T>, b: typeof none): Many<T>;
+export declare function combineManyMut<T, U>(a:  Readonly<Many<T>>, b:  Readonly<Many<U>>): Many<T | U>;
+export declare function combineManyMut<T, U>(a:  Readonly<T>, b:  Readonly<Many<U>>): Many<T | U>;
+export declare function combineManyMut<T, U>(a:  Readonly<Many<T>>, b:  Readonly<U>): Many<T | U>;
+export declare function combineManyMut<T, U>(a:  Readonly<T>, b:  Readonly<U>): Many<T | U>;
 
 // generic utilities: unpacking types
 
@@ -236,7 +236,7 @@ export type UnpackType<T> = T extends Many<infer U>
 /**
  * Unpacking the return type of a function as a combination of {@link UnpackType} and {@link UnpackReturnType}.
  */
-export type OutputType<F extends function> = UnpackType<UnpackReturnType<F>>;
+export type OutputType<F extends (...args: readonly any[]) => unknown> = UnpackType<UnpackReturnType<F>>;
 
 // generic utilities: working with tuples
 

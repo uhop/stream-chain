@@ -1,4 +1,4 @@
-import {none, stop} from './defs';
+import {none, stop} from '../defs';
 
 export = takeWhile;
 
@@ -10,9 +10,9 @@ export = takeWhile;
  */
 declare function takeWhile<T>(
   fn: (value: T) => boolean,
-  finalValue?: typeof none | typeof stop = none
+  finalValue?: typeof none | typeof stop
 ): (value: unknown) => T | typeof finalValue;
 declare function takeWhile<T>(
   fn: (value: T) => Promise<boolean>,
-  finalValue?: typeof none | typeof stop = none
+  finalValue?: typeof none | typeof stop
 ): (value: unknown) => Promise<T | typeof finalValue>;
