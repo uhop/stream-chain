@@ -99,7 +99,7 @@ test.asPromise('jsonl parserStream: bad json', (t, resolve) => {
     t.ok(e);
     resolve();
   });
-  pipeline.on('end', value => {
+  pipeline.on('end', () => {
     t.fail("We shouldn't be here.");
     resolve();
   });

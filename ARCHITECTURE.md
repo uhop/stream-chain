@@ -41,9 +41,7 @@ src/                      # Source code
     ├── fixUtf8Stream.js  # fixUtf8Stream() — repartition chunks for valid UTF-8
     ├── lines.js          # lines() — split byte stream into lines
     └── *.d.ts            # TypeScript declarations for each utility
-tests/                    # Test files (test-*.mjs, ESM, using tape-six)
-ts-check/                 # TypeScript type-check files
-ts-test/                  # TypeScript demo/test files
+tests/                    # Test files (test-*.mjs, test-*.mts, test-*.cjs, using tape-six)
 bench/                    # Benchmarks
 wiki/                     # GitHub wiki documentation (git submodule)
 .github/                  # CI workflows, Dependabot config
@@ -140,7 +138,6 @@ src/utils/* ── src/defs.js (most utilities use none, stop, many, flushable)
 - **Run with Deno**: `npm run test:deno`
 - **Run sequential**: `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **TypeScript check**: `npm run ts-check`
-- **TypeScript demo**: `npm run ts-demo`
 - **Lint**: `npm run lint` (Prettier check)
 - **Lint fix**: `npm run lint:fix` (Prettier write)
 

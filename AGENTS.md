@@ -24,7 +24,6 @@ npm install
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **Test (single file):** `node tests/test-<name>.mjs`
 - **TypeScript check:** `npm run ts-check`
-- **TypeScript demo:** `npm run ts-demo`
 - **Lint:** `npm run lint` (Prettier check)
 - **Lint fix:** `npm run lint:fix` (Prettier write)
 
@@ -64,9 +63,7 @@ stream-chain/
 │       ├── readableFrom.js # Convert iterable to Readable stream
 │       ├── fixUtf8Stream.js # Fix multi-byte UTF-8 splits across chunks
 │       └── lines.js      # Split byte stream into lines
-├── tests/                # Test files (test-*.mjs)
-├── ts-check/             # TypeScript type-check files
-├── ts-test/              # TypeScript demo/test files
+├── tests/                # Test files (test-*.mjs, test-*.mts, test-*.cjs)
 ├── bench/                # Benchmarks
 ├── wiki/                 # GitHub wiki documentation (git submodule)
 └── .github/              # CI workflows, Dependabot config
@@ -129,8 +126,8 @@ test('example', async t => {
 });
 ```
 
-- Test files are ESM (`.mjs`) and use `tape-six`.
-- Test file naming convention: `test-*.mjs`.
+- Test files use `tape-six`: `.mjs` for runtime tests, `.mts` for TypeScript typing tests, `.cjs` for CommonJS tests.
+- Test file naming convention: `test-*.*js` and `test-*.*ts`.
 - Tests are configured in `package.json` under the `"tape6"` section.
 - Test files should be directly executable: `node tests/test-foo.mjs`.
 

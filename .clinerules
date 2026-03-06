@@ -7,7 +7,7 @@ stream-chain creates a chain of streams out of regular functions, asynchronous f
 
 ## Critical rules
 
-- **CommonJS.** The project is `"type": "commonjs"`. Use `require()` in source, `import` in tests (`.mjs`).
+- **CommonJS.** The project is `"type": "commonjs"`. Use `require()` in source, `import` in tests (`.mjs`/`.mts`).
 - **No transpilation.** Code runs directly.
 - **No runtime dependencies.** Never add packages to `dependencies`. Only `devDependencies` are allowed.
 - **Do not modify or delete test expectations** without understanding why they changed.
@@ -55,7 +55,7 @@ stream-chain creates a chain of streams out of regular functions, asynchronous f
 - JSONL: `src/jsonl/parser.js`, `src/jsonl/parserStream.js`, `src/jsonl/stringerStream.js`
 - Utilities: `src/utils/` (take, skip, fold, scan, batch, lines, etc.)
 - Typed streams: `src/typed-streams.js`
-- Tests: `tests/test-*.mjs`
+- Tests: `tests/test-*.*js`, `tests/test-*.*ts`
 - Wiki docs: `wiki/` (git submodule)
 
 ## When reading the codebase

@@ -16,21 +16,23 @@ Follow these steps when adding a new utility function or module.
 2. Create `src/utils/foo.d.ts` with hand-written TypeScript declarations.
    - Keep the `.js` and `.d.ts` files in sync.
 3. Create `tests/test-foo.mjs` with automated tests (tape-six, ESM):
-   - Import the utility and `chain` from `stream-chain`.
+   - Import the utility and `chain` from `../src/index.js`.
    - Test normal operation, edge cases, and interaction with `chain()`.
+4. If the module has a `.d.ts`, add typing tests to an existing `tests/test-typings-*.mts` file or create a new one.
+   - Verify typed usage patterns compile and run correctly.
    // turbo
-4. Run the new test: `node tests/test-foo.mjs`
-5. Create `wiki/utils.md` entry or a separate wiki page with usage documentation.
-6. Add a link in `wiki/Home.md` under the appropriate section.
-7. Update `ARCHITECTURE.md` — add the utility to the project layout tree.
-8. Update `llms.txt` and `llms-full.txt` with a description and example.
-9. Update `AGENTS.md` if the architecture quick reference needs updating.
-   // turbo
-10. Verify: `npm test`
+5. Run the new test: `node tests/test-foo.mjs`
+6. Create `wiki/utils.md` entry or a separate wiki page with usage documentation.
+7. Add a link in `wiki/Home.md` under the appropriate section.
+8. Update `ARCHITECTURE.md` — add the utility to the project layout tree.
+9. Update `llms.txt` and `llms-full.txt` with a description and example.
+10. Update `AGENTS.md` if the architecture quick reference needs updating.
     // turbo
-11. Verify: `npm run ts-check`
+11. Verify: `npm test`
     // turbo
-12. Verify: `npm run lint`
+12. Verify: `npm run ts-check`
+    // turbo
+13. Verify: `npm run lint`
 
 ## Top-level module (e.g., `src/foo.js`)
 
@@ -42,16 +44,17 @@ Follow these steps when adding a new utility function or module.
    - Add `module.exports.foo = require('./foo');` to `src/index.js`.
    - Add the corresponding export and types to `src/index.d.ts`.
 4. Create `tests/test-foo.mjs` with automated tests.
+5. If the module has a `.d.ts`, add typing tests to an existing `tests/test-typings-*.mts` file or create a new one.
    // turbo
-5. Run the new test: `node tests/test-foo.mjs`
-6. Create a wiki page (e.g., `wiki/foo.md`) with usage documentation.
-7. Add a link in `wiki/Home.md`.
-8. Update `ARCHITECTURE.md` — add to project layout and dependency graph.
-9. Update `llms.txt` and `llms-full.txt`.
-10. Update `AGENTS.md` if the architecture quick reference needs updating.
+6. Run the new test: `node tests/test-foo.mjs`
+7. Create a wiki page (e.g., `wiki/foo.md`) with usage documentation.
+8. Add a link in `wiki/Home.md`.
+9. Update `ARCHITECTURE.md` — add to project layout and dependency graph.
+10. Update `llms.txt` and `llms-full.txt`.
+11. Update `AGENTS.md` if the architecture quick reference needs updating.
     // turbo
-11. Verify: `npm test`
+12. Verify: `npm test`
     // turbo
-12. Verify: `npm run ts-check`
+13. Verify: `npm run ts-check`
     // turbo
-13. Verify: `npm run lint`
+14. Verify: `npm run lint`
