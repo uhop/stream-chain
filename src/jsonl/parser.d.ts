@@ -11,7 +11,7 @@ interface OutputItem {
   /** The key: a sequential number starting from 0. */
   key: number;
   /** The parsed value. */
-  value: any;
+  value: unknown;
 }
 
 /**

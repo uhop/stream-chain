@@ -9,7 +9,7 @@ import fs, { createReadStream, createWriteStream } from 'node:fs';
 const pipeline1 = chain([
   createReadStream('input.json'),
   parser(),
-  ({value}: {value: number}) => value + 1,
+  (item: {key: number; value: unknown}) => (item.value as number) + 1,
   stringerStream(),
   createWriteStream('output.json')
 ] as const);
@@ -19,7 +19,7 @@ void pipeline1;
 const pipeline2 = chain([
   createReadStream('input.json'),
   parserStream(),
-  ({value}: {value: number}) => value + 1,
+  (item: {key: number; value: unknown}) => (item.value as number) + 1,
   stringerStream(),
   createWriteStream('output.json')
 ] as const);

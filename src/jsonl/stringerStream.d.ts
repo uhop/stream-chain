@@ -37,4 +37,4 @@ interface StringerOptions {
  * @param options options for the stringer stream (see {@link StringerOptions})
  * @returns a duplex stream
  */
-declare function stringer<T>(options?: any): TypedTransform<T, string>;
+declare function stringer<T>(options?: StringerOptions): TypedTransform<T, string>;

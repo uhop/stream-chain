@@ -13,5 +13,5 @@ export = takeWithSkip;
 declare function takeWithSkip<T = any>(
   n: number,
   skip?: number,
-  finalValue?: typeof none | typeof stop = none
+  finalValue?: typeof none | typeof stop
 ): (value: T) => T | typeof finalValue;
