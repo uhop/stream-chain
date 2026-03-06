@@ -1,0 +1,62 @@
+<!-- Canonical source: AGENTS.md — keep this file in sync -->
+# stream-chain — AI Agent Rules
+
+## Project identity
+
+stream-chain creates a chain of streams out of regular functions, asynchronous functions, generators, and existing streams, while properly handling backpressure. The result is a Duplex stream. It is a lightweight, zero-dependency micro-package. The npm package name is `stream-chain`. Internal symbols use `Symbol.for('object-stream.*')`.
+
+## Critical rules
+
+- **CommonJS.** The project is `"type": "commonjs"`. Use `require()` in source, `import` in tests (`.mjs`).
+- **No transpilation.** Code runs directly.
+- **No runtime dependencies.** Never add packages to `dependencies`. Only `devDependencies` are allowed.
+- **Do not modify or delete test expectations** without understanding why they changed.
+- **Do not add comments or remove comments** unless explicitly asked.
+- **Keep `src/index.js` and `src/index.d.ts` in sync.** All public API is exported from `index.js` and typed in `index.d.ts`.
+- **Keep `.js` and `.d.ts` files in sync** for all modules under `src/`.
+- **Object mode by default.** `chain()` defaults to `{writableObjectMode: true, readableObjectMode: true}`.
+- **Backpressure must be handled correctly.** This is a core concern of the library.
+
+## Code style
+
+- Prettier: 100 char width, single quotes, no bracket spacing, no trailing commas, arrow parens "avoid" (see `.prettierrc`).
+- 2-space indentation.
+- Semicolons are enforced by Prettier (default `semi: true`).
+
+## Architecture quick reference
+
+- `chain(fns, options)` is the main entry point. Accepts array of functions, streams, or arrays (flattened). Returns a `Duplex` with `.streams`, `.input`, `.output`.
+- Functions are grouped via `gen()` for efficiency (unless `noGrouping: true`).
+- `gen(...fns)` creates an async generator pipeline. Handles `none`, `stop`, `many()`, `finalValue()`, flushable.
+- `fun(...fns)` is like `gen()` but returns an async function.
+- `asStream(fn)` wraps any function as a `Duplex` stream.
+- Special values in `defs.js`: `none` (skip), `stop` (terminate), `many(values)` (emit multiple), `finalValue(value)` (skip rest), `flushable(fn)` (called at end).
+- Web streams are automatically adapted to Node streams.
+- JSONL support in `src/jsonl/` — parser and stringer.
+- Utilities in `src/utils/` — `take`, `skip`, `fold`, `scan`, `batch`, `lines`, etc.
+
+## Verification commands
+
+- `npm test` — run the full test suite (parallel workers)
+- `node tests/test-<name>.mjs` — run a single test file directly
+- `npm run test:bun` — run with Bun
+- `npm run ts-check` — TypeScript type checking
+
+## File layout
+
+- Entry point: `src/index.js` + `src/index.d.ts`
+- Special values: `src/defs.js` + `src/defs.d.ts`
+- Transducers: `src/gen.js`, `src/fun.js`
+- Stream adapter: `src/asStream.js`
+- JSONL: `src/jsonl/parser.js`, `src/jsonl/parserStream.js`, `src/jsonl/stringerStream.js`
+- Utilities: `src/utils/` (take, skip, fold, scan, batch, lines, etc.)
+- Typed streams: `src/typed-streams.js`
+- Tests: `tests/test-*.mjs`
+- Wiki docs: `wiki/` (git submodule)
+
+## When reading the codebase
+
+- Start with `ARCHITECTURE.md` for the module map and dependency graph.
+- `src/index.d.ts` is the best API reference for the public API.
+- Wiki markdown files in `wiki/` contain detailed usage docs.
+- `src/index.js` and `src/defs.js` are the core modules — read them first.
