@@ -29,6 +29,8 @@ Follow these steps when adding a new utility function or module.
 10. Verify: `npm test`
     // turbo
 11. Verify: `npm run ts-check`
+    // turbo
+12. Verify: `npm run lint`
 
 ## Top-level module (e.g., `src/foo.js`)
 
@@ -51,3 +53,5 @@ Follow these steps when adding a new utility function or module.
 11. Verify: `npm test`
     // turbo
 12. Verify: `npm run ts-check`
+    // turbo
+13. Verify: `npm run lint`

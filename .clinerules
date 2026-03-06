@@ -40,7 +40,11 @@ stream-chain creates a chain of streams out of regular functions, asynchronous f
 - `npm test` — run the full test suite (parallel workers)
 - `node tests/test-<name>.mjs` — run a single test file directly
 - `npm run test:bun` — run with Bun
+- `npm run test:deno` — run with Deno
+- `npm run test:seq` — run sequentially (also `test:seq:bun`, `test:seq:deno`)
 - `npm run ts-check` — TypeScript type checking
+- `npm run lint` — Prettier check
+- `npm run lint:fix` — Prettier write
 
 ## File layout
 

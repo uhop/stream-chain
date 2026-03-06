@@ -20,9 +20,13 @@ npm install
 - **Install:** `npm install`
 - **Test:** `npm test` (runs `tape6 --flags FO`)
 - **Test (Bun):** `npm run test:bun`
+- **Test (Deno):** `npm run test:deno`
+- **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **Test (single file):** `node tests/test-<name>.mjs`
 - **TypeScript check:** `npm run ts-check`
 - **TypeScript demo:** `npm run ts-demo`
+- **Lint:** `npm run lint` (Prettier check)
+- **Lint fix:** `npm run lint:fix` (Prettier write)
 
 ## Project structure
 

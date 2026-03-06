@@ -9,7 +9,8 @@ Write or update tests using the tape-six testing library.
 ## Notes
 
 - Tests are ESM files (`.mjs`) even though source is CommonJS.
-- The default `tape6` runner uses worker threads for parallel execution.
+- The default `tape6` runner uses worker threads for parallel execution. `tape6-seq` runs sequentially in-process — useful for debugging or when tests share state.
+- Tests run on Node, Bun, and Deno.
 - Test file naming convention: `test-*.mjs` in the `tests/` directory.
 - See existing tests (e.g., `tests/test-simple.mjs`) for patterns specific to stream-chain.
 - Common test helper: `tests/helpers.mjs` provides `delay()` and `readArray()`.
@@ -31,4 +32,5 @@ Write or update tests using the tape-six testing library.
 3. Run the new test file directly to verify: `node tests/test-<name>.mjs`
    // turbo
 4. Run the full test suite to check for regressions: `npm test`
+   - If debugging, use `npm run test:seq` (runs sequentially, easier to trace issues).
 5. Report results and any failures.

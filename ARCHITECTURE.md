@@ -137,8 +137,12 @@ src/utils/* ── src/defs.js (most utilities use none, stop, many, flushable)
 - **Run all**: `npm test` (parallel workers via `tape6 --flags FO`)
 - **Run single file**: `node tests/test-<name>.mjs`
 - **Run with Bun**: `npm run test:bun`
+- **Run with Deno**: `npm run test:deno`
+- **Run sequential**: `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **TypeScript check**: `npm run ts-check`
 - **TypeScript demo**: `npm run ts-demo`
+- **Lint**: `npm run lint` (Prettier check)
+- **Lint fix**: `npm run lint:fix` (Prettier write)
 
 ## Import paths
 

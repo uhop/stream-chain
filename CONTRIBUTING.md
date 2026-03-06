@@ -17,8 +17,9 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the module map and dependency graph
 ## Development workflow
 
 1. Make your changes.
-2. Test: `npm test`
-3. Type-check: `npm run ts-check`
+2. Lint: `npm run lint:fix`
+3. Test: `npm test`
+4. Type-check: `npm run ts-check`
 
 ## Code style
 

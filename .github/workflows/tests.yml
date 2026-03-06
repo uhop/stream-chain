@@ -12,12 +12,14 @@ on:
 jobs:
   tests:
     name: Node.js ${{matrix.node-version}} on ${{matrix.os}}
+    permissions:
+      contents: read
     runs-on: ${{matrix.os}}
 
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        node-version: [18, 20, 22]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20, 22, 24, 25]
 
     steps:
     - uses: actions/checkout@v4
