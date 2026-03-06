@@ -21,7 +21,7 @@ export const readString = (string, quant) => new Readable({
       }
     } else {
       for (let i = 0; i < string.length; i += quant) {
-        this.push(string.substr(i, quant));
+        this.push(string.slice(i, i + quant));
       }
     }
     this.push(null);

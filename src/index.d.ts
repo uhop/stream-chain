@@ -50,7 +50,7 @@ export type DuplexStream<W = any, R = any> = {
  */
 export interface ChainOptions extends DuplexOptions {
   /** If `true`, no groupings will be done. Each function will be a separate stream object. */
-  noGroupings?: boolean;
+  noGrouping?: boolean;
   /** If `true`, event bindings to the chain stream object will be skipped. */
   skipEvents?: boolean;
 }
@@ -58,11 +58,11 @@ export interface ChainOptions extends DuplexOptions {
 /**
  * The tuple type for a chain function with one item.
  */
-type ChainSteams1 = [Readable | Writable | Duplex | Transform];
+type ChainStreams1 = [Readable | Writable | Duplex | Transform];
 /**
  * The tuple type for a chain function with multiple items.
  */
-type ChainSteams = [
+type ChainStreams = [
   Readable | Duplex | Transform,
   ...(Duplex | Transform)[],
   Writable | Duplex | Transform
@@ -73,7 +73,7 @@ type ChainSteams = [
  */
 export interface ChainOutput<W, R> extends Duplex {
   /** Internal list of streams. */
-  streams: ChainSteams1 | ChainSteams;
+  streams: ChainStreams1 | ChainStreams;
   /** The first stream, which can be used to feed the chain and to attach event handlers. */
   input: Readable | Writable | Duplex | Transform;
   /** The last stream, which can be used to consume results and to attach event handlers. */

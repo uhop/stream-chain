@@ -50,7 +50,7 @@ test.asPromise('simple: async function', (t, resolve) => {
   });
 });
 
-test.asPromise('simple: async function', (t, resolve) => {
+test.asPromise('simple: many', (t, resolve) => {
   const output = [],
     c = chain([
       fromIterable([1, 2, 3]),

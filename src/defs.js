@@ -98,7 +98,6 @@ module.exports.manySymbol = manySymbol;
 module.exports.many = many;
 module.exports.isMany = isMany;
 module.exports.getManyValues = getManyValues;
-module.exports.getFunctionList = getFunctionList;
 
 module.exports.flushSymbol = flushSymbol;
 module.exports.flushable = flushable;

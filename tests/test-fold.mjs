@@ -67,7 +67,7 @@ test.asPromise('fold: scan async', (t, resolve) => {
 
 test.asPromise('fold: reduce', (t, resolve) => {
   const output = [],
-    c = chain([readableFrom([1, 2, 3]), fold((acc, x) => acc + x, 0), streamToArray(output)]);
+    c = chain([readableFrom([1, 2, 3]), reduce((acc, x) => acc + x, 0), streamToArray(output)]);
 
   c.on('end', () => {
     t.deepEqual(output, [6]);

@@ -1,6 +1,8 @@
 // @ts-self-types="./typed-streams.d.ts"
 
-const {Duplex, Readable, Transform, Writable} = require('stream');
+'use strict';
+
+const {Duplex, Readable, Transform, Writable} = require('node:stream');
 
 class TypedDuplex extends Duplex {};
 class TypedReadable extends Readable {};

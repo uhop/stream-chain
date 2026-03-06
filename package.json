@@ -10,7 +10,6 @@
     "./*": "./src/*"
   },
   "scripts": {
-    "debug": "node --inspect-brk tests/tests.js",
     "test": "tape6 --flags FO",
     "test:bun": "tape6-bun --flags FO",
     "test:deno": "tape6-deno --flags FO",
@@ -43,7 +42,9 @@
   "files": [
     "src",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "llms.txt",
+    "llms-full.txt"
   ],
   "tape6": {
     "tests": [

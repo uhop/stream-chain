@@ -222,7 +222,6 @@ module.exports.manySymbol = defs.manySymbol;
 module.exports.many = defs.many;
 module.exports.isMany = defs.isMany;
 module.exports.getManyValues = defs.getManyValues;
-module.exports.getFunctionList = defs.getFunctionList;
 
 module.exports.flushSymbol = defs.flushSymbol;
 module.exports.flushable = defs.flushable;
