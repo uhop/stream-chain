@@ -55,7 +55,7 @@
     "@types/node": "^25.3.5",
     "nano-benchmark": "^1.0.11",
     "prettier": "^3.8.1",
-    "tape-six": "^1.7.8",
+    "tape-six": "^1.7.10",
     "tape-six-proc": "^1.2.5",
     "typescript": "^5.9.3"
   }
