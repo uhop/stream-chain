@@ -20,6 +20,9 @@
     "test:seq:bun": "bun run `tape6-seq --self` --flags FO",
     "test:seq:deno": "deno run -A `tape6-seq --self` --flags FO",
     "ts-check": "tsc --noEmit",
+    "ts-test": "tape6 --flags FO 'tests/test-*.*ts'",
+    "ts-test:bun": "tape6-bun --flags FO 'tests/test-*.*ts'",
+    "ts-test:deno": "tape6-deno --flags FO 'tests/test-*.*ts'",
     "lint": "prettier --check .",
     "lint:fix": "prettier --write ."
   },
@@ -47,8 +50,7 @@
   ],
   "tape6": {
     "tests": [
-      "/tests/test-*.*js",
-      "/tests/test-*.*ts"
+      "/tests/test-*.*js"
     ]
   },
   "devDependencies": {
