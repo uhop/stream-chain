@@ -5,7 +5,7 @@ export = batch;
 /**
  * Batch values into arrays of `n` elements.
  */
-type BatchOutput<T> = (value: T | typeof none) => (T[] | typeof none);
+type BatchOutput<T> = (value: T | typeof none) => T[] | typeof none;
 
 /**
  * Creates a function that batches values into arrays of `n` elements.

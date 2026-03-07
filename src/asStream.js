@@ -6,10 +6,7 @@ const {Duplex} = require('node:stream');
 const defs = require('./defs');
 
 const asStream = (fn, options) => {
-  if (typeof fn != 'function')
-    throw TypeError(
-      'Only a function is accepted as the first argument'
-    );
+  if (typeof fn != 'function') throw TypeError('Only a function is accepted as the first argument');
 
   // pump variables
   let paused = Promise.resolve(),

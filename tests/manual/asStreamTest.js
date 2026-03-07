@@ -1,4 +1,3 @@
-
 const {PassThrough} = require('node:stream');
 
 const defs = require('../../src/defs');

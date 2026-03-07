@@ -219,24 +219,27 @@ export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> =
   ReturnType<F> extends Promise<unknown>
     ? Awaited<ReturnType<F>>
     : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
-    ? O
-    : ReturnType<F> extends Generator<infer O, unknown, unknown>
-    ? O
-    : ReturnType<F>;
+      ? O
+      : ReturnType<F> extends Generator<infer O, unknown, unknown>
+        ? O
+        : ReturnType<F>;
 
 /**
  * `stream-chain`-specific utility for getting the type from functions used in a function list.
  */
-export type UnpackType<T> = T extends Many<infer U>
-  ? U
-  : T extends FinalValue<infer U>
-  ? U
-  : Exclude<T, typeof none | typeof stop>;
+export type UnpackType<T> =
+  T extends Many<infer U>
+    ? U
+    : T extends FinalValue<infer U>
+      ? U
+      : Exclude<T, typeof none | typeof stop>;
 
 /**
  * Unpacking the return type of a function as a combination of {@link UnpackType} and {@link UnpackReturnType}.
  */
-export type OutputType<F extends (...args: readonly any[]) => unknown> = UnpackType<UnpackReturnType<F>>;
+export type OutputType<F extends (...args: readonly any[]) => unknown> = UnpackType<
+  UnpackReturnType<F>
+>;
 
 // generic utilities: working with tuples
 
@@ -293,13 +296,13 @@ export type Arg0<F> = F extends readonly unknown[]
   ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
     ? Arg0<F1>
     : AsFlatList<F> extends readonly []
-    ? any
-    : AsFlatList<F> extends readonly (infer F1)[]
-    ? Arg0<F1>
-    : never
+      ? any
+      : AsFlatList<F> extends readonly (infer F1)[]
+        ? Arg0<F1>
+        : never
   : F extends (...args: readonly any[]) => unknown
-  ? Parameters<F>[0]
-  : never;
+    ? Parameters<F>[0]
+    : never;
 
 /**
  * Returns the unpacked return type of a function or a function list or `never`.
@@ -308,10 +311,10 @@ export type Ret<F, Default = any> = F extends readonly unknown[]
   ? AsFlatList<F> extends readonly [...unknown[], infer F1]
     ? Ret<F1, Default>
     : AsFlatList<F> extends readonly []
-    ? Default
-    : AsFlatList<F> extends readonly (infer F1)[]
-    ? Ret<F1, Default>
-    : never
+      ? Default
+      : AsFlatList<F> extends readonly (infer F1)[]
+        ? Ret<F1, Default>
+        : never
   : F extends Fn
-  ? OutputType<F>
-  : never;
+    ? OutputType<F>
+    : never;

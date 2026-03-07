@@ -1,7 +1,7 @@
 # stream-chain [![NPM version][npm-img]][npm-url]
 
-[npm-img]:      https://img.shields.io/npm/v/stream-chain.svg
-[npm-url]:      https://npmjs.org/package/stream-chain
+[npm-img]: https://img.shields.io/npm/v/stream-chain.svg
+[npm-url]: https://npmjs.org/package/stream-chain
 
 `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, existing Node streams, and Web streams, while properly handling [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
 
@@ -39,7 +39,7 @@ const pipeline = chain([
   },
 
   // filters out even values
-  x => x % 2 ? x : null,
+  x => (x % 2 ? x : null),
 
   // uses an arbitrary transform stream
   new Transform({
@@ -89,31 +89,30 @@ Many details about this package can be discovered by looking at test files locat
 
 The factory function accepts the following arguments:
 
-* `fns` is an array of functions, arrays or stream instances.
-  * If a value is a function, it is a candidate for a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream (see below for more details), which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters.
-    * If it is a regular function, it can return:
-      * Regular value:
-        * If it is `undefined` or `null`, no value shall be passed.
-        * Otherwise, the value will be passed to the next stream.
+- `fns` is an array of functions, arrays or stream instances.
+  - If a value is a function, it is a candidate for a [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform) stream (see below for more details), which calls this function with two parameters: `chunk` (an object), and an optional `encoding`. See [Node's documentation](https://nodejs.org/api/stream.html#stream_transform_transform_chunk_encoding_callback) for more details on those parameters.
+    - If it is a regular function, it can return:
+      - Regular value:
+        - If it is `undefined` or `null`, no value shall be passed.
+        - Otherwise, the value will be passed to the next stream.
 
         ```js
         // produces no values:
-        x => null
-        x => undefined
+        x => null;
+        x => undefined;
         // produces one value:
-        x => x
+        x => x;
         ```
 
-      * Special value:
-        * If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
+      - Special value:
+        - If it is an instance of [Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise) or "thenable" (an object with a method called `then()`), it will be waited for. Its result should be a regular value.
 
           ```js
           // delays by 0.5s:
-          x => new Promise(
-            resolve => setTimeout(() => resolve(x), 500))
+          x => new Promise(resolve => setTimeout(() => resolve(x), 500));
           ```
 
-        * If it is an instance of a generator or "nextable" (an object with a method called `next()`), it will be iterated according to the [generator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator) protocol. The results should be regular values.
+        - If it is an instance of a generator or "nextable" (an object with a method called `next()`), it will be iterated according to the [generator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Generator) protocol. The results should be regular values.
 
           ```js
           // produces multiple values:
@@ -124,35 +123,38 @@ The factory function accepts the following arguments:
             }
             next() {
               return {
-                done:  this.i <= 1,
+                done: this.i <= 1,
                 value: this.x + this.i++
               };
             }
           }
-          x => new Nextable(x)
+          x => new Nextable(x);
           ```
 
           `next()` can return a `Promise` according to the [asynchronous generator](https://zaiste.net/nodejs_10_asynchronous_iteration_async_generators/) protocol.
-      * Any thrown exception will be caught and passed to a callback function effectively generating an error event.
+
+      - Any thrown exception will be caught and passed to a callback function effectively generating an error event.
 
         ```js
         // fails
-        x => { throw new Error('Bad!'); }
+        x => {
+          throw new Error('Bad!');
+        };
         ```
 
-  * If it is an asynchronous function, it can return a regular value.
-    * In essence, it is covered under "special values" as a function that returns a promise.
+  - If it is an asynchronous function, it can return a regular value.
+    - In essence, it is covered under "special values" as a function that returns a promise.
 
     ```js
     // delays by 0.5s:
     async x => {
       await new Promise(resolve => setTimeout(() => resolve(), 500));
       return x;
-    }
+    };
     ```
 
-  * If it is a generator function, each yield should produce a regular value.
-    * In essence, it is covered under "special values" as a function that returns a generator object.
+  - If it is a generator function, each yield should produce a regular value.
+    - In essence, it is covered under "special values" as a function that returns a generator object.
 
     ```js
     // produces multiple values:
@@ -164,8 +166,8 @@ The factory function accepts the following arguments:
     }
     ```
 
-  * If it is an asynchronous generator function, each yield should produce a regular value.
-    * In essence, it is covered under "special values" as a function that returns a generator object.
+  - If it is an asynchronous generator function, each yield should produce a regular value.
+    - In essence, it is covered under "special values" as a function that returns a generator object.
 
     ```js
     // produces multiple values:
@@ -180,34 +182,36 @@ The factory function accepts the following arguments:
     }
     ```
 
-  * If a value is an array, its items are assumed to be functions, streams or other such arrays. The array is flattened, all individual items are included in a chain sequentially.
-    * It is a provision to create lightweight bundles from pipeline items.
-  * If a value is a valid stream, it is included as is in the pipeline.
-    * [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform).
-    * [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex).
-    * The very first stream can be [Readable](https://nodejs.org/api/stream.html#stream_class_stream_readable).
-      * In this case the pipeline ignores all possible writes to the front, and ends when the first stream ends.
-    * The very last stream can be [Writable](https://nodejs.org/api/stream.html#stream_class_stream_writable).
-      * In this case the pipeline does not produce any output, and finishes when the last stream finishes.
-      * Because `'data'` event is not used in this case, the instance resumes itself automatically. Read about it in Node's documentation:
-        * [Two reading modes](https://nodejs.org/api/stream.html#two-reading-modes).
-        * [Three states](https://nodejs.org/api/stream.html#three-states).
-        * [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
-  * *(Since 3.1.0)* If a value is a web stream object (like `ReadableStream` or `WritableStream`), it is adapted to a corresponding Node stream and included in the pipeline.
-    * Note that the support of web streams is still experimental in Node.
-* `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
-  * The default options is this object:
+  - If a value is an array, its items are assumed to be functions, streams or other such arrays. The array is flattened, all individual items are included in a chain sequentially.
+    - It is a provision to create lightweight bundles from pipeline items.
+  - If a value is a valid stream, it is included as is in the pipeline.
+    - [Transform](https://nodejs.org/api/stream.html#stream_class_stream_transform).
+    - [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex).
+    - The very first stream can be [Readable](https://nodejs.org/api/stream.html#stream_class_stream_readable).
+      - In this case the pipeline ignores all possible writes to the front, and ends when the first stream ends.
+    - The very last stream can be [Writable](https://nodejs.org/api/stream.html#stream_class_stream_writable).
+      - In this case the pipeline does not produce any output, and finishes when the last stream finishes.
+      - Because `'data'` event is not used in this case, the instance resumes itself automatically. Read about it in Node's documentation:
+        - [Two reading modes](https://nodejs.org/api/stream.html#two-reading-modes).
+        - [Three states](https://nodejs.org/api/stream.html#three-states).
+        - [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
+  - _(Since 3.1.0)_ If a value is a web stream object (like `ReadableStream` or `WritableStream`), it is adapted to a corresponding Node stream and included in the pipeline.
+    - Note that the support of web streams is still experimental in Node.
+
+- `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
+  - The default options is this object:
 
     ```js
     {writableObjectMode: true, readableObjectMode: true}
     ```
 
     If `options` is specified it is copied over the default options.
-  * Always make sure that `writableObjectMode` is the same as the corresponding object mode of the first stream, and `readableObjectMode` is the same as the corresponding object mode of the last stream.
-    * Eventually both these modes can be deduced, but Node does not define the standard way to determine it, so currently it cannot be done reliably.
-  * Additionally the following custom properties are recognized:
-    * `skipEvents` is an optional boolean flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
-    * `noGrouping` is an optional boolean flag. If it is falsy (the default), all subsequent functions are grouped together using the `gen()` utility for improved performance. If it is specified and truthy, all functions will be wrapped as streams individually. This mode is compatible with how the 2.x version works.
+
+  - Always make sure that `writableObjectMode` is the same as the corresponding object mode of the first stream, and `readableObjectMode` is the same as the corresponding object mode of the last stream.
+    - Eventually both these modes can be deduced, but Node does not define the standard way to determine it, so currently it cannot be done reliably.
+  - Additionally the following custom properties are recognized:
+    - `skipEvents` is an optional boolean flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
+    - `noGrouping` is an optional boolean flag. If it is falsy (the default), all subsequent functions are grouped together using the `gen()` utility for improved performance. If it is specified and truthy, all functions will be wrapped as streams individually. This mode is compatible with how the 2.x version works.
 
 An instance can be used to attach handlers for stream events.
 
@@ -223,26 +227,27 @@ BSD-3-Clause
 
 ## Release History
 
-* 3.4.0 *Added `Many`-related helpers and `chainUnchecked()` for TS.*
-* 3.3.2 *Technical release: updated deps, more tests.*
-* 3.3.1 *Minor enhancement: more flexible split on lines.*
-* 3.3.0 *Added a way to ignore JSON parsing errors silently.*
-* 3.2.0 *Added TS typings and `clearFunctionList()`.*
-* 3.1.0 *Added a seamless support for web streams.*
-* 3.0.1 *First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details.*
-* 3.0.0 *New major version. Unreleased.*
-* 2.2.5 *Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins)).*
-* 2.2.4 *Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang)).*
-* 2.2.3 *Technical release. No need to upgrade.*
-* 2.2.2 *Technical release. No need to upgrade.*
-* 2.2.1 *Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper.*
-* 2.2.0 *Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`.*
-* 2.1.0 *Added simple transducers, dropped Node 6.*
-* 2.0.3 *Added TypeScript typings and the badge.*
-* 2.0.2 *Workaround for Node 6: use `'finish'` event instead of `_final()`.*
-* 2.0.1 *Improved documentation.*
-* 2.0.0 *Upgraded to use Duplex instead of EventEmitter as the base.*
-* 1.0.3 *Improved documentation.*
-* 1.0.2 *Better README.*
-* 1.0.1 *Fixed the README.*
-* 1.0.0 *The initial release.*
+- 3.4.1 _Improved TS typings, added TypeScript typing tests, cleaned up dead code._
+- 3.4.0 _Added `Many`-related helpers and `chainUnchecked()` for TS._
+- 3.3.2 _Technical release: updated deps, more tests._
+- 3.3.1 _Minor enhancement: more flexible split on lines._
+- 3.3.0 _Added a way to ignore JSON parsing errors silently._
+- 3.2.0 _Added TS typings and `clearFunctionList()`._
+- 3.1.0 _Added a seamless support for web streams._
+- 3.0.1 _First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details._
+- 3.0.0 _New major version. Unreleased._
+- 2.2.5 _Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins))._
+- 2.2.4 _Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang))._
+- 2.2.3 _Technical release. No need to upgrade._
+- 2.2.2 _Technical release. No need to upgrade._
+- 2.2.1 _Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper._
+- 2.2.0 _Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`._
+- 2.1.0 _Added simple transducers, dropped Node 6._
+- 2.0.3 _Added TypeScript typings and the badge._
+- 2.0.2 _Workaround for Node 6: use `'finish'` event instead of `_final()`._
+- 2.0.1 _Improved documentation._
+- 2.0.0 _Upgraded to use Duplex instead of EventEmitter as the base._
+- 1.0.3 _Improved documentation._
+- 1.0.2 _Better README._
+- 1.0.1 _Fixed the README._
+- 1.0.0 _The initial release._

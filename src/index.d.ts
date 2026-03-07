@@ -64,10 +64,10 @@ declare function dataSource<F>(
 ): F extends AsyncIterable<infer T>
   ? () => AsyncIterator<T>
   : F extends Iterable<infer T>
-  ? () => Iterator<T>
-  : F extends Fn
-  ? F
-  : never;
+    ? () => Iterator<T>
+    : F extends Fn
+      ? F
+      : never;
 
 declare namespace chain {
   /**
@@ -116,72 +116,74 @@ declare namespace chain {
   /**
    * Returns the first argument of a chain, a stream, or a function.
    */
-  export type Arg0<F> = F extends TypedTransform<infer W, any>
-    ? W
-    : F extends TypedDuplex<infer W, any>
-    ? W
-    : F extends TypedReadable<any>
-    ? never
-    : F extends TypedWritable<infer W>
-    ? W
-    : F extends Writable | Transform | Duplex
-    ? any
-    : F extends Readable
-    ? never
-    : F extends TransformStream<infer W, any>
-    ? W
-    : F extends DuplexStream<infer W, any>
-    ? W
-    : F extends WritableStream<infer W>
-    ? W
-    : F extends ReadableStream<any>
-    ? never
-    : F extends readonly unknown[]
-    ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
-      ? Arg0<F1>
-      : AsFlatList<F> extends readonly []
-      ? any
-      : AsFlatList<F> extends readonly (infer F1)[]
-      ? Arg0<F1>
-      : never
-    : F extends (...args: readonly any[]) => unknown
-    ? Parameters<F>[0]
-    : never;
+  export type Arg0<F> =
+    F extends TypedTransform<infer W, any>
+      ? W
+      : F extends TypedDuplex<infer W, any>
+        ? W
+        : F extends TypedReadable<any>
+          ? never
+          : F extends TypedWritable<infer W>
+            ? W
+            : F extends Writable | Transform | Duplex
+              ? any
+              : F extends Readable
+                ? never
+                : F extends TransformStream<infer W, any>
+                  ? W
+                  : F extends DuplexStream<infer W, any>
+                    ? W
+                    : F extends WritableStream<infer W>
+                      ? W
+                      : F extends ReadableStream<any>
+                        ? never
+                        : F extends readonly unknown[]
+                          ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
+                            ? Arg0<F1>
+                            : AsFlatList<F> extends readonly []
+                              ? any
+                              : AsFlatList<F> extends readonly (infer F1)[]
+                                ? Arg0<F1>
+                                : never
+                          : F extends (...args: readonly any[]) => unknown
+                            ? Parameters<F>[0]
+                            : never;
 
   /**
    * Returns the return type of a chain, a stream, or a function.
    */
-  export type Ret<F, Default = any> = F extends TypedTransform<any, infer R>
-    ? R
-    : F extends TypedDuplex<any, infer R>
-    ? R
-    : F extends TypedReadable<infer R>
-    ? R
-    : F extends TypedWritable<any>
-    ? never
-    : F extends Readable | Transform | Duplex
-    ? any
-    : F extends Writable
-    ? never
-    : F extends TransformStream<any, infer R>
-    ? R
-    : F extends DuplexStream<any, infer R>
-    ? R
-    : F extends ReadableStream<infer R>
-    ? R
-    : F extends WritableStream<any>
-    ? never
-    : F extends readonly unknown[]
-    ? AsFlatList<F> extends readonly [...unknown[], infer F1]
-      ? Ret<F1, Default>
-      : AsFlatList<F> extends readonly []
-      ? Default
-      : AsFlatList<F> extends readonly (infer F1)[]
-      ? Ret<F1, Default>
-      : never
-    : F extends Fn
-    ? OutputType<F>
-    : never;
+  export type Ret<F, Default = any> =
+    F extends TypedTransform<any, infer R>
+      ? R
+      : F extends TypedDuplex<any, infer R>
+        ? R
+        : F extends TypedReadable<infer R>
+          ? R
+          : F extends TypedWritable<any>
+            ? never
+            : F extends Readable | Transform | Duplex
+              ? any
+              : F extends Writable
+                ? never
+                : F extends TransformStream<any, infer R>
+                  ? R
+                  : F extends DuplexStream<any, infer R>
+                    ? R
+                    : F extends ReadableStream<infer R>
+                      ? R
+                      : F extends WritableStream<any>
+                        ? never
+                        : F extends readonly unknown[]
+                          ? AsFlatList<F> extends readonly [...unknown[], infer F1]
+                            ? Ret<F1, Default>
+                            : AsFlatList<F> extends readonly []
+                              ? Default
+                              : AsFlatList<F> extends readonly (infer F1)[]
+                                ? Ret<F1, Default>
+                                : never
+                          : F extends Fn
+                            ? OutputType<F>
+                            : never;
 
   /**
    * Represents an item in the chain function.
@@ -189,61 +191,61 @@ declare namespace chain {
    */
   export type ChainItem<I, F> =
     F extends TypedTransform<infer W, infer R>
-    ? I extends W
-      ? F
-      : TypedTransform<I, R>
-    : F extends TypedDuplex<infer W, infer R>
-    ? I extends W
-      ? F
-      : TypedDuplex<I, R>
-    : F extends TypedReadable<any>
-    ? [I] extends [never]
-      ? F
-      : never
-    : F extends TypedWritable<infer W>
-    ? I extends W
-      ? F
-      : TypedWritable<I>
-    : F extends Writable | Transform | Duplex
-    ? F
-    : F extends Readable
-    ? [I] extends [never]
-      ? F
-      : never
-    : F extends TransformStream<infer W, infer R>
-    ? I extends W
-      ? F
-      : TransformStream<I, R>
-    : F extends DuplexStream<infer W, infer R>
-    ? I extends W
-      ? F
-      : DuplexStream<I, R>
-    : F extends ReadableStream<any>
-    ? [I] extends [never]
-      ? F
-      : never
-    : F extends WritableStream<infer W>
-    ? I extends W
-      ? F
-      : WritableStream<I>
-    : F extends readonly [infer F1, ...infer R]
-    ? F1 extends (null | undefined)
-      ? readonly [F1, ...ChainList<I, R>]
-      : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
-    : F extends readonly unknown[]
-    ? readonly [ChainItem<I, any>]
-    : F extends Fn
-    ? I extends Arg0<F>
-      ? F
-      : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
-    : never;
+      ? I extends W
+        ? F
+        : TypedTransform<I, R>
+      : F extends TypedDuplex<infer W, infer R>
+        ? I extends W
+          ? F
+          : TypedDuplex<I, R>
+        : F extends TypedReadable<any>
+          ? [I] extends [never]
+            ? F
+            : never
+          : F extends TypedWritable<infer W>
+            ? I extends W
+              ? F
+              : TypedWritable<I>
+            : F extends Writable | Transform | Duplex
+              ? F
+              : F extends Readable
+                ? [I] extends [never]
+                  ? F
+                  : never
+                : F extends TransformStream<infer W, infer R>
+                  ? I extends W
+                    ? F
+                    : TransformStream<I, R>
+                  : F extends DuplexStream<infer W, infer R>
+                    ? I extends W
+                      ? F
+                      : DuplexStream<I, R>
+                    : F extends ReadableStream<any>
+                      ? [I] extends [never]
+                        ? F
+                        : never
+                      : F extends WritableStream<infer W>
+                        ? I extends W
+                          ? F
+                          : WritableStream<I>
+                        : F extends readonly [infer F1, ...infer R]
+                          ? F1 extends null | undefined
+                            ? readonly [F1, ...ChainList<I, R>]
+                            : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
+                          : F extends readonly unknown[]
+                            ? readonly [ChainItem<I, any>]
+                            : F extends Fn
+                              ? I extends Arg0<F>
+                                ? F
+                                : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
+                              : never;
 
   /**
    * Replicates a tuple verifying the types of the list items so arguments match returns.
    * The replicated tuple is used to highlight mismatches between list items.
    */
   export type ChainList<I, L> = L extends readonly [infer F1, ...infer R]
-    ? F1 extends (null | undefined)
+    ? F1 extends null | undefined
       ? readonly [F1, ...ChainList<I, R>]
       : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
     : L;

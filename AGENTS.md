@@ -24,6 +24,7 @@ npm install
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **Test (single file):** `node tests/test-<name>.mjs`
 - **TypeScript check:** `npm run ts-check`
+- **TypeScript tests:** `npm run ts-test` (also `ts-test:bun`, `ts-test:deno`)
 - **Lint:** `npm run lint` (Prettier check)
 - **Lint fix:** `npm run lint:fix` (Prettier write)
 
@@ -76,7 +77,7 @@ stream-chain/
 - **Prettier** for formatting (see `.prettierrc`): 100 char width, single quotes, no bracket spacing, no trailing commas, arrow parens "avoid".
 - 2-space indentation.
 - Semicolons are enforced by Prettier (default `semi: true`).
-- Imports use `require()` syntax in source, `import` in tests (`.mjs`).
+- Imports use `require()` syntax in source, `import` in tests (`.mjs`/`.mts`).
 - The package is `stream-chain`. Internal symbols use `Symbol.for('object-stream.*')`.
 
 ## Critical rules

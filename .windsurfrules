@@ -43,6 +43,7 @@ stream-chain creates a chain of streams out of regular functions, asynchronous f
 - `npm run test:deno` — run with Deno
 - `npm run test:seq` — run sequentially (also `test:seq:bun`, `test:seq:deno`)
 - `npm run ts-check` — TypeScript type checking
+- `npm run ts-test` — TypeScript tests (also `ts-test:bun`, `ts-test:deno`)
 - `npm run lint` — Prettier check
 - `npm run lint:fix` — Prettier write
 

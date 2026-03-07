@@ -63,18 +63,19 @@ wiki/                     # GitHub wiki documentation (git submodule)
 
 Functions in a chain can return special values to control flow:
 
-| Value | Symbol | Effect |
-|-------|--------|--------|
-| `none` | `object-stream.none` | Skip — no value passed downstream |
-| `null`/`undefined` | — | Same as `none` |
-| `stop` | `object-stream.stop` | Skip and terminate the generator (gen/fun only) |
-| `many(values)` | `object-stream.many` | Emit multiple values from a single input |
+| Value               | Symbol                | Effect                                                         |
+| ------------------- | --------------------- | -------------------------------------------------------------- |
+| `none`              | `object-stream.none`  | Skip — no value passed downstream                              |
+| `null`/`undefined`  | —                     | Same as `none`                                                 |
+| `stop`              | `object-stream.stop`  | Skip and terminate the generator (gen/fun only)                |
+| `many(values)`      | `object-stream.many`  | Emit multiple values from a single input                       |
 | `finalValue(value)` | `object-stream.final` | Skip remaining chain steps, emit value directly (gen/fun only) |
-| `flushable(fn)` | `object-stream.flush` | Mark function to be called at stream end with `none` |
+| `flushable(fn)`     | `object-stream.flush` | Mark function to be called at stream end with `none`           |
 
 ### gen() — async generator pipeline
 
 `gen(...fns)` takes multiple functions and returns a single async generator function that:
+
 1. Processes each input value through the function pipeline sequentially.
 2. Handles all special return values (`none`, `stop`, `many`, `finalValue`).
 3. Supports regular, async, generator, and async generator functions.
@@ -92,6 +93,7 @@ Functions in a chain can return special values to control flow:
 ### Stream detection
 
 `chain()` detects stream types to decide how to integrate them:
+
 - **Node streams**: `isReadableNodeStream`, `isWritableNodeStream`, `isDuplexNodeStream`
 - **Web streams**: `isReadableWebStream`, `isWritableWebStream`, `isDuplexWebStream`
 - Web streams are adapted to Node streams via `Readable.fromWeb()`, `Writable.fromWeb()`, `Duplex.fromWeb()`.
@@ -138,6 +140,7 @@ src/utils/* ── src/defs.js (most utilities use none, stop, many, flushable)
 - **Run with Deno**: `npm run test:deno`
 - **Run sequential**: `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
 - **TypeScript check**: `npm run ts-check`
+- **TypeScript tests**: `npm run ts-test` (also `ts-test:bun`, `ts-test:deno`)
 - **Lint**: `npm run lint` (Prettier check)
 - **Lint fix**: `npm run lint:fix` (Prettier write)
 

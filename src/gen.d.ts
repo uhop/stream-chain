@@ -24,25 +24,25 @@ declare namespace gen {
    * It is used to highlight mismatches between argument types and return types in a list.
    */
   type FnItem<I, F> = F extends readonly [infer F1, ...infer R]
-    ? F1 extends (null | undefined)
+    ? F1 extends null | undefined
       ? readonly [F1, ...FnList<I, R>]
       : readonly [FnItem<I, F1>, ...FnList<Ret<F1, I>, R>]
     : F extends readonly unknown[]
-    ? readonly [FnItem<I, any>]
-    : F extends Fn
-    ? I extends Arg0<F>
-      ? F
-      : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
-    : F extends (null | undefined)
-    ? F
-    : never;
+      ? readonly [FnItem<I, any>]
+      : F extends Fn
+        ? I extends Arg0<F>
+          ? F
+          : (arg: I, ...rest: readonly unknown[]) => ReturnType<F>
+        : F extends null | undefined
+          ? F
+          : never;
 
   /**
    * Replicates a tuple verifying the types of the list items so arguments match returns.
    * The replicated tuple is used to highlight mismatches between list items.
    */
   type FnList<I, L> = L extends readonly [infer F1, ...infer R]
-    ? F1 extends (null | undefined)
+    ? F1 extends null | undefined
       ? readonly [F1, ...FnList<I, R>]
       : readonly [FnItem<I, F1>, ...FnList<Ret<F1, I>, R>]
     : L;

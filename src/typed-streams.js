@@ -4,9 +4,9 @@
 
 const {Duplex, Readable, Transform, Writable} = require('node:stream');
 
-class TypedDuplex extends Duplex {};
-class TypedReadable extends Readable {};
-class TypedTransform extends Transform {};
-class TypedWritable extends Writable {};
+class TypedDuplex extends Duplex {}
+class TypedReadable extends Readable {}
+class TypedTransform extends Transform {}
+class TypedWritable extends Writable {}
 
 module.exports = {TypedDuplex, TypedReadable, TypedTransform, TypedWritable};

@@ -8,7 +8,4 @@ export = scan;
  * @remarks It is a companion for `fold()`. Unlike `fold()` it returns the current accumulator for each value.
  */
 declare function scan<A, T>(fn: (acc: A, value: T) => A, acc: A): (value: T) => A;
-declare function scan<A, T>(
-  fn: (acc: A, value: T) => Promise<A>,
-  acc: A
-): (value: T) => Promise<A>;
+declare function scan<A, T>(fn: (acc: A, value: T) => Promise<A>, acc: A): (value: T) => Promise<A>;

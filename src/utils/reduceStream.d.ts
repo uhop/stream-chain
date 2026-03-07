@@ -33,9 +33,7 @@ interface ReduceStreamOutput<A, T> extends TypedWritable<T> {
  * @returns a writable stream
  * @remarks It is modelled on the [reduce](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce) method.
  */
-declare function reduceStream<A, T>(
-  options: ReduceStreamOptions<A, T>
-): ReduceStreamOutput<A, T>;
+declare function reduceStream<A, T>(options: ReduceStreamOptions<A, T>): ReduceStreamOutput<A, T>;
 /**
  * Creates a writable stream that contains an accumulator as a property.
  * @param reducer a reducer function
