@@ -1,8 +1,9 @@
 ---
-description: Write or update tape-six tests for a module or feature
+name: write-tests
+description: Write or update tape-six tests for a module or feature. Use when asked to write tests, add test coverage, or create typing tests for stream-chain.
 ---
 
-# Write Tests
+# Write Tests for stream-chain
 
 Write or update tests using the tape-six testing library.
 
@@ -16,9 +17,7 @@ Write or update tests using the tape-six testing library.
    - Import the module under test with relative paths: `import chain from '../src/index.js';`
    - For stream tests, collect output with `pipeline.on('data', ...)` and verify in `pipeline.on('end', ...)`.
    - Use `tests/helpers.mjs` utilities: `streamToArray()`, `readString()`, `writeToArray()`, `delay()`.
-   // turbo
 5. Run the new test file directly to verify: `node tests/test-<name>.mjs`
-   // turbo
 6. Run the full test suite to check for regressions: `npm test`
    - If debugging, use `npm run test:seq` (runs sequentially, easier to trace issues).
 7. Report results and any failures.
