@@ -118,13 +118,13 @@ const readableFrom = options => {
     return sanitize(value);
   };
 
-  stream = new Readable(
-    Object.assign({objectMode: true}, options, {
-      read() {
-        resume();
-      }
-    })
-  );
+  stream = new Readable({
+    objectMode: true,
+    ...options,
+    read() {
+      resume();
+    }
+  });
 
   startPump();
   return stream;

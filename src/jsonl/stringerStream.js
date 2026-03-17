@@ -20,31 +20,31 @@ const stringer = options => {
     replacer = options.replacer;
     space = options.space;
   }
-  return new Transform(
-    Object.assign({writableObjectMode: true}, options, {
-      transform(value, _, callback) {
-        let result = JSON.stringify(value, replacer, space);
-        if (first) {
-          first = false;
-          result = prefix + result;
-        } else {
-          result = separator + result;
-        }
-        this.push(result);
-        callback(null);
-      },
-      flush(callback) {
-        let output;
-        if (first) {
-          output = typeof emptyValue == 'string' ? emptyValue : prefix + suffix;
-        } else {
-          output = suffix;
-        }
-        output && this.push(output);
-        callback(null);
+  return new Transform({
+    writableObjectMode: true,
+    ...options,
+    transform(value, _, callback) {
+      let result = JSON.stringify(value, replacer, space);
+      if (first) {
+        first = false;
+        result = prefix + result;
+      } else {
+        result = separator + result;
       }
-    })
-  );
+      this.push(result);
+      callback(null);
+    },
+    flush(callback) {
+      let output;
+      if (first) {
+        output = typeof emptyValue == 'string' ? emptyValue : prefix + suffix;
+      } else {
+        output = suffix;
+      }
+      output && this.push(output);
+      callback(null);
+    }
+  });
 };
 
 module.exports = stringer;

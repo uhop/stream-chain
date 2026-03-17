@@ -171,15 +171,16 @@ const chain = (fns, options) => {
     output.on('finish', () => stream.push(null));
   }
 
-  stream = new Duplex(
-    Object.assign({writableObjectMode: true, readableObjectMode: true}, options, {
-      readable: isReadableNodeStream(output),
-      writable: isWritableNodeStream(input),
-      write: writeMethod,
-      final: finalMethod,
-      read: readMethod
-    })
-  );
+  stream = new Duplex({
+    writableObjectMode: true,
+    readableObjectMode: true,
+    ...options,
+    readable: isReadableNodeStream(output),
+    writable: isWritableNodeStream(input),
+    write: writeMethod,
+    final: finalMethod,
+    read: readMethod
+  });
   stream.streams = streams;
   stream.input = input;
   stream.output = output;

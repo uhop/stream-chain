@@ -101,30 +101,31 @@ const asStream = (fn, options) => {
     return sanitize(value);
   };
 
-  stream = new Duplex(
-    Object.assign({writableObjectMode: true, readableObjectMode: true}, options, {
-      write(chunk, encoding, callback) {
-        processChunk(chunk, encoding).then(
-          () => callback(null),
-          error => callback(error)
-        );
-      },
-      final(callback) {
-        if (!defs.isFlushable(fn)) {
-          stream.push(null);
-          callback(null);
-          return;
-        }
-        processChunk(defs.none, null).then(
-          () => (stream.push(null), callback(null)),
-          error => callback(error)
-        );
-      },
-      read() {
-        resume();
+  stream = new Duplex({
+    writableObjectMode: true,
+    readableObjectMode: true,
+    ...options,
+    write(chunk, encoding, callback) {
+      processChunk(chunk, encoding).then(
+        () => callback(null),
+        error => callback(error)
+      );
+    },
+    final(callback) {
+      if (!defs.isFlushable(fn)) {
+        stream.push(null);
+        callback(null);
+        return;
       }
-    })
-  );
+      processChunk(defs.none, null).then(
+        () => (stream.push(null), callback(null)),
+        error => callback(error)
+      );
+    },
+    read() {
+      resume();
+    }
+  });
 
   return stream;
 };

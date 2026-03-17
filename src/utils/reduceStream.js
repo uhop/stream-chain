@@ -18,25 +18,25 @@ const reduceStream = (options, initial) => {
     'reducer' in options && (reducer = options.reducer);
   }
 
-  const stream = new Writable(
-    Object.assign({objectMode: true}, options, {
-      write(chunk, _, callback) {
-        const result = reducer.call(this, this.accumulator, chunk);
-        if (result && typeof result.then == 'function') {
-          result.then(
-            value => {
-              this.accumulator = value;
-              callback(null);
-            },
-            error => callback(error)
-          );
-        } else {
-          this.accumulator = result;
-          callback(null);
-        }
+  const stream = new Writable({
+    objectMode: true,
+    ...options,
+    write(chunk, _, callback) {
+      const result = reducer.call(this, this.accumulator, chunk);
+      if (result && typeof result.then == 'function') {
+        result.then(
+          value => {
+            this.accumulator = value;
+            callback(null);
+          },
+          error => callback(error)
+        );
+      } else {
+        this.accumulator = result;
+        callback(null);
       }
-    })
-  );
+    }
+  });
   stream.accumulator = accumulator;
 
   return stream;
