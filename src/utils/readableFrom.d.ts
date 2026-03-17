@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import {Readable, ReadableOptions} from 'node:stream';
+import {ReadableOptions} from 'node:stream';
 import {TypedReadable} from '../typed-streams';
 
 export = readableFrom;

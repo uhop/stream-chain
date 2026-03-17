@@ -10,7 +10,7 @@ export = takeWithSkip;
  * @returns a function that takes a value and returns a value or {@link finalValue} when `n` elements are taken. It returns {@link none} when `skip` elements are skipped.
  * @remarks This function is more efficient than `skip()` followed by `take()`.
  */
-declare function takeWithSkip<T = any>(
+declare function takeWithSkip<T = unknown>(
   n: number,
   skip?: number,
   finalValue?: typeof none | typeof stop

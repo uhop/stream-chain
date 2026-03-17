@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import {Duplex, DuplexOptions} from 'node:stream';
+import {DuplexOptions} from 'node:stream';
 import {TypedDuplex} from './typed-streams';
 import {Arg0, Ret} from './defs';
 

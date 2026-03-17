@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import {Writable, WritableOptions} from 'node:stream';
+import {WritableOptions} from 'node:stream';
 import {TypedWritable} from '../typed-streams';
 
 export = reduceStream;

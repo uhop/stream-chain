@@ -27,7 +27,7 @@ export declare class Stop extends Error {}
 /**
  * Interface for a value that has been marked as a final value.
  */
-export interface FinalValue<T = any> {
+export interface FinalValue<T = unknown> {
   [finalSymbol]: 1;
   value: T;
 }
@@ -58,7 +58,7 @@ export declare const final: typeof finalValue;
  * Interface for a value that has been marked as multiple values.
  * It is used to return multiple values from a regular (non-generator) function.
  */
-export interface Many<T = any> {
+export interface Many<T = unknown> {
   [manySymbol]: 1;
   values: T[];
 }
@@ -86,7 +86,7 @@ export declare function getManyValues<T>(o: Many<T>): T[];
  * If it is marked as flushable, it will be called with the special {@link none} value
  * when the pipeline is stopped so it can produce the last value.
  */
-export interface Flushable<I = any, O = unknown> {
+export interface Flushable<I = unknown, O = unknown> {
   (value: I, ...rest: any[]): O;
   [flushSymbol]: 1;
 }
@@ -114,7 +114,7 @@ export declare function flushable<I, O>(
  */
 export interface FunctionList<
   T extends (...args: readonly any[]) => unknown,
-  I = any,
+  I = unknown,
   O = unknown
 > {
   (value: I, ...rest: any[]): O;
@@ -149,7 +149,7 @@ export declare function setFunctionList<
  */
 export declare function getFunctionList<
   T extends (...args: readonly any[]) => unknown,
-  I = any,
+  I = unknown,
   O = unknown
 >(o: FunctionList<T, I, O>): T[];
 /**
@@ -159,7 +159,7 @@ export declare function getFunctionList<
  */
 export declare function clearFunctionList<
   T extends (...args: readonly any[]) => unknown,
-  I = any,
+  I = unknown,
   O = unknown
 >(o: FunctionList<T, I, O>): (value: I, ...rest: any[]) => O;
 
@@ -296,7 +296,7 @@ export type Arg0<F> = F extends readonly unknown[]
   ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
     ? Arg0<F1>
     : AsFlatList<F> extends readonly []
-      ? any
+      ? unknown
       : AsFlatList<F> extends readonly (infer F1)[]
         ? Arg0<F1>
         : never
@@ -307,7 +307,7 @@ export type Arg0<F> = F extends readonly unknown[]
 /**
  * Returns the unpacked return type of a function or a function list or `never`.
  */
-export type Ret<F, Default = any> = F extends readonly unknown[]
+export type Ret<F, Default = unknown> = F extends readonly unknown[]
   ? AsFlatList<F> extends readonly [...unknown[], infer F1]
     ? Ret<F1, Default>
     : AsFlatList<F> extends readonly []

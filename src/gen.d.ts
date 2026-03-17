@@ -5,7 +5,7 @@ export = gen;
 /**
  * Returns a wrapped identity function. Rarely used.
  */
-declare function gen(): (arg: any) => AsyncGenerator<any, void, unknown>;
+declare function gen(): (arg: unknown) => AsyncGenerator<unknown, void, unknown>;
 /**
  * Returns a function that applies the given functions in sequence wrapping them as
  * an asynchronous generator.
@@ -16,7 +16,7 @@ declare function gen<L extends readonly unknown[]>(
   ...fns: gen.FnList<Arg0<L>, L>
 ): AsFlatList<L> extends readonly [Fn, ...Fn[]]
   ? (arg: Arg0<L>) => AsyncGenerator<Ret<L>, void, unknown>
-  : (arg: any) => AsyncGenerator<any, void, unknown>;
+  : (arg: unknown) => AsyncGenerator<unknown, void, unknown>;
 
 declare namespace gen {
   /**

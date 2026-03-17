@@ -466,7 +466,7 @@ chain([fs.createReadStream('data.jsonl'), parserStream()]);
 ### stringerStream(options?)
 
 Duplex stream that serializes objects to JSONL. Options extend Duplex options:
-- `reviver` — JSON.stringify replacer function.
+- `replacer` — JSON.stringify replacer function.
 - `space` — JSON.stringify space argument.
 - `prefix` (string, default: '') — prepended to output.
 - `suffix` (string, default: '') — appended to output.

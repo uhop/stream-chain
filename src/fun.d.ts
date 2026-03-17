@@ -6,7 +6,7 @@ export = fun;
 /**
  * Returns a wrapped identity function. Rarely used.
  */
-declare function fun(): (arg: any) => Promise<Many<any>>;
+declare function fun(): (arg: unknown) => Promise<Many<unknown>>;
 
 /**
  * Returns a function that applies the given functions in sequence wrapping them as
@@ -19,4 +19,4 @@ declare function fun<L extends unknown[]>(
   ...fns: gen.FnList<Arg0<L>, L>
 ): AsFlatList<L> extends readonly [Fn, ...Fn[]]
   ? (arg: Arg0<L>) => Promise<Many<Ret<L>>>
-  : (arg: any) => Promise<Many<any>>;
+  : (arg: unknown) => Promise<Many<unknown>>;

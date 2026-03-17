@@ -1,6 +1,5 @@
 /// <reference types="node" />
 
-import {Transform} from 'node:stream';
 import {TypedTransform} from '../typed-streams';
 
 export = stringer;

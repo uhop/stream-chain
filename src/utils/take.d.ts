@@ -8,7 +8,7 @@ export = take;
  * @param finalValue a value that is returned when `n` elements are taken. It can be {@link none} or {@link stop}. It defaults to {@link none}.
  * @returns a function that takes a value and returns a value or {@link finalValue} when `n` elements are taken
  */
-declare function take<T = any>(
+declare function take<T = unknown>(
   n: number,
   finalValue?: typeof none | typeof stop
 ): (value: T) => T | typeof finalValue;

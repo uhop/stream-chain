@@ -13,4 +13,4 @@ type BatchOutput<T> = (value: T | typeof none) => T[] | typeof none;
  * @returns a flushable function that batches values
  * @remarks The returned function is a {@link BatchOutput}. It collects values into batches (arrays) of `n` elements. The last batch can have less than `n` elements.
  */
-declare function batch<T = any>(n?: number): BatchOutput<T>;
+declare function batch<T = unknown>(n?: number): BatchOutput<T>;

@@ -73,7 +73,7 @@ declare namespace chain {
   /**
    * Represents a typed duplex stream as a pair of readable and writable streams.
    */
-  export type DuplexStream<W = any, R = any> = {
+  export type DuplexStream<W = unknown, R = unknown> = {
     readable: ReadableStream<R>;
     writable: WritableStream<W>;
   };
@@ -141,7 +141,7 @@ declare namespace chain {
                           ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
                             ? Arg0<F1>
                             : AsFlatList<F> extends readonly []
-                              ? any
+                              ? unknown
                               : AsFlatList<F> extends readonly (infer F1)[]
                                 ? Arg0<F1>
                                 : never
@@ -152,7 +152,7 @@ declare namespace chain {
   /**
    * Returns the return type of a chain, a stream, or a function.
    */
-  export type Ret<F, Default = any> =
+  export type Ret<F, Default = unknown> =
     F extends TypedTransform<any, infer R>
       ? R
       : F extends TypedDuplex<any, infer R>

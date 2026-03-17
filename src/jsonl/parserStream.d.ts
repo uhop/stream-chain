@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import {Duplex, DuplexOptions} from 'node:stream';
+import {DuplexOptions} from 'node:stream';
 import {TypedDuplex} from '../typed-streams';
 
 export = parserStream;
@@ -23,6 +23,6 @@ interface ParserOptions extends DuplexOptions {
  * @param options options for the parser stream (see {@link ParserOptions})
  * @returns a duplex stream
  */
-declare function parserStream<T = any>(
+declare function parserStream<T = unknown>(
   options?: ParserOptions
 ): TypedDuplex<string | Uint8Array, T>;
