@@ -179,36 +179,30 @@ export declare function toMany<T>(value: T): Many<T>;
  */
 export declare function normalizeMany(value: unknown): unknown;
 /**
- * Combine two values into a `Many`.
- * @param a the first value
- * @param b the second value
- * @returns a `Many` containing both values
+ * Extracts the element type from a `combineMany`/`combineManyMut` argument.
+ * `none` contributes nothing, `Many<T>` contributes `T`, anything else contributes itself.
  */
-export declare function combineMany(a: typeof none, b: typeof none): Many<never>;
-export declare function combineMany<T>(a: typeof none, b: Many<T>): Many<T>;
-export declare function combineMany<T>(a: Many<T>, b: typeof none): Many<T>;
-export declare function combineMany<T>(a: typeof none, b: T): Many<T>;
-export declare function combineMany<T>(a: T, b: typeof none): Many<T>;
-export declare function combineMany<T, U>(a: Many<T>, b: Many<U>): Many<T | U>;
-export declare function combineMany<T, U>(a: T, b: Many<U>): Many<T | U>;
-export declare function combineMany<T, U>(a: Many<T>, b: U): Many<T | U>;
-export declare function combineMany<T, U>(a: T, b: U): Many<T | U>;
+export type CombineManyItem<T> = T extends typeof none ? never : T extends Many<infer U> ? U : T;
+
 /**
- * Combine two values into a `Many` mutably.
- * @param a the first value
- * @param b the second value
- * @returns a `Many` containing both values
- * @remarks if `a` or `b` are `Many`, they can be modified in-place
+ * Combine values into a `Many`.
+ * @param args values to combine
+ * @returns a `Many` containing all values
  */
-export declare function combineManyMut(a: typeof none, b: typeof none): Many<never>;
-export declare function combineManyMut<T>(a: typeof none, b: Many<T>): Many<T>;
-export declare function combineManyMut<T>(a: Many<T>, b: typeof none): Many<T>;
-export declare function combineManyMut<T>(a: typeof none, b: T): Many<T>;
-export declare function combineManyMut<T>(a: T, b: typeof none): Many<T>;
-export declare function combineManyMut<T, U>(a: Many<T>, b: Many<U>): Many<T | U>;
-export declare function combineManyMut<T, U>(a: T, b: Many<U>): Many<T | U>;
-export declare function combineManyMut<T, U>(a: Many<T>, b: U): Many<T | U>;
-export declare function combineManyMut<T, U>(a: T, b: U): Many<T | U>;
+export declare function combineMany<T extends unknown[]>(
+  ...args: T
+): Many<CombineManyItem<T[number]>>;
+/**
+ * Combine values into a `Many` mutably.
+ * @param a the first value (may be modified in-place if it is a `Many`)
+ * @param args additional values to combine
+ * @returns a `Many` containing all values
+ * @remarks only the first argument may be modified in-place
+ */
+export declare function combineManyMut<A, T extends unknown[]>(
+  a: A,
+  ...args: T
+): Many<CombineManyItem<A> | CombineManyItem<T[number]>>;
 
 // generic utilities: unpacking types
 

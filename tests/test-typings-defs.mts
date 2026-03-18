@@ -97,6 +97,14 @@ test('typings defs: combineMany', t => {
   t.deepEqual(getManyValues(combineMany(many([1, 2, 3]), 4)), [1, 2, 3, 4]);
 });
 
+test('typings defs: combineMany variadic', t => {
+  t.deepEqual(getManyValues(combineMany()), []);
+  t.deepEqual(getManyValues(combineMany(1, 2, 3)), [1, 2, 3]);
+  t.deepEqual(getManyValues(combineMany(none, 1, none, 2, none)), [1, 2]);
+  t.deepEqual(getManyValues(combineMany(many([1]), 2, many([3, 4]))), [1, 2, 3, 4]);
+  t.deepEqual(getManyValues(combineMany(1, none, many([2, 3]), 4, many([5]))), [1, 2, 3, 4, 5]);
+});
+
 test('typings defs: combineMany immutability', t => {
   const a = many([1, 2, 3]);
   const b = many([4, 5, 6]);
@@ -112,6 +120,13 @@ test('typings defs: combineManyMut', t => {
   t.deepEqual(getManyValues(combineManyMut(1, none)), [1]);
   t.deepEqual(getManyValues(combineManyMut(1, 2)), [1, 2]);
   t.deepEqual(getManyValues(combineManyMut(many([1, 2]), many([3, 4]))), [1, 2, 3, 4]);
+});
+
+test('typings defs: combineManyMut variadic', t => {
+  t.deepEqual(getManyValues(combineManyMut(none)), []);
+  t.deepEqual(getManyValues(combineManyMut(1, 2, 3)), [1, 2, 3]);
+  t.deepEqual(getManyValues(combineManyMut(none, 1, none, 2, none)), [1, 2]);
+  t.deepEqual(getManyValues(combineManyMut(many([1]), 2, many([3, 4]))), [1, 2, 3, 4]);
 });
 
 test('typings defs: combineManyMut mutability', t => {

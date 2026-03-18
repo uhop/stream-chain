@@ -57,26 +57,30 @@ const normalizeMany = o => {
   return o;
 };
 
-const combineMany = (a, b) => {
-  const values = a === none ? [] : a?.[manySymbol] === 1 ? a.values.slice() : [a];
-  if (b === none) {
-    // do nothing
-  } else if (b?.[manySymbol] === 1) {
-    values.push(...b.values);
-  } else {
-    values.push(b);
+const combineMany = (...args) => {
+  const values = [];
+  for (let i = 0; i < args.length; ++i) {
+    const a = args[i];
+    if (a === none) continue;
+    if (a?.[manySymbol] === 1) {
+      values.push(...a.values);
+    } else {
+      values.push(a);
+    }
   }
   return many(values);
 };
 
-const combineManyMut = (a, b) => {
+const combineManyMut = (a, ...args) => {
   const values = a === none ? [] : a?.[manySymbol] === 1 ? a.values : [a];
-  if (b === none) {
-    // do nothing
-  } else if (b?.[manySymbol] === 1) {
-    values.push(...b.values);
-  } else {
-    values.push(b);
+  for (let i = 0; i < args.length; ++i) {
+    const b = args[i];
+    if (b === none) continue;
+    if (b?.[manySymbol] === 1) {
+      values.push(...b.values);
+    } else {
+      values.push(b);
+    }
   }
   return many(values);
 };
