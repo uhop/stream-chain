@@ -3,7 +3,7 @@
 [npm-img]: https://img.shields.io/npm/v/stream-chain.svg
 [npm-url]: https://npmjs.org/package/stream-chain
 
-`stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, existing Node streams, and Web streams, while properly handling [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates a boilerplate helping to concentrate on functionality without losing the performance especially make it easy to build object mode data processing pipelines.
+`stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generator functions, existing Node streams, and Web streams, while properly handling [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams). The resulting chain is represented as a [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex) stream, which can be combined with other streams the usual way. It eliminates boilerplate helping to concentrate on functionality without losing performance, making it easy to build object mode data processing pipelines.
 
 Originally `stream-chain` was used internally with [stream-fork](https://www.npmjs.com/package/stream-fork) and [stream-json](https://www.npmjs.com/package/stream-json) to create flexible data processing pipelines.
 
@@ -79,7 +79,7 @@ npm i --save stream-chain
 
 ## Documentation
 
-All documentation can be found in the [wiki](https://github.com/uhop/stream-chain/wiki). It document in details the main function and various utilities and helpers that can simplify stream programming. Additionally it includes a support for JSONL (line-separated JSON files).
+All documentation can be found in the [wiki](https://github.com/uhop/stream-chain/wiki). It documents in detail the main function and various utilities and helpers that can simplify stream programming. Additionally it includes a support for JSONL (line-separated JSON files).
 
 An object that is returned by `chain()` is based on [Duplex](https://nodejs.org/api/stream.html#stream_class_stream_duplex). It chains its dependents in a single pipeline optionally binding `error` events.
 
@@ -123,7 +123,7 @@ The factory function accepts the following arguments:
             }
             next() {
               return {
-                done: this.i <= 1,
+                done: this.i > 1,
                 value: this.x + this.i++
               };
             }

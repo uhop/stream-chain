@@ -126,7 +126,7 @@ const readableFrom = options => {
     }
   });
 
-  startPump();
+  startPump().catch(error => stream.destroy(error));
   return stream;
 };
 

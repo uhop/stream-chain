@@ -1,7 +1,7 @@
 {
   "name": "stream-chain",
   "version": "3.4.1",
-  "description": "Chain functions as transform streams.",
+  "description": "Chain functions, generators, and streams into a pipeline with backpressure support.",
   "type": "commonjs",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -32,7 +32,15 @@
   },
   "keywords": [
     "stream",
-    "chain"
+    "chain",
+    "pipeline",
+    "transform",
+    "backpressure",
+    "duplex",
+    "generator",
+    "async",
+    "object-mode",
+    "functional"
   ],
   "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "funding": "https://github.com/sponsors/uhop",

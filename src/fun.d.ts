@@ -13,7 +13,7 @@ declare function fun(): (arg: unknown) => Promise<Many<unknown>>;
  * an asynchronous function.
  * @param fns functions to be wrapped
  * @returns an asynchronous function
- * @remark It collects values and return them as a {@link Many}.
+ * @remarks It collects values and returns them as a {@link Many}.
  */
 declare function fun<L extends unknown[]>(
   ...fns: gen.FnList<Arg0<L>, L>

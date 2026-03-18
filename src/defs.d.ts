@@ -36,7 +36,7 @@ export interface FinalValue<T = unknown> {
  * @param o object to test
  * @returns `true` if `o` is a `FinalValue`
  */
-export declare function isFinalValue(o: object): o is FinalValue;
+export declare function isFinalValue(o: unknown): o is FinalValue;
 /**
  * Creates a `FinalValue`
  * @param value the wrapped value
