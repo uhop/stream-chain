@@ -163,8 +163,8 @@ Helper functions:
 - `getManyValues(value)` — extract the array from a Many wrapper.
 - `toMany(value)` — convert any value to Many: `none` → `many([])`, `x` → `many([x])`, `many(arr)` → `many(arr)`.
 - `normalizeMany(value)` — `many([])` → `none`, `many([x])` → `x`, `many([...])` → `many([...])`.
-- `combineMany(a, b)` — merge two values (any of none/value/many) into a single Many. Returns new Many.
-- `combineManyMut(a, b)` — like `combineMany` but may mutate `a` for performance.
+- `combineMany(...args)` — merge any number of values (any of none/value/many) into a single Many. Returns new Many.
+- `combineManyMut(a, ...args)` — like `combineMany` but may mutate `a` (the first argument) for performance.
 
 ### finalValue(value)
 

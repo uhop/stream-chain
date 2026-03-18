@@ -227,6 +227,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.5.0 _Variadic `combineMany()` and `combineManyMut()`. Fixed `readableFrom()` unhandled rejection bug. Improved TS typings, docs, and `package.json` metadata._
 - 3.4.1 _Improved TS typings, added TypeScript typing tests, cleaned up dead code._
 - 3.4.0 _Added `Many`-related helpers and `chainUnchecked()` for TS._
 - 3.3.2 _Technical release: updated deps, more tests._
