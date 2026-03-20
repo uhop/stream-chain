@@ -25,6 +25,57 @@ const asStream = (fn, options) => {
     paused = new Promise(resolve => (resolvePaused = resolve));
   };
 
+  const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
+
+  const applyFns = innerFns
+    ? function apply(value, i, push) {
+        for (;;) {
+          if (value && typeof value.then == 'function') return value.then(v => apply(v, i, push));
+          if (value === undefined || value === null || value === defs.none) return;
+          if (value === defs.stop) throw new defs.Stop();
+          if (defs.isFinalValue(value)) {
+            push(defs.getFinalValue(value));
+            return;
+          }
+          if (defs.isMany(value)) {
+            const values = defs.getManyValues(value);
+            if (i >= innerFns.length) {
+              for (let j = 0; j < values.length; ++j) push(values[j]);
+              return;
+            }
+            let pending;
+            for (let j = 0; j < values.length; ++j) {
+              if (pending) {
+                const jj = j;
+                pending = pending.then(() => apply(values[jj], i, push));
+              } else {
+                const result = apply(values[j], i, push);
+                if (result) pending = result;
+              }
+            }
+            return pending;
+          }
+          if (value && typeof value.next == 'function') {
+            return (async () => {
+              for (;;) {
+                let data = value.next();
+                if (data && typeof data.then == 'function') data = await data;
+                if (data.done) break;
+                const result = apply(data.value, i, push);
+                if (result) await result;
+              }
+            })();
+          }
+          if (i >= innerFns.length) {
+            push(value);
+            return;
+          }
+          value = innerFns[i++](value);
+        }
+      }
+    : null;
+
+  let stopped = false;
   let stream = null; // will be assigned later
 
   // data processing
@@ -82,7 +133,7 @@ const asStream = (fn, options) => {
     } catch (error) {
       if (error instanceof defs.Stop) {
         stream.push(null);
-        stream.destroy();
+        stopped = true;
         return;
       }
       throw error;
@@ -106,19 +157,161 @@ const asStream = (fn, options) => {
     readableObjectMode: true,
     ...options,
     write(chunk, encoding, callback) {
-      processChunk(chunk, encoding).then(
+      if (stopped) {
+        callback(null);
+        return;
+      }
+      // fast path for gen() compositions: process inner functions directly
+      if (applyFns) {
+        let backpressure = false;
+        let asyncResult;
+        try {
+          asyncResult = applyFns(chunk, 0, value => {
+            if (!stream.push(value)) backpressure = true;
+          });
+        } catch (error) {
+          if (error instanceof defs.Stop) {
+            stream.push(null);
+            stopped = true;
+            callback(null);
+            return;
+          }
+          callback(error);
+          return;
+        }
+        if (asyncResult) {
+          asyncResult.then(
+            () => callback(null),
+            error => {
+              if (error instanceof defs.Stop) {
+                stream.push(null);
+                stopped = true;
+                callback(null);
+                return;
+              }
+              callback(error);
+            }
+          );
+          return;
+        }
+        if (backpressure) {
+          pause();
+          paused.then(() => callback(null));
+        } else {
+          callback(null);
+        }
+        return;
+      }
+      let value;
+      try {
+        value = fn(chunk, encoding);
+      } catch (error) {
+        if (error instanceof defs.Stop) {
+          stream.push(null);
+          stopped = true;
+          callback(null);
+          return;
+        }
+        callback(error);
+        return;
+      }
+      // sync fast path: plain value (not a promise, generator, or special)
+      if (
+        !(value && (typeof value.then == 'function' || typeof value.next == 'function')) &&
+        value !== defs.stop &&
+        !defs.isMany(value) &&
+        !defs.isFinalValue(value)
+      ) {
+        if (value !== undefined && value !== null && value !== defs.none) {
+          if (!stream.push(value)) {
+            pause();
+            paused.then(() => callback(null));
+            return;
+          }
+        }
+        callback(null);
+        return;
+      }
+      // async slow path: promises, generators, many, finalValue, stop
+      processValue(value).then(
         () => callback(null),
-        error => callback(error)
+        error => {
+          if (error instanceof defs.Stop) {
+            stream.push(null);
+            stopped = true;
+            callback(null);
+            return;
+          }
+          callback(error);
+        }
       );
     },
     final(callback) {
+      // fast path for gen() compositions: flush inner functions directly
+      if (applyFns) {
+        let backpressure = false;
+        let asyncChain;
+        try {
+          const pushFn = value => {
+            if (!stream.push(value)) backpressure = true;
+          };
+          for (let i = 0; i < innerFns.length; ++i) {
+            if (defs.isFlushable(innerFns[i])) {
+              if (asyncChain) {
+                const ii = i;
+                asyncChain = asyncChain.then(() =>
+                  applyFns(innerFns[ii](defs.none), ii + 1, pushFn)
+                );
+              } else {
+                const result = applyFns(innerFns[i](defs.none), i + 1, pushFn);
+                if (result) asyncChain = result;
+              }
+            }
+          }
+        } catch (error) {
+          if (error instanceof defs.Stop) {
+            stream.push(null);
+            stopped = true;
+            callback(null);
+            return;
+          }
+          callback(error);
+          return;
+        }
+        if (asyncChain) {
+          asyncChain.then(
+            () => (stream.push(null), callback(null)),
+            error => {
+              if (error instanceof defs.Stop) {
+                stopped = true;
+                stream.push(null);
+                callback(null);
+                return;
+              }
+              callback(error);
+            }
+          );
+          return;
+        }
+        stream.push(null);
+        if (backpressure) {
+          pause();
+          paused.then(() => callback(null));
+        } else {
+          callback(null);
+        }
+        return;
+      }
       if (!defs.isFlushable(fn)) {
         stream.push(null);
         callback(null);
         return;
       }
       processChunk(defs.none, null).then(
-        () => (stream.push(null), callback(null)),
+        () => {
+          if (!stopped) stream.push(null);
+          callback(null);
+        },
         error => callback(error)
       );
     },
