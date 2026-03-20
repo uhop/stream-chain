@@ -99,7 +99,6 @@ const readableFrom = options => {
     } catch (error) {
       if (error instanceof defs.Stop) {
         stream.push(null);
-        stream.destroy();
         return;
       }
       throw error;
