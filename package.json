@@ -67,6 +67,6 @@
     "prettier": "^3.8.1",
     "tape-six": "^1.7.12",
     "tape-six-proc": "^1.2.7",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   }
 }
