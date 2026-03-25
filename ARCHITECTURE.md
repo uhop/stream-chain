@@ -66,11 +66,13 @@ Functions in a chain can return special values to control flow:
 | Value               | Symbol                | Effect                                                         |
 | ------------------- | --------------------- | -------------------------------------------------------------- |
 | `none`              | `object-stream.none`  | Skip — no value passed downstream                              |
-| `null`/`undefined`  | —                     | Same as `none`                                                 |
+| `null`/`undefined`  | —                     | Same as `none` in `asStream()`/`chain()` (see note below)      |
 | `stop`              | `object-stream.stop`  | Skip and terminate the generator (gen/fun only)                |
 | `many(values)`      | `object-stream.many`  | Emit multiple values from a single input                       |
 | `finalValue(value)` | `object-stream.final` | Skip remaining chain steps, emit value directly (gen/fun only) |
 | `flushable(fn)`     | `object-stream.flush` | Mark function to be called at stream end with `none`           |
+
+**Note on `null`/`undefined`:** `gen()` and `fun()` are general-purpose compositors that pass any value through the pipeline, including `null` and `undefined`. `asStream()` and `chain()` treat `null` and `undefined` as `none` (skip) because Node.js streams reserve these values for end-of-stream signaling.
 
 ### gen() — async generator pipeline
 

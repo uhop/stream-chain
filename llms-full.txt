@@ -109,7 +109,7 @@ Returns: `Duplex` stream with additional properties:
 
 Functions receive `(chunk, encoding)`. The return value determines what happens:
 
-- **`null`, `undefined`, or `none`** — no value passed downstream (filter).
+- **`null`, `undefined`, or `none`** — no value passed downstream (filter). Note: `null`/`undefined` are treated as `none` in `asStream()`/`chain()` because Node.js streams reserve them for end-of-stream signaling. `gen()` and `fun()` pass `null`/`undefined` through like any other value.
 - **`stop`** — no value passed and generator terminates (gen/fun only).
 - **Regular value** — passed to next step.
 - **`many(values)`** — all values in the array emitted sequentially.
@@ -245,6 +245,7 @@ Creates an async generator pipeline from functions. Each input value is passed t
 - Arrays in the argument list are flattened. Falsy values are ignored.
 - If any function is flushable, the result is also flushable.
 - The result is tagged with a function list for chain() optimization.
+- Unlike `asStream()`/`chain()`, `gen()` passes `null`/`undefined` through the pipeline like any other value. Use `none` for consistent skip behavior.
 
 ```js
 import gen from 'stream-chain/gen.js';
@@ -260,7 +261,7 @@ for await (const v of pipeline(3)) {
 
 ## fun(...fns)
 
-Like `gen()` but returns an async function. Values from generators are collected into `many()` arrays.
+Like `gen()` but returns an async function. Values from generators are collected into `many()` arrays. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`/`chain()`).
 
 ```js
 import fun from 'stream-chain/fun.js';
@@ -276,7 +277,7 @@ console.log(getManyValues(result)); // [0, 1, 4]
 
 ## asStream(fn, options?)
 
-Wraps any function as a Duplex stream. Supports regular, async, generator, and async generator functions. Handles all special return values.
+Wraps any function as a Duplex stream. Supports regular, async, generator, and async generator functions. Handles all special return values. Treats `null`/`undefined` as `none` (skip) because Node.js streams reserve them for end-of-stream signaling — this differs from `gen()`/`fun()` which pass them through.
 
 - `fn` — any function.
 - `options` — Duplex options (default: `{writableObjectMode: true, readableObjectMode: true}`).
