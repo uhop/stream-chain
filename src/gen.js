@@ -65,7 +65,27 @@ const gen = (...fns) => {
   let g = async function* (value) {
     if (flushed) throw Error('Call to a flushed pipe.');
     if (value !== defs.none) {
-      yield* next(value, fns, 0);
+      for (let i = 0; i <= fns.length; ++i) {
+        if (value && typeof value.then == 'function') {
+          yield* next(value, fns, i);
+          return;
+        }
+        if (value === defs.none) return;
+        if (value === defs.stop) throw new defs.Stop();
+        if (defs.isFinalValue(value)) {
+          yield defs.getFinalValue(value);
+          return;
+        }
+        if (defs.isMany(value) || (value && typeof value.next == 'function')) {
+          yield* next(value, fns, i);
+          return;
+        }
+        if (i == fns.length) {
+          yield value;
+          return;
+        }
+        value = fns[i](value);
+      }
     } else {
       flushed = true;
       for (let i = 0; i < fns.length; ++i) {
