@@ -40,7 +40,7 @@ stream-chain/
 │   ├── defs.d.ts         # TypeScript definitions for defs
 │   ├── gen.js            # Creates async generator pipeline from functions
 │   ├── gen.d.ts          # TypeScript definitions for gen
-│   ├── fun.js            # Creates async function pipeline from functions
+│   ├── fun.js            # Creates function pipeline from functions (sync-first)
 │   ├── fun.d.ts          # TypeScript definitions for fun
 │   ├── asStream.js       # Converts a function into a Duplex stream
 │   ├── asStream.d.ts     # TypeScript definitions for asStream
@@ -95,7 +95,7 @@ stream-chain/
 - `chain(fns, options)` is the main entry point. It accepts an array of functions, streams, or arrays (which are flattened). Returns a `Duplex` stream with `.streams`, `.input`, `.output` properties.
 - Functions in the chain are grouped together using `gen()` for efficiency (unless `noGrouping: true`).
 - `gen(...fns)` creates an async generator pipeline from a list of functions. It handles all special return values (`none`, `stop`, `many()`, `finalValue()`, flushable functions).
-- `fun(...fns)` is like `gen()` but returns an async function instead of a generator.
+- `fun(...fns)` is like `gen()` but returns a function instead of a generator. Returns sync results for sync pipelines, `Promise` for async.
 - `asStream(fn)` wraps any function as a `Duplex` stream.
 - Special return values are defined in `defs.js`: `none` (skip), `stop` (terminate), `many(values)` (emit multiple), `finalValue(value)` (skip rest of chain), `flushable(fn)` (called at stream end).
 - Web streams (`ReadableStream`, `WritableStream`, duplex `{readable, writable}`) are automatically adapted to Node streams.

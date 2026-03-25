@@ -9,10 +9,9 @@ export = fun;
 declare function fun(): (arg: unknown) => Many<unknown> | Promise<Many<unknown>>;
 
 /**
- * Returns a function that applies the given functions in sequence wrapping them as
- * an asynchronous function.
+ * Returns a function that applies the given functions in sequence.
  * @param fns functions to be wrapped
- * @returns an asynchronous function
+ * @returns a function that returns a synchronous result or a `Promise`
  * @remarks It collects values and returns them as a {@link Many}.
  */
 declare function fun<L extends unknown[]>(

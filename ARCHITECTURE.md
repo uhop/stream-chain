@@ -13,7 +13,7 @@ src/                      # Source code
 ├── defs.d.ts             # TypeScript declarations for defs
 ├── gen.js                # Async generator pipeline from a list of functions
 ├── gen.d.ts              # TypeScript declarations for gen
-├── fun.js                # Async function pipeline from a list of functions
+├── fun.js                # Function pipeline from a list of functions (sync-first)
 ├── fun.d.ts              # TypeScript declarations for fun
 ├── asStream.js           # Wraps any function as a Duplex stream
 ├── asStream.d.ts         # TypeScript declarations for asStream
@@ -84,9 +84,9 @@ Functions in a chain can return special values to control flow:
 4. Calls flushable functions with `none` when the input is exhausted.
 5. Tags the result with a function list (`fListSymbol`) so `chain()` can inline it.
 
-### fun() — async function pipeline
+### fun() — function pipeline (sync-first)
 
-`fun(...fns)` is like `gen()` but returns an async function instead of a generator. Generator results are collected into `many()` arrays.
+`fun(...fns)` is like `gen()` but returns a function instead of a generator. Generator results are collected into `many()` arrays. For purely synchronous pipelines it returns a synchronous result; for asynchronous pipelines it returns a `Promise`.
 
 ### asStream() — function to Duplex
 

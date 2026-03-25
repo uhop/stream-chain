@@ -261,7 +261,7 @@ for await (const v of pipeline(3)) {
 
 ## fun(...fns)
 
-Like `gen()` but returns an async function. Values from generators are collected into `many()` arrays. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`/`chain()`).
+Like `gen()` but returns a function instead of a generator. Values from generators are collected into `many()` arrays. For purely synchronous pipelines it returns a synchronous result; for asynchronous pipelines it returns a `Promise`. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`/`chain()`).
 
 ```js
 import fun from 'stream-chain/fun.js';

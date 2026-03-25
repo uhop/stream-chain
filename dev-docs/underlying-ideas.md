@@ -80,7 +80,7 @@ Core ideas:
 - A pipeline is an array of processing units applied sequentially.
 - Each unit can be a function (sync/async), a generator (sync/async), a stream (Node or Web), or another pipeline.
 - Functional sub-pipelines group consecutive functions without stream overhead:
-  - `fun()` &mdash; takes a list of functions, returns an async function. Handles `none`, `stop`, `many()`, and `finalValue()` returns.
+  - `fun()` &mdash; takes a list of functions, returns a function (sync-first: returns sync results for sync pipelines, `Promise` for async). Handles `none`, `stop`, `many()`, and `finalValue()` returns.
   - `gen()` &mdash; takes a list of functions, returns an async generator. It handles `none`, `many()`, and other special values internally, but never produces them &mdash; a generator naturally yields zero, one, or many values.
 - `asStream()` wraps any function as a Duplex stream.
 
