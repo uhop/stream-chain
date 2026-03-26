@@ -146,6 +146,25 @@ src/utils/* ── src/defs.js (most utilities use none, stop, many, flushable)
 - **Lint**: `npm run lint` (Prettier check)
 - **Lint fix**: `npm run lint:fix` (Prettier write)
 
+## Benchmarks
+
+Benchmarks use [nano-benchmark](https://www.npmjs.com/package/nano-benchmark). Run a benchmark by specifying its file:
+
+```bash
+npm run bench -- bench/<name>.mjs
+```
+
+### Benchmark files
+
+| File                       | What it measures                                                                                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bench/gen-fun-stream.mjs` | Compares `gen()`, `fun()`, and `chain(asStream(...))` on the same pipeline of sync functions. Shows relative overhead of each abstraction.               |
+| `bench/gen-fun.mjs`        | Head-to-head `gen()` vs `fun()` without stream overhead.                                                                                                 |
+| `bench/gen-opt.mjs`        | `gen()` function-list inlining optimization: flat list vs nested `gen()` with inlining vs nested `gen()` with `clearFunctionList()` (inlining disabled). |
+| `bench/fun-opt.mjs`        | Same as `gen-opt.mjs` but for `fun()`.                                                                                                                   |
+
+All benchmarks use a pipeline of simple sync arithmetic functions (`x => x - 2`, `x => x + 1`, etc.) to isolate framework overhead from application logic.
+
 ## Import paths
 
 ```js
