@@ -67,7 +67,9 @@ const next = (value, fns, index, collect) => {
     if (error instanceof defs.Stop) {
       const flushResult = flush(fns, cleanIndex, collect);
       if (flushResult && typeof flushResult.then == 'function') {
-        return flushResult.then(() => { throw error; });
+        return flushResult.then(() => {
+          throw error;
+        });
       }
     }
     throw error;
