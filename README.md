@@ -227,6 +227,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.6.0 _Performance: sync-first `fun()` (~2.5× faster for sync pipelines, now returns `Many | Promise<Many>`). Sync fast path in `gen()` (~1.6× faster). Documented `null`/`undefined` handling differences. Wiki: renamed V2 files for Windows compatibility._
 - 3.5.1 _Fixed `finish` event not firing after `stop`. Web stream detection uses duck-typing instead of `instanceof` (supports non-standard web streams) (thx [Alex Yang](https://github.com/himself65)). Performance: unified fast path in `asStream()`._
 - 3.5.0 _Variadic `combineMany()` and `combineManyMut()`. Fixed `readableFrom()` unhandled rejection bug. Improved TS typings, docs, and `package.json` metadata._
 - 3.4.1 _Improved TS typings, added TypeScript typing tests, cleaned up dead code._
