@@ -102,16 +102,46 @@ declare namespace chain {
   ];
 
   /**
-   * Represents the output of the chain function. It is based on `Duplex` with extra properties.
+   * Read-side overrides added on top of `Duplex` for chain outputs.
+   * Notes on what's NOT here:
+   *   - `write`/`end` are not narrowed to `W` because doing so breaks structural
+   *     compatibility with `NodeJS.WritableStream` (which fixes `chunk: string | Uint8Array`
+   *     for non-objectMode streams) and consequently breaks `readable.pipe(chain)`.
+   *     `W` survives on `ChainOutput<W, R>` for inference and for consumers who type it
+   *     explicitly, but is intentionally not propagated through the writable side.
    */
-  export interface ChainOutput<W, R> extends Duplex {
+  interface ChainOutputExtensions<R> {
     /** Internal list of streams. */
     streams: ChainStreams1 | ChainStreams;
     /** The first stream, which can be used to feed the chain and to attach event handlers. */
     input: Readable | Writable | Duplex | Transform;
     /** The last stream, which can be used to consume results and to attach event handlers. */
     output: Readable | Writable | Duplex | Transform;
+
+    [Symbol.asyncIterator](): NodeJS.AsyncIterator<R>;
+
+    read(size?: number): R;
+    push(chunk: R | null, encoding?: BufferEncoding): boolean;
+
+    on(event: 'data', listener: (chunk: R) => void): this;
+    once(event: 'data', listener: (chunk: R) => void): this;
+    addListener(event: 'data', listener: (chunk: R) => void): this;
+    off(event: 'data', listener: (chunk: R) => void): this;
+    removeListener(event: 'data', listener: (chunk: R) => void): this;
+    emit(event: 'data', chunk: R): boolean;
   }
+
+  /**
+   * Represents the output of the chain function. It is based on `Duplex` with extra properties.
+   * `Omit` strips the `any`-returning read/push/asyncIterator members so the R-typed
+   * overrides in `ChainOutputExtensions` win; the remaining `Duplex` members (including
+   * the typed event-emitter overloads and `write`/`end`/`pipe` compatibility) survive via
+   * intersection. `W` is preserved on the signature for backward compatibility and as an
+   * inference anchor for `chain<L>(...)`; see `ChainOutputExtensions` for why it is not
+   * propagated to the writable side.
+   */
+  export type ChainOutput<W, R> = Omit<Duplex, 'read' | 'push' | typeof Symbol.asyncIterator> &
+    ChainOutputExtensions<R>;
 
   /**
    * Returns the first argument of a chain, a stream, or a function.
