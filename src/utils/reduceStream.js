@@ -5,7 +5,7 @@
 const {Writable} = require('node:stream');
 
 const defaultInitial = 0;
-const defaultReducer = (acc, value) => value;
+const defaultReducer = (_acc, value) => value;
 
 const reduceStream = (options, initial) => {
   if (!options || !options.reducer) {
@@ -18,25 +18,28 @@ const reduceStream = (options, initial) => {
     'reducer' in options && (reducer = options.reducer);
   }
 
-  const stream = new Writable({
-    objectMode: true,
-    ...options,
-    write(chunk, _, callback) {
-      const result = reducer.call(this, this.accumulator, chunk);
-      if (result && typeof result.then == 'function') {
-        result.then(
-          value => {
-            this.accumulator = value;
-            callback(null);
-          },
-          error => callback(error)
-        );
-      } else {
-        this.accumulator = result;
-        callback(null);
+  const stream = /** @type {import('node:stream').Writable & {accumulator: any}} */ (
+    new Writable({
+      objectMode: true,
+      ...options,
+      /** @this {import('node:stream').Writable & {accumulator: any}} */
+      write(chunk, _, callback) {
+        const result = reducer.call(this, this.accumulator, chunk);
+        if (result && typeof result.then == 'function') {
+          result.then(
+            value => {
+              this.accumulator = value;
+              callback(null);
+            },
+            error => callback(error)
+          );
+        } else {
+          this.accumulator = result;
+          callback(null);
+        }
       }
-    }
-  });
+    })
+  );
   stream.accumulator = accumulator;
 
   return stream;

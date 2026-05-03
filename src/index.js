@@ -101,8 +101,8 @@ const groupFunctions = (output, fn, index, fns) => {
 const produceStreams = item => {
   if (Array.isArray(item)) {
     if (!item.length) return null;
-    if (item.length == 1) return item[0] && chain.asStream(item[0]);
-    return chain.asStream(chain.gen(...item));
+    if (item.length == 1) return item[0] && /** @type {any} */ (chain).asStream(item[0]);
+    return /** @type {any} */ (chain).asStream(/** @type {any} */ (chain).gen(...item));
   }
   return item;
 };
@@ -124,7 +124,7 @@ const wrapFunctions = (fn, index, fns) => {
   if (index === fns.length - 1 && isWritableWebStream(fn)) {
     return Writable.fromWeb(fn, {objectMode: true});
   }
-  if (typeof fn == 'function') return chain.asStream(fn); // a function
+  if (typeof fn == 'function') return /** @type {any} */ (chain).asStream(fn); // a function
   throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
 };
 
@@ -193,16 +193,18 @@ const chain = (fns, options) => {
     output.on('finish', () => stream.push(null));
   }
 
-  stream = new Duplex({
-    writableObjectMode: true,
-    readableObjectMode: true,
-    ...options,
-    readable: isReadableNodeStream(output),
-    writable: isWritableNodeStream(input),
-    write: writeMethod,
-    final: finalMethod,
-    read: readMethod
-  });
+  stream = /** @type {Duplex & {streams: any[], input: any, output: any}} */ (
+    new Duplex({
+      writableObjectMode: true,
+      readableObjectMode: true,
+      ...options,
+      readable: isReadableNodeStream(output),
+      writable: isWritableNodeStream(input),
+      write: writeMethod,
+      final: finalMethod,
+      read: readMethod
+    })
+  );
   stream.streams = streams;
   stream.input = input;
   stream.output = output;
