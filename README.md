@@ -227,6 +227,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.6.2 _Improved TS typings: `ChainOutput<W, R>` propagates `R` to events and methods (thx [Scover](https://github.com/5cover)). Updated deps._
 - 3.6.1 _Technical release: updated deps._
 - 3.6.0 _Performance: sync-first `fun()` (~2.5× faster for sync pipelines, now returns `Many | Promise<Many>`). Sync fast path in `gen()` (~1.6× faster). Documented `null`/`undefined` handling differences. Wiki: renamed V2 files for Windows compatibility._
 - 3.5.1 _Fixed `finish` event not firing after `stop`. Web stream detection uses duck-typing instead of `instanceof` (supports non-standard web streams) (thx [Alex Yang](https://github.com/himself65)). Performance: unified fast path in `asStream()`._
