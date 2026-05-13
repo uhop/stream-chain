@@ -46,6 +46,8 @@
   ],
   "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "funding": "https://github.com/sponsors/uhop",
+  "llms": "https://raw.githubusercontent.com/uhop/stream-chain/master/llms.txt",
+  "llmsFull": "https://raw.githubusercontent.com/uhop/stream-chain/master/llms-full.txt",
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/uhop/stream-chain/issues"

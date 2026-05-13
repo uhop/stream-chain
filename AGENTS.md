@@ -10,7 +10,7 @@ For detailed usage docs and API references see the [wiki](https://github.com/uho
 This project uses a git submodule for the wiki:
 
 ```bash
-git clone --recursive git@github.com:uhop/stream-chain.git
+git clone --recursive https://github.com/uhop/stream-chain.git
 cd stream-chain
 npm install
 ```

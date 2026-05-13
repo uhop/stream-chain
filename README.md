@@ -257,3 +257,5 @@ BSD-3-Clause
 - 1.0.2 _Better README._
 - 1.0.1 _Fixed the README._
 - 1.0.0 _The initial release._
+
+The full release notes are in the wiki: [Release notes](https://github.com/uhop/stream-chain/wiki/Release-notes).
