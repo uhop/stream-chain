@@ -164,27 +164,27 @@ declare namespace chain {
               ? W
               : F extends Writable | Transform | Duplex
                 ? any
-              : F extends Readable
-                ? never
-                : F extends TransformStream<infer W, any>
-                  ? W
-                  : F extends DuplexStream<infer W, any>
+                : F extends Readable
+                  ? never
+                  : F extends TransformStream<infer W, any>
                     ? W
-                    : F extends WritableStream<infer W>
+                    : F extends DuplexStream<infer W, any>
                       ? W
-                      : F extends ReadableStream<any>
-                        ? never
-                        : F extends readonly unknown[]
-                          ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
-                            ? Arg0<F1>
-                            : AsFlatList<F> extends readonly []
-                              ? unknown
-                              : AsFlatList<F> extends readonly (infer F1)[]
-                                ? Arg0<F1>
-                                : never
-                          : F extends (...args: readonly any[]) => unknown
-                            ? Parameters<F>[0]
-                            : never;
+                      : F extends WritableStream<infer W>
+                        ? W
+                        : F extends ReadableStream<any>
+                          ? never
+                          : F extends readonly unknown[]
+                            ? AsFlatList<F> extends readonly [infer F1, ...(readonly unknown[])]
+                              ? Arg0<F1>
+                              : AsFlatList<F> extends readonly []
+                                ? unknown
+                                : AsFlatList<F> extends readonly (infer F1)[]
+                                  ? Arg0<F1>
+                                  : never
+                            : F extends (...args: readonly any[]) => unknown
+                              ? Parameters<F>[0]
+                              : never;
 
   /**
    * Returns the return type of a chain, a stream, or a function.
@@ -202,27 +202,27 @@ declare namespace chain {
               ? never
               : F extends Readable | Transform | Duplex
                 ? any
-              : F extends Writable
-                ? never
-                : F extends TransformStream<any, infer R>
-                  ? R
-                  : F extends DuplexStream<any, infer R>
+                : F extends Writable
+                  ? never
+                  : F extends TransformStream<any, infer R>
                     ? R
-                    : F extends ReadableStream<infer R>
+                    : F extends DuplexStream<any, infer R>
                       ? R
-                      : F extends WritableStream<any>
-                        ? never
-                        : F extends readonly unknown[]
-                          ? AsFlatList<F> extends readonly [...unknown[], infer F1]
-                            ? Ret<F1, Default>
-                            : AsFlatList<F> extends readonly []
-                              ? Default
-                              : AsFlatList<F> extends readonly (infer F1)[]
-                                ? Ret<F1, Default>
-                                : never
-                          : F extends Fn
-                            ? OutputType<F>
-                            : never;
+                      : F extends ReadableStream<infer R>
+                        ? R
+                        : F extends WritableStream<any>
+                          ? never
+                          : F extends readonly unknown[]
+                            ? AsFlatList<F> extends readonly [...unknown[], infer F1]
+                              ? Ret<F1, Default>
+                              : AsFlatList<F> extends readonly []
+                                ? Default
+                                : AsFlatList<F> extends readonly (infer F1)[]
+                                  ? Ret<F1, Default>
+                                  : never
+                            : F extends Fn
+                              ? OutputType<F>
+                              : never;
 
   /**
    * Represents an item in the chain function.

@@ -227,6 +227,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 3.6.3 _TS inference updates: improvements and found bugs. Updated deps._
 - 3.6.2 _Improved TS typings: `ChainOutput<W, R>` propagates `R` to events and methods (thx [Scover](https://github.com/5cover)). Updated deps._
 - 3.6.1 _Technical release: updated deps._
 - 3.6.0 _Performance: sync-first `fun()` (~2.5× faster for sync pipelines, now returns `Many | Promise<Many>`). Sync fast path in `gen()` (~1.6× faster). Documented `null`/`undefined` handling differences. Wiki: renamed V2 files for Windows compatibility._

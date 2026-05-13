@@ -431,14 +431,22 @@ test('typings fun: pipe-like items in middle position (fun/gen)', t => {
     const g_mid = gen((s: string) => s.length > 3);
 
     // (P) fun(fn, fun(...), fn) — middle fun consumes string, outputs boolean.
-    const fP = fun((n: number) => `s${n}`, f_mid, (b: boolean) => Number(b));
+    const fP = fun(
+      (n: number) => `s${n}`,
+      f_mid,
+      (b: boolean) => Number(b)
+    );
     const _fP_arg: number = null as unknown as Parameters<typeof fP>[0];
     void _fP_arg;
     const _fP_ret: Many<number> | Promise<Many<number>> = fP(0);
     void _fP_ret;
 
     // (Q) fun(fn, gen(...), fn) — middle gen consumes string, outputs boolean.
-    const fQ = fun((n: number) => `s${n}`, g_mid, (b: boolean) => Number(b));
+    const fQ = fun(
+      (n: number) => `s${n}`,
+      g_mid,
+      (b: boolean) => Number(b)
+    );
     const _fQ_arg: number = null as unknown as Parameters<typeof fQ>[0];
     void _fQ_arg;
     const _fQ_ret: Many<number> | Promise<Many<number>> = fQ(0);
@@ -454,14 +462,22 @@ test('typings gen: pipe-like items in middle position (fun/gen)', t => {
     const g_mid = gen((s: string) => s.length > 3);
 
     // (R) gen(fn, fun(...), fn) — middle fun consumes string, outputs boolean.
-    const gR = gen((n: number) => `s${n}`, f_mid, (b: boolean) => Number(b));
+    const gR = gen(
+      (n: number) => `s${n}`,
+      f_mid,
+      (b: boolean) => Number(b)
+    );
     const _gR_arg: number = null as unknown as Parameters<typeof gR>[0];
     void _gR_arg;
     const _gR_ret: AsyncGenerator<number, void, unknown> = gR(0);
     void _gR_ret;
 
     // (S) gen(fn, gen(...), fn) — middle gen consumes string, outputs boolean.
-    const gS = gen((n: number) => `s${n}`, g_mid, (b: boolean) => Number(b));
+    const gS = gen(
+      (n: number) => `s${n}`,
+      g_mid,
+      (b: boolean) => Number(b)
+    );
     const _gS_arg: number = null as unknown as Parameters<typeof gS>[0];
     void _gS_arg;
     const _gS_ret: AsyncGenerator<number, void, unknown> = gS(0);

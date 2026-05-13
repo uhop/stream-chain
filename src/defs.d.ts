@@ -213,8 +213,9 @@ export declare function combineManyMut<A, T extends unknown[]>(
  * distribution the whole-union `extends Promise<unknown>` test fails on `Many<R>` alone,
  * `Promise<Many<R>>` falls through unwrapped, and the inner `Many` leaks downstream.
  */
-export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> =
-  UnpackReturnTypeOf<ReturnType<F>>;
+export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> = UnpackReturnTypeOf<
+  ReturnType<F>
+>;
 
 type UnpackReturnTypeOf<T> =
   T extends AsyncGenerator<infer O, unknown, unknown>
