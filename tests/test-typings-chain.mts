@@ -240,6 +240,41 @@ test('typings chain: ChainOutput<W, R> propagates R (issue #47)', t => {
   t.pass();
 });
 
+test('typings chain: chain-of-chain — W and R propagate through nested ChainOutput', t => {
+  // Compile-time only. Regression guard for the bug where `Ret<L>` walked into
+  // a nested `ChainOutput<W, R>` and hit the structural `Duplex` branch, losing R.
+  // Now mirrors `TypedDuplex` via `__streamTypeW`/`__streamTypeR` phantoms.
+  const _check = () => {
+    const ok = 'ok' as const;
+    const i2s = (n: number) => `value: ${n}`;
+    const s2b = (s: string) => s !== '';
+    const b2s = (b: boolean) => String(b);
+
+    const c1 = chain([i2s, s2b, b2s]);
+    const c3 = chain([(b: boolean) => (b ? 1 : 0), c1]);
+
+    c3.on('data', chunk => {
+      const _: AssertNotAny<typeof chunk, 'nested-chain on(data): any'> = ok;
+      void _;
+    });
+    void (async () => {
+      for await (const chunk of c3) {
+        const _: AssertNotAny<typeof chunk, 'nested-chain for-await: any'> = ok;
+        void _;
+      }
+    });
+
+    // Symmetric case: chain output as the FIRST item exercises `Arg0` recovery of W.
+    const c4 = chain([c1, (s: string) => s.length]);
+    c4.on('data', chunk => {
+      const _: AssertNotAny<typeof chunk, 'first-chain on(data): any'> = ok;
+      void _;
+    });
+  };
+  void _check;
+  t.pass();
+});
+
 test('typings chain: TypedReadable<R> / TypedDuplex<W,R> / TypedTransform<W,R> propagate R', t => {
   const _check = () => {
     const ok = 'ok' as const;

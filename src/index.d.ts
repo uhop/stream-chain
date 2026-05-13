@@ -107,10 +107,15 @@ declare namespace chain {
    *   - `write`/`end` are not narrowed to `W` because doing so breaks structural
    *     compatibility with `NodeJS.WritableStream` (which fixes `chunk: string | Uint8Array`
    *     for non-objectMode streams) and consequently breaks `readable.pipe(chain)`.
-   *     `W` survives on `ChainOutput<W, R>` for inference and for consumers who type it
-   *     explicitly, but is intentionally not propagated through the writable side.
+   *     `W` rides via the phantom `__streamTypeW` (mirroring `TypedDuplex`) so
+   *     `Arg0<ChainOutput<W, R>>` recovers `W` for chain-of-chain inference.
    */
-  interface ChainOutputExtensions<R> {
+  interface ChainOutputExtensions<W, R> {
+    /** Phantom carrier for the writable-side type. Type-only — never callable at runtime. */
+    __streamTypeW(): W;
+    /** Phantom carrier for the readable-side type. Type-only — never callable at runtime. */
+    __streamTypeR(): R;
+
     /** Internal list of streams. */
     streams: ChainStreams1 | ChainStreams;
     /** The first stream, which can be used to feed the chain and to attach event handlers. */
@@ -136,27 +141,29 @@ declare namespace chain {
    * `Omit` strips the `any`-returning read/push/asyncIterator members so the R-typed
    * overrides in `ChainOutputExtensions` win; the remaining `Duplex` members (including
    * the typed event-emitter overloads and `write`/`end`/`pipe` compatibility) survive via
-   * intersection. `W` is preserved on the signature for backward compatibility and as an
-   * inference anchor for `chain<L>(...)`; see `ChainOutputExtensions` for why it is not
-   * propagated to the writable side.
+   * intersection. `W` rides via the `__streamTypeW` phantom in `ChainOutputExtensions`
+   * so `Arg0`/`Ret` can recover both type parameters when a chain output appears inside
+   * another chain.
    */
   export type ChainOutput<W, R> = Omit<Duplex, 'read' | 'push' | typeof Symbol.asyncIterator> &
-    ChainOutputExtensions<R>;
+    ChainOutputExtensions<W, R>;
 
   /**
    * Returns the first argument of a chain, a stream, or a function.
    */
   export type Arg0<F> =
-    F extends TypedTransform<infer W, any>
+    F extends ChainOutput<infer W, any>
       ? W
-      : F extends TypedDuplex<infer W, any>
+      : F extends TypedTransform<infer W, any>
         ? W
-        : F extends TypedReadable<any>
-          ? never
-          : F extends TypedWritable<infer W>
-            ? W
-            : F extends Writable | Transform | Duplex
-              ? any
+        : F extends TypedDuplex<infer W, any>
+          ? W
+          : F extends TypedReadable<any>
+            ? never
+            : F extends TypedWritable<infer W>
+              ? W
+              : F extends Writable | Transform | Duplex
+                ? any
               : F extends Readable
                 ? never
                 : F extends TransformStream<infer W, any>
@@ -183,16 +190,18 @@ declare namespace chain {
    * Returns the return type of a chain, a stream, or a function.
    */
   export type Ret<F, Default = unknown> =
-    F extends TypedTransform<any, infer R>
+    F extends ChainOutput<any, infer R>
       ? R
-      : F extends TypedDuplex<any, infer R>
+      : F extends TypedTransform<any, infer R>
         ? R
-        : F extends TypedReadable<infer R>
+        : F extends TypedDuplex<any, infer R>
           ? R
-          : F extends TypedWritable<any>
-            ? never
-            : F extends Readable | Transform | Duplex
-              ? any
+          : F extends TypedReadable<infer R>
+            ? R
+            : F extends TypedWritable<any>
+              ? never
+              : F extends Readable | Transform | Duplex
+                ? any
               : F extends Writable
                 ? never
                 : F extends TransformStream<any, infer R>

@@ -208,15 +208,22 @@ export declare function combineManyMut<A, T extends unknown[]>(
 
 /**
  * Generic utility for getting the return type of a function including async and generators.
+ * Naked-T conditional so it distributes over unions — needed when a function returns a
+ * shape like `Many<R> | Promise<Many<R>>` (the surface of `fun(...)`'s output). Without
+ * distribution the whole-union `extends Promise<unknown>` test fails on `Many<R>` alone,
+ * `Promise<Many<R>>` falls through unwrapped, and the inner `Many` leaks downstream.
  */
 export type UnpackReturnType<F extends (...args: readonly any[]) => unknown> =
-  ReturnType<F> extends Promise<unknown>
-    ? Awaited<ReturnType<F>>
-    : ReturnType<F> extends AsyncGenerator<infer O, unknown, unknown>
+  UnpackReturnTypeOf<ReturnType<F>>;
+
+type UnpackReturnTypeOf<T> =
+  T extends AsyncGenerator<infer O, unknown, unknown>
+    ? O
+    : T extends Generator<infer O, unknown, unknown>
       ? O
-      : ReturnType<F> extends Generator<infer O, unknown, unknown>
-        ? O
-        : ReturnType<F>;
+      : T extends Promise<infer U>
+        ? UnpackReturnTypeOf<U>
+        : T;
 
 /**
  * `stream-chain`-specific utility for getting the type from functions used in a function list.
