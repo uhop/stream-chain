@@ -1,9 +1,7 @@
 /// <reference types="node" />
 
 import {ReadableOptions} from 'node:stream';
-import {TypedReadable} from '../typed-streams';
-
-export = readableFrom;
+import {TypedReadable} from '../typed-streams.js';
 
 /**
  * A function or an iterable that will be used as a data source.
@@ -24,3 +22,6 @@ interface ReadableFromOptions<T> extends ReadableOptions {
  * @returns a readable stream
  */
 declare function readableFrom<T>(options: Iter<T> | ReadableFromOptions<T>): TypedReadable<T>;
+
+export default readableFrom;
+export {readableFrom};

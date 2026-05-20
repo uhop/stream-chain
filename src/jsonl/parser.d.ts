@@ -2,8 +2,6 @@
 
 import {Buffer} from 'node:buffer';
 
-export = parser;
-
 /**
  * The JSONL parser output.
  */
@@ -36,3 +34,6 @@ type ParserOptions = {
 declare function parser(
   reviver?: Reviver | ParserOptions
 ): (x: string | Buffer) => AsyncGenerator<OutputItem, void, unknown>;
+
+export default parser;
+export {parser};

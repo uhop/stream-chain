@@ -2,8 +2,8 @@
 
 const {test} = require('tape-six');
 
-const chain = require('../src/index.js');
-const readableFrom = require('../src/utils/readableFrom.js');
+const {chain} = require('../src/index.js');
+const {readableFrom} = require('../src/utils/readableFrom.js');
 
 test.asPromise('cjs: require chain', (t, resolve) => {
   const output = [];
@@ -41,9 +41,9 @@ test.asPromise('cjs: require defs', (t, resolve) => {
 });
 
 test.asPromise('cjs: require utilities', (t, resolve) => {
-  const skip = require('../src/utils/skip.js');
-  const take = require('../src/utils/take.js');
-  const batch = require('../src/utils/batch.js');
+  const {skip} = require('../src/utils/skip.js');
+  const {take} = require('../src/utils/take.js');
+  const {batch} = require('../src/utils/batch.js');
 
   const output = [];
   const c = chain([readableFrom([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]), skip(2), take(5), batch(3)]);
@@ -59,8 +59,8 @@ test.asPromise('cjs: require utilities', (t, resolve) => {
 });
 
 test.asPromise('cjs: require gen and fun', (t, resolve) => {
-  const gen = require('../src/gen.js');
-  const fun = require('../src/fun.js');
+  const {gen} = require('../src/gen.js');
+  const {fun} = require('../src/fun.js');
 
   const output = [];
   const c = chain([
@@ -87,8 +87,8 @@ test.asPromise('cjs: require gen and fun', (t, resolve) => {
 });
 
 test.asPromise('cjs: require jsonl', (t, resolve) => {
-  const parserStream = require('../src/jsonl/parserStream.js');
-  const stringerStream = require('../src/jsonl/stringerStream.js');
+  const {parserStream} = require('../src/jsonl/parserStream.js');
+  const {stringerStream} = require('../src/jsonl/stringerStream.js');
 
   const output = [];
   const c = chain([readableFrom([{a: 1}, {b: 2}]), stringerStream({separator: '\n'})]);

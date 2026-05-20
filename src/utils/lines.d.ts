@@ -1,6 +1,4 @@
-import {none} from '../defs';
-
-export = lines;
+import {none} from '../defs.js';
 
 /**
  * The flushable function that outputs text in lines.
@@ -12,3 +10,6 @@ type LinesOutput = (value: string | typeof none) => Generator<string, void, unkn
  * @returns a splitter function
  */
 declare function lines(): LinesOutput;
+
+export default lines;
+export {lines};

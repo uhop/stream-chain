@@ -1,8 +1,6 @@
 /// <reference types="node" />
 
-import {TypedTransform} from '../typed-streams';
-
-export = stringer;
+import {TypedTransform} from '../typed-streams.js';
 
 /**
  * Options for the stringer stream used to control the output.
@@ -37,3 +35,6 @@ interface StringerOptions {
  * @returns a duplex stream
  */
 declare function stringer<T>(options?: StringerOptions): TypedTransform<T, string>;
+
+export default stringer;
+export {stringer as stringerStream};

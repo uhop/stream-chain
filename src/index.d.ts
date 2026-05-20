@@ -1,7 +1,7 @@
 /// <reference types="node" />
 
 import {Duplex, DuplexOptions, Readable, Transform, Writable} from 'node:stream';
-import {TypedDuplex, TypedReadable, TypedTransform, TypedWritable} from './typed-streams';
+import {TypedDuplex, TypedReadable, TypedTransform, TypedWritable} from './typed-streams.js';
 
 import {
   none,
@@ -31,11 +31,9 @@ import {
   type AsFlatList,
   type Fn,
   type OutputType
-} from './defs';
-import gen from './gen';
-import asStream from './asStream';
-
-export = chain;
+} from './defs.js';
+import gen from './gen.js';
+import asStream from './asStream.js';
 
 /**
  * Creates a stream object out of a list of functions and streams.
@@ -288,36 +286,33 @@ declare namespace chain {
       ? readonly [F1, ...ChainList<I, R>]
       : readonly [ChainItem<I, F1>, ...ChainList<Ret<F1, I>, R>]
     : L;
-
-  export {
-    none,
-    stop,
-    Stop,
-    finalSymbol,
-    finalValue,
-    final,
-    isFinalValue,
-    getFinalValue,
-    manySymbol,
-    many,
-    isMany,
-    getManyValues,
-    getFunctionList,
-    flushSymbol,
-    flushable,
-    isFlushable,
-    fListSymbol,
-    isFunctionList,
-    setFunctionList,
-    clearFunctionList,
-    toMany,
-    normalizeMany,
-    combineMany,
-    combineManyMut,
-    chain,
-    chainUnchecked,
-    gen,
-    asStream,
-    dataSource
-  };
 }
+
+export default chain;
+export {chain, chainUnchecked, dataSource, gen, asStream};
+export {
+  none,
+  stop,
+  Stop,
+  finalSymbol,
+  finalValue,
+  final,
+  isFinalValue,
+  getFinalValue,
+  manySymbol,
+  many,
+  isMany,
+  getManyValues,
+  getFunctionList,
+  flushSymbol,
+  flushable,
+  isFlushable,
+  fListSymbol,
+  isFunctionList,
+  setFunctionList,
+  clearFunctionList,
+  toMany,
+  normalizeMany,
+  combineMany,
+  combineManyMut
+};

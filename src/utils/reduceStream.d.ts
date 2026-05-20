@@ -1,9 +1,7 @@
 /// <reference types="node" />
 
 import {WritableOptions} from 'node:stream';
-import {TypedWritable} from '../typed-streams';
-
-export = reduceStream;
+import {TypedWritable} from '../typed-streams.js';
 
 /** A reducer function prototype */
 type Reducer<A, T> = (this: ReduceStreamOutput<A, T>, acc: A, value: T) => A;
@@ -45,3 +43,6 @@ declare function reduceStream<A, T>(
   reducer: Reducer<A, T> | ReducerPromise<A, T>,
   initial: A
 ): ReduceStreamOutput<A, T>;
+
+export default reduceStream;
+export {reduceStream};

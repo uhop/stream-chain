@@ -1,6 +1,4 @@
-import {none, stop} from '../defs';
-
-export = takeWhile;
+import {none, stop} from '../defs.js';
 
 /**
  * Creates a function that takes values while `fn` returns `true`.
@@ -16,3 +14,6 @@ declare function takeWhile<T>(
   fn: (value: T) => Promise<boolean>,
   finalValue?: typeof none | typeof stop
 ): (value: unknown) => Promise<T | typeof finalValue>;
+
+export default takeWhile;
+export {takeWhile};

@@ -1,10 +1,8 @@
 // @ts-self-types="./fixUtf8Stream.d.ts"
 
-'use strict';
+import {StringDecoder} from 'string_decoder';
 
-const {StringDecoder} = require('string_decoder');
-
-const {none, flushable} = require('../defs');
+import {none, flushable} from '../defs.js';
 
 const fixUtf8Stream = () => {
   const stringDecoder = new StringDecoder();
@@ -30,4 +28,5 @@ const fixUtf8Stream = () => {
   });
 };
 
-module.exports = fixUtf8Stream;
+export default fixUtf8Stream;
+export {fixUtf8Stream};

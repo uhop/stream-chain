@@ -1,8 +1,6 @@
 // @ts-self-types="./reduceStream.d.ts"
 
-'use strict';
-
-const {Writable} = require('node:stream');
+import {Writable} from 'node:stream';
 
 const defaultInitial = 0;
 const defaultReducer = (_acc, value) => value;
@@ -45,4 +43,5 @@ const reduceStream = (options, initial) => {
   return stream;
 };
 
-module.exports = reduceStream;
+export default reduceStream;
+export {reduceStream};

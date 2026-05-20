@@ -1,7 +1,5 @@
-import type {Many, AsFlatList, Arg0, Ret, Fn} from './defs';
-import type gen from './gen';
-
-export = fun;
+import type {Many, AsFlatList, Arg0, Ret, Fn} from './defs.js';
+import type gen from './gen.js';
 
 /**
  * Returns a wrapped identity function. Rarely used.
@@ -19,3 +17,6 @@ declare function fun<L extends unknown[]>(
 ): AsFlatList<L> extends readonly [Fn, ...Fn[]]
   ? (arg: Arg0<L>) => Many<Ret<L>> | Promise<Many<Ret<L>>>
   : (arg: unknown) => Many<unknown> | Promise<Many<unknown>>;
+
+export default fun;
+export {fun};

@@ -1,8 +1,6 @@
 // @ts-self-types="./takeWhile.d.ts"
 
-'use strict';
-
-const {none} = require('../defs');
+import {none} from '../defs.js';
 
 const takeWhile = (fn, finalValue = none) => {
   let test = true;
@@ -22,4 +20,5 @@ const takeWhile = (fn, finalValue = none) => {
   };
 };
 
-module.exports = takeWhile;
+export default takeWhile;
+export {takeWhile};

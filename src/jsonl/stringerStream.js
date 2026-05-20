@@ -1,8 +1,6 @@
 // @ts-self-types="./stringerStream.d.ts"
 
-'use strict';
-
-const {Transform} = require('node:stream');
+import {Transform} from 'node:stream';
 
 const stringer = options => {
   let first = true,
@@ -47,4 +45,5 @@ const stringer = options => {
   });
 };
 
-module.exports = stringer;
+export default stringer;
+export {stringer as stringerStream};

@@ -1,6 +1,4 @@
-import {none} from '../defs';
-
-export = fold;
+import {none} from '../defs.js';
 
 /**
  * Folds values into an accumulator. Returns the accumulator when the source is exhausted.
@@ -17,3 +15,6 @@ declare function fold<A, T>(
   fn: (acc: A, value: T) => Promise<A>,
   acc: A
 ): (value: T | typeof none) => Promise<A | typeof none>;
+
+export default fold;
+export {fold};

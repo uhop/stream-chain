@@ -1,9 +1,7 @@
 // @ts-self-types="./readableFrom.d.ts"
 
-'use strict';
-
-const {Readable} = require('node:stream');
-const defs = require('../defs');
+import {Readable} from 'node:stream';
+import * as defs from '../defs.js';
 
 const readableFrom = options => {
   if (!options || !options.iterable) {
@@ -129,4 +127,5 @@ const readableFrom = options => {
   return stream;
 };
 
-module.exports = readableFrom;
+export default readableFrom;
+export {readableFrom};

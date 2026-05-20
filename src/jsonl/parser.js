@@ -1,11 +1,9 @@
 // @ts-self-types="./parser.d.ts"
 
-'use strict';
-
-const {none} = require('../defs.js');
-const gen = require('../gen.js');
-const fixUtf8Stream = require('../utils/fixUtf8Stream');
-const lines = require('../utils/lines');
+import {none} from '../defs.js';
+import gen from '../gen.js';
+import fixUtf8Stream from '../utils/fixUtf8Stream.js';
+import lines from '../utils/lines.js';
 
 const parse = reviver => string => JSON.parse(string, reviver);
 
@@ -26,4 +24,5 @@ const parser = options => {
   return gen(fixUtf8Stream(), lines(), string => ({key: counter++, value: parseFn(string)}));
 };
 
-module.exports = parser;
+export default parser;
+export {parser};

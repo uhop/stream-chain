@@ -1,6 +1,4 @@
-import {none, stop} from '../defs';
-
-export = take;
+import {none, stop} from '../defs.js';
 
 /**
  * Creates a function that takes `n` elements.
@@ -12,3 +10,6 @@ declare function take<T = unknown>(
   n: number,
   finalValue?: typeof none | typeof stop
 ): (value: T) => T | typeof finalValue;
+
+export default take;
+export {take};

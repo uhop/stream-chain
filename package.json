@@ -2,12 +2,15 @@
   "name": "stream-chain",
   "version": "3.6.3",
   "description": "Chain functions, generators, and streams into a pipeline with backpressure support.",
-  "type": "commonjs",
+  "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
   "exports": {
     ".": "./src/index.js",
     "./*": "./src/*"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "scripts": {
     "test": "tape6 --flags FO",

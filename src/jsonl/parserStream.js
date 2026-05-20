@@ -1,9 +1,7 @@
 // @ts-self-types="./parserStream.d.ts"
 
-'use strict';
-
-const asStream = require('../asStream');
-const parser = require('./parser.js');
+import asStream from '../asStream.js';
+import parser from './parser.js';
 
 const parserStream = options => {
   const reviver = options && options.reviver,
@@ -15,4 +13,5 @@ const parserStream = options => {
   });
 };
 
-module.exports = parserStream;
+export default parserStream;
+export {parserStream};

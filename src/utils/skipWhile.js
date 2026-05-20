@@ -1,8 +1,6 @@
 // @ts-self-types="./skipWhile.d.ts"
 
-'use strict';
-
-const {none} = require('../defs');
+import {none} from '../defs.js';
 
 const skipWhile = fn => {
   let test = true;
@@ -22,4 +20,5 @@ const skipWhile = fn => {
   };
 };
 
-module.exports = skipWhile;
+export default skipWhile;
+export {skipWhile};

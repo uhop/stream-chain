@@ -1,8 +1,6 @@
 // @ts-self-types="./batch.d.ts"
 
-'use strict';
-
-const {none, flushable} = require('../defs');
+import {none, flushable} from '../defs.js';
 
 const batch = (n = 100) => {
   let buffer = [];
@@ -22,4 +20,5 @@ const batch = (n = 100) => {
   });
 };
 
-module.exports = batch;
+export default batch;
+export {batch};

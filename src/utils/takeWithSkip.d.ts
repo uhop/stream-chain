@@ -1,6 +1,4 @@
-import {none, stop} from '../defs';
-
-export = takeWithSkip;
+import {none, stop} from '../defs.js';
 
 /**
  * Creates a function that takes `n` elements after skipping `skip` elements.
@@ -15,3 +13,6 @@ declare function takeWithSkip<T = unknown>(
   skip?: number,
   finalValue?: typeof none | typeof stop
 ): (value: T) => T | typeof finalValue;
+
+export default takeWithSkip;
+export {takeWithSkip};

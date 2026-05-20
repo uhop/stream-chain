@@ -1,7 +1,5 @@
 // @ts-self-types="./scan.d.ts"
 
-'use strict';
-
 const scan = (fn, acc) => value => {
   const result = fn(acc, value);
   if (result && typeof result.then == 'function') {
@@ -10,4 +8,5 @@ const scan = (fn, acc) => value => {
   return (acc = result);
 };
 
-module.exports = scan;
+export default scan;
+export {scan};

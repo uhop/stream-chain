@@ -1,5 +1,3 @@
-export = scan;
-
 /**
  * Creates a function that scans values into an accumulator.
  * @param fn a function that takes an accumulator and a value and returns an accumulator
@@ -9,3 +7,6 @@ export = scan;
  */
 declare function scan<A, T>(fn: (acc: A, value: T) => A, acc: A): (value: T) => A;
 declare function scan<A, T>(fn: (acc: A, value: T) => Promise<A>, acc: A): (value: T) => Promise<A>;
+
+export default scan;
+export {scan};

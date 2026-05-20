@@ -1,6 +1,4 @@
-import type {Arg0, Ret, AsFlatList, Fn} from './defs';
-
-export = gen;
+import type {Arg0, Ret, AsFlatList, Fn} from './defs.js';
 
 /**
  * Returns a wrapped identity function. Rarely used.
@@ -47,3 +45,6 @@ declare namespace gen {
       : readonly [FnItem<I, F1>, ...FnList<Ret<F1, I>, R>]
     : L;
 }
+
+export default gen;
+export {gen};

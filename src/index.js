@@ -1,11 +1,9 @@
 // @ts-self-types="./index.d.ts"
 
-'use strict';
-
-const {Readable, Writable, Duplex} = require('node:stream');
-const defs = require('./defs');
-const gen = require('./gen');
-const asStream = require('./asStream');
+import {Readable, Writable, Duplex} from 'node:stream';
+import * as defs from './defs.js';
+import gen from './gen.js';
+import asStream from './asStream.js';
 
 // is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 const isReadableNodeStream = obj =>
@@ -230,42 +228,44 @@ const dataSource = fn => {
   throw new TypeError('The argument should be a function or an iterable object.');
 };
 
-module.exports = chain;
-
 // from defs.js
-module.exports.none = defs.none;
-module.exports.stop = defs.stop;
-module.exports.Stop = defs.Stop;
+chain.none = defs.none;
+chain.stop = defs.stop;
+chain.Stop = defs.Stop;
 
-module.exports.finalSymbol = defs.finalSymbol;
-module.exports.finalValue = defs.finalValue;
-module.exports.final = defs.final;
-module.exports.isFinalValue = defs.isFinalValue;
-module.exports.getFinalValue = defs.getFinalValue;
+chain.finalSymbol = defs.finalSymbol;
+chain.finalValue = defs.finalValue;
+chain.final = defs.final;
+chain.isFinalValue = defs.isFinalValue;
+chain.getFinalValue = defs.getFinalValue;
 
-module.exports.manySymbol = defs.manySymbol;
-module.exports.many = defs.many;
-module.exports.isMany = defs.isMany;
-module.exports.getManyValues = defs.getManyValues;
+chain.manySymbol = defs.manySymbol;
+chain.many = defs.many;
+chain.isMany = defs.isMany;
+chain.getManyValues = defs.getManyValues;
 
-module.exports.flushSymbol = defs.flushSymbol;
-module.exports.flushable = defs.flushable;
-module.exports.isFlushable = defs.isFlushable;
+chain.flushSymbol = defs.flushSymbol;
+chain.flushable = defs.flushable;
+chain.isFlushable = defs.isFlushable;
 
-module.exports.fListSymbol = defs.fListSymbol;
-module.exports.isFunctionList = defs.isFunctionList;
-module.exports.getFunctionList = defs.getFunctionList;
-module.exports.setFunctionList = defs.setFunctionList;
-module.exports.clearFunctionList = defs.clearFunctionList;
+chain.fListSymbol = defs.fListSymbol;
+chain.isFunctionList = defs.isFunctionList;
+chain.getFunctionList = defs.getFunctionList;
+chain.setFunctionList = defs.setFunctionList;
+chain.clearFunctionList = defs.clearFunctionList;
 
-module.exports.toMany = defs.toMany;
-module.exports.normalizeMany = defs.normalizeMany;
-module.exports.combineMany = defs.combineMany;
-module.exports.combineManyMut = defs.combineManyMut;
+chain.toMany = defs.toMany;
+chain.normalizeMany = defs.normalizeMany;
+chain.combineMany = defs.combineMany;
+chain.combineManyMut = defs.combineManyMut;
 
-module.exports.chain = chain; // for compatibility with 2.x
-module.exports.chainUnchecked = chain; // for TypeScript to bypass type checks
-module.exports.gen = gen;
-module.exports.asStream = asStream;
+chain.chain = chain; // for compatibility with 2.x
+chain.chainUnchecked = chain; // for TypeScript to bypass type checks
+chain.gen = gen;
+chain.asStream = asStream;
 
-module.exports.dataSource = dataSource;
+chain.dataSource = dataSource;
+
+export default chain;
+export {chain, chain as chainUnchecked, gen, asStream, dataSource};
+export * from './defs.js';

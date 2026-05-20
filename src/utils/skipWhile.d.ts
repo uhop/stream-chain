@@ -1,6 +1,4 @@
-import {none} from '../defs';
-
-export = skipWhile;
+import {none} from '../defs.js';
 
 /**
  * Creates a function that skips values while `fn` returns `true`.
@@ -11,3 +9,6 @@ declare function skipWhile<T>(fn: (value: T) => boolean): (value: T) => T | type
 declare function skipWhile<T>(
   fn: (value: T) => Promise<boolean>
 ): (value: T) => Promise<T | typeof none>;
+
+export default skipWhile;
+export {skipWhile};

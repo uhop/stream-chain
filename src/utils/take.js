@@ -1,12 +1,11 @@
 // @ts-self-types="./take.d.ts"
 
-'use strict';
-
-const {none} = require('../defs');
+import {none} from '../defs.js';
 
 const take =
   (n, finalValue = none) =>
   value =>
     n > 0 ? (--n, value) : finalValue;
 
-module.exports = take;
+export default take;
+export {take};

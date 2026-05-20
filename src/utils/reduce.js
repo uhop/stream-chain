@@ -1,3 +1,4 @@
 // @ts-self-types="./reduce.d.ts"
 
-module.exports = require('./fold');
+export {default} from './fold.js';
+export {fold as reduce} from './fold.js';

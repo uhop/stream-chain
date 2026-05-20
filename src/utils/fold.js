@@ -1,8 +1,6 @@
 // @ts-self-types="./fold.d.ts"
 
-'use strict';
-
-const {none, flushable} = require('../defs');
+import {none, flushable} from '../defs.js';
 
 const fold = (fn, acc) =>
   flushable(value => {
@@ -23,4 +21,5 @@ const fold = (fn, acc) =>
     return none;
   });
 
-module.exports = fold;
+export default fold;
+export {fold};

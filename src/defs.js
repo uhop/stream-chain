@@ -1,7 +1,5 @@
 // @ts-self-types="./defs.d.ts"
 
-'use strict';
-
 const none = Symbol.for('object-stream.none');
 const stop = Symbol.for('object-stream.stop');
 
@@ -88,32 +86,29 @@ const combineManyMut = (a, ...args) => {
 // old aliases
 const final = finalValue;
 
-module.exports.none = none;
-module.exports.stop = stop;
-module.exports.Stop = Stop;
-
-module.exports.finalSymbol = finalSymbol;
-module.exports.finalValue = finalValue;
-module.exports.final = final;
-module.exports.isFinalValue = isFinalValue;
-module.exports.getFinalValue = getFinalValue;
-
-module.exports.manySymbol = manySymbol;
-module.exports.many = many;
-module.exports.isMany = isMany;
-module.exports.getManyValues = getManyValues;
-
-module.exports.flushSymbol = flushSymbol;
-module.exports.flushable = flushable;
-module.exports.isFlushable = isFlushable;
-
-module.exports.fListSymbol = fListSymbol;
-module.exports.isFunctionList = isFunctionList;
-module.exports.getFunctionList = getFunctionList;
-module.exports.setFunctionList = setFunctionList;
-module.exports.clearFunctionList = clearFunctionList;
-
-module.exports.toMany = toMany;
-module.exports.normalizeMany = normalizeMany;
-module.exports.combineMany = combineMany;
-module.exports.combineManyMut = combineManyMut;
+export {
+  none,
+  stop,
+  Stop,
+  finalSymbol,
+  finalValue,
+  final,
+  isFinalValue,
+  getFinalValue,
+  manySymbol,
+  many,
+  isMany,
+  getManyValues,
+  flushSymbol,
+  flushable,
+  isFlushable,
+  fListSymbol,
+  isFunctionList,
+  getFunctionList,
+  setFunctionList,
+  clearFunctionList,
+  toMany,
+  normalizeMany,
+  combineMany,
+  combineManyMut
+};

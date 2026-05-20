@@ -1,8 +1,6 @@
 // @ts-self-types="./gen.d.ts"
 
-'use strict';
-
-const defs = require('./defs');
+import * as defs from './defs.js';
 
 const next = async function* (value, fns, index) {
   for (let i = index; i <= fns.length; ++i) {
@@ -101,6 +99,7 @@ const gen = (...fns) => {
   return defs.setFunctionList(g, fns);
 };
 
-module.exports = gen;
+gen.next = next;
 
-module.exports.next = next;
+export default gen;
+export {gen, next};

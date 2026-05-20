@@ -1,9 +1,7 @@
 // @ts-self-types="./asStream.d.ts"
 
-'use strict';
-
-const {Duplex} = require('node:stream');
-const defs = require('./defs');
+import {Duplex} from 'node:stream';
+import * as defs from './defs.js';
 
 const asStream = (fn, options) => {
   if (typeof fn != 'function') throw TypeError('Only a function is accepted as the first argument');
@@ -323,4 +321,5 @@ const asStream = (fn, options) => {
   return stream;
 };
 
-module.exports = asStream;
+export default asStream;
+export {asStream};

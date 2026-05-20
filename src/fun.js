@@ -1,8 +1,6 @@
 // @ts-self-types="./fun.d.ts"
 
-'use strict';
-
-const defs = require('./defs');
+import * as defs from './defs.js';
 
 const next = (value, fns, index, collect) => {
   let cleanIndex;
@@ -151,8 +149,9 @@ const fun = (...fns) => {
   return defs.setFunctionList(g, defs.getFunctionList(f));
 };
 
-module.exports = fun;
+fun.next = next;
+fun.collect = collect;
+fun.asArray = asArray;
 
-module.exports.next = next;
-module.exports.collect = collect;
-module.exports.asArray = asArray;
+export default fun;
+export {fun, next, collect, asArray};

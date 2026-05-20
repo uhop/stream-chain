@@ -1,8 +1,6 @@
 // @ts-self-types="./lines.d.ts"
 
-'use strict';
-
-const {none, flushable} = require('../defs');
+import {none, flushable} from '../defs.js';
 
 const lines = () => {
   let rest = '';
@@ -23,4 +21,5 @@ const lines = () => {
   });
 };
 
-module.exports = lines;
+export default lines;
+export {lines};
