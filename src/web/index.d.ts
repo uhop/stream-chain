@@ -58,9 +58,9 @@ declare function chainUnchecked<W = any, R = any>(
 
 export default chain;
 export {chain, chainUnchecked};
-export {default as gen} from '../gen.js';
-export {default as fun} from '../fun.js';
-export {default as asWebStream} from '../asWebStream.js';
+export {gen} from '../gen.js';
+export {fun} from '../fun.js';
+export {asWebStream} from '../asWebStream.js';
 export {
   isReadableWebStream,
   isWritableWebStream,
