@@ -1,18 +1,17 @@
-// @ts-self-types="./asStream.d.ts"
-
-// Full-blown executor with PROPER per-item backpressure: applyFns awaits between
-// pushes. When stream.push() returns false, the next push returns the `paused`
-// Promise (resolves when read() fires). The queue stays at hwm regardless of
-// how many outputs one input chunk produces — safe for unbounded streams.
+// Snapshot of the pre-fix asStream — kept here for old-vs-new benchmarking.
+// DO NOT use as the canonical asStream. Imports `../src/defs.js` directly
+// because it lives under bench/ to avoid leaking through package.json exports.
 
 import {Duplex} from 'node:stream';
-import * as defs from './defs.js';
+import * as defs from '../src/defs.js';
 
 const asStream = (fn, options) => {
   if (typeof fn != 'function') throw TypeError('Only a function is accepted as the first argument');
 
-  let paused = Promise.resolve();
-  let resolvePaused = null;
+  let paused = Promise.resolve(),
+    resolvePaused = null;
+  const queue = [];
+
   const resume = () => {
     if (!resolvePaused) return;
     resolvePaused();
@@ -26,58 +25,47 @@ const asStream = (fn, options) => {
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
-  let stopped = false;
-  let stream = null;
-
-  // Per-item backpressure: push and return `paused` if stream.push returned false.
-  const enqueue = value => {
-    if (!stream.push(value)) {
-      pause();
-      return paused;
-    }
-  };
-
-  // Async applyFns: awaits between pushes so the queue stays bounded.
   const applyFns = innerFns
-    ? async function apply(value, i, push) {
+    ? function apply(value, i, push) {
         for (;;) {
-          if (value && typeof value.then == 'function') {
-            value = await value;
-            continue;
-          }
+          if (value && typeof value.then == 'function') return value.then(v => apply(v, i, push));
           if (value === undefined || value === null || value === defs.none) return;
           if (value === defs.stop) throw new defs.Stop();
           if (defs.isFinalValue(value)) {
-            const r = push(defs.getFinalValue(value));
-            if (r) await r;
+            push(defs.getFinalValue(value));
             return;
           }
           if (defs.isMany(value)) {
             const values = defs.getManyValues(value);
             if (i >= innerFns.length) {
-              for (let j = 0; j < values.length; ++j) {
-                const r = push(values[j]);
-                if (r) await r;
-              }
+              for (let j = 0; j < values.length; ++j) push(values[j]);
               return;
             }
+            let pending;
             for (let j = 0; j < values.length; ++j) {
-              await apply(values[j], i, push);
+              if (pending) {
+                const jj = j;
+                pending = pending.then(() => apply(values[jj], i, push));
+              } else {
+                const result = apply(values[j], i, push);
+                if (result) pending = result;
+              }
             }
-            return;
+            return pending;
           }
           if (value && typeof value.next == 'function') {
-            for (;;) {
-              let data = value.next();
-              if (data && typeof data.then == 'function') data = await data;
-              if (data.done) break;
-              await apply(data.value, i, push);
-            }
-            return;
+            return (async () => {
+              for (;;) {
+                let data = value.next();
+                if (data && typeof data.then == 'function') data = await data;
+                if (data.done) break;
+                const result = apply(data.value, i, push);
+                if (result) await result;
+              }
+            })();
           }
           if (i >= innerFns.length) {
-            const r = push(value);
-            if (r) await r;
+            push(value);
             return;
           }
           value = innerFns[i++](value);
@@ -85,7 +73,8 @@ const asStream = (fn, options) => {
       }
     : null;
 
-  const queue = [];
+  let stopped = false;
+  let stream = null;
 
   const pushResults = values => {
     if (values && typeof values.next == 'function') {
@@ -94,11 +83,11 @@ const asStream = (fn, options) => {
     }
     queue.push(values[Symbol.iterator]());
   };
-
   const pump = async () => {
     while (queue.length) {
-      const g = queue[queue.length - 1];
-      let result = g.next();
+      await paused;
+      const gen = queue[queue.length - 1];
+      let result = gen.next();
       if (result && typeof result.then == 'function') {
         result = await result;
       }
@@ -113,33 +102,24 @@ const asStream = (fn, options) => {
       await sanitize(value);
     }
   };
-
   const sanitize = async value => {
     if (value === undefined || value === null || value === defs.none) return;
     if (value === defs.stop) throw new defs.Stop();
+
     if (defs.isMany(value)) {
       pushResults(defs.getManyValues(value));
       return pump();
     }
+
     if (defs.isFinalValue(value)) {
       value = defs.getFinalValue(value);
       return processValue(value);
     }
-    const r = enqueue(value);
-    if (r) await r;
-  };
 
-  const processValue = async value => {
-    if (value && typeof value.then == 'function') {
-      return value.then(v => processValue(v));
+    if (!stream.push(value)) {
+      pause();
     }
-    if (value && typeof value.next == 'function') {
-      pushResults(value);
-      return pump();
-    }
-    return sanitize(value);
   };
-
   const processChunk = async (chunk, encoding) => {
     try {
       const value = fn(chunk, encoding);
@@ -153,6 +133,16 @@ const asStream = (fn, options) => {
       throw error;
     }
   };
+  const processValue = async value => {
+    if (value && typeof value.then == 'function') {
+      return value.then(value => processValue(value));
+    }
+    if (value && typeof value.next == 'function') {
+      pushResults(value);
+      return pump();
+    }
+    return sanitize(value);
+  };
 
   stream = new Duplex({
     writableObjectMode: true,
@@ -164,18 +154,43 @@ const asStream = (fn, options) => {
         return;
       }
       if (applyFns) {
-        applyFns(chunk, 0, enqueue).then(
-          () => callback(null),
-          error => {
-            if (error instanceof defs.Stop) {
-              stream.push(null);
-              stopped = true;
-              callback(null);
-              return;
-            }
-            callback(error);
+        let backpressure = false;
+        let asyncResult;
+        try {
+          asyncResult = applyFns(chunk, 0, value => {
+            if (!stream.push(value)) backpressure = true;
+          });
+        } catch (error) {
+          if (error instanceof defs.Stop) {
+            stream.push(null);
+            stopped = true;
+            callback(null);
+            return;
           }
-        );
+          callback(error);
+          return;
+        }
+        if (asyncResult) {
+          asyncResult.then(
+            () => callback(null),
+            error => {
+              if (error instanceof defs.Stop) {
+                stream.push(null);
+                stopped = true;
+                callback(null);
+                return;
+              }
+              callback(error);
+            }
+          );
+          return;
+        }
+        if (backpressure) {
+          pause();
+          paused.then(() => callback(null));
+        } else {
+          callback(null);
+        }
         return;
       }
       let value;
@@ -191,7 +206,6 @@ const asStream = (fn, options) => {
         callback(error);
         return;
       }
-      // Sync fast path
       if (
         !(value && (typeof value.then == 'function' || typeof value.next == 'function')) &&
         value !== defs.stop &&
@@ -208,7 +222,6 @@ const asStream = (fn, options) => {
         callback(null);
         return;
       }
-      // Async slow path
       processValue(value).then(
         () => callback(null),
         error => {
@@ -224,25 +237,57 @@ const asStream = (fn, options) => {
     },
     final(callback) {
       if (applyFns) {
-        (async () => {
-          try {
-            for (let i = 0; i < innerFns.length; ++i) {
-              if (defs.isFlushable(innerFns[i])) {
-                await applyFns(innerFns[i](defs.none), i + 1, enqueue);
+        let backpressure = false;
+        let asyncChain;
+        try {
+          const pushFn = value => {
+            if (!stream.push(value)) backpressure = true;
+          };
+          for (let i = 0; i < innerFns.length; ++i) {
+            if (defs.isFlushable(innerFns[i])) {
+              if (asyncChain) {
+                const ii = i;
+                asyncChain = asyncChain.then(() =>
+                  applyFns(innerFns[ii](defs.none), ii + 1, pushFn)
+                );
+              } else {
+                const result = applyFns(innerFns[i](defs.none), i + 1, pushFn);
+                if (result) asyncChain = result;
               }
             }
-            stream.push(null);
-            callback(null);
-          } catch (error) {
-            if (error instanceof defs.Stop) {
-              stream.push(null);
-              stopped = true;
-              callback(null);
-              return;
-            }
-            callback(error);
           }
-        })();
+        } catch (error) {
+          if (error instanceof defs.Stop) {
+            stream.push(null);
+            stopped = true;
+            callback(null);
+            return;
+          }
+          callback(error);
+          return;
+        }
+        if (asyncChain) {
+          asyncChain.then(
+            () => (stream.push(null), callback(null)),
+            error => {
+              if (error instanceof defs.Stop) {
+                stopped = true;
+                stream.push(null);
+                callback(null);
+                return;
+              }
+              callback(error);
+            }
+          );
+          return;
+        }
+        stream.push(null);
+        if (backpressure) {
+          pause();
+          paused.then(() => callback(null));
+        } else {
+          callback(null);
+        }
         return;
       }
       if (!defs.isFlushable(fn)) {

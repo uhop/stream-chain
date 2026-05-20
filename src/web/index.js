@@ -39,16 +39,22 @@ const groupFunctions = (output, item, index, items) => {
   return output;
 };
 
-const produceStages = item => {
+// Factory: returns a stage-producer bound to the chain's options. Options are
+// forwarded to every newly-wrapped asWebStream stage (existing stream items
+// passed in by the user keep their own settings — chain doesn't reconfigure them).
+const makeProduceStages = options => item => {
   if (Array.isArray(item)) {
     if (!item.length) return null;
-    if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0]);
-    return /** @type {any} */ (chain).asWebStream(/** @type {any} */ (chain).gen(...item));
+    if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0], options);
+    return /** @type {any} */ (chain).asWebStream(
+      /** @type {any} */ (chain).gen(...item),
+      options
+    );
   }
   return item;
 };
 
-const chain = (fns, _options) => {
+const chain = (fns, options) => {
   if (!Array.isArray(fns) || !fns.length) {
     throw new TypeError("Chain's first argument should be a non-empty array.");
   }
@@ -63,7 +69,7 @@ const chain = (fns, _options) => {
     throw new TypeError("Chain's first argument is empty after flattening.");
   }
 
-  const stages = fns.reduce(groupFunctions, []).map(produceStages).filter(s => s);
+  const stages = fns.reduce(groupFunctions, []).map(makeProduceStages(options)).filter(s => s);
 
   // Pipe stages together. pipeTo handles backpressure + error propagation.
   for (let i = 0; i < stages.length - 1; ++i) {

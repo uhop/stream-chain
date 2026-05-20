@@ -1,6 +1,18 @@
 import type {Arg0, Ret} from '../defs.js';
 
-export interface ChainWebStreamOptions {}
+/**
+ * Options for `chain(fns, options)` in the `/web` subpath. Uses Web Streams'
+ * standard `QueuingStrategy` shape. Forwarded to every `asWebStream` stage the
+ * chain creates; existing stream items in `fns` keep their own settings.
+ */
+export interface ChainWebStreamOptions {
+  /** Queuing strategy applied to both sides of each new stage if no side-specific given. */
+  strategy?: QueuingStrategy;
+  /** Queuing strategy for the readable side of each new stage. */
+  readableStrategy?: QueuingStrategy;
+  /** Queuing strategy for the writable side of each new stage. */
+  writableStrategy?: QueuingStrategy;
+}
 
 /**
  * A single stage in a /web chain: has a readable side, a writable side, or both.

@@ -25,7 +25,7 @@ const isDuplexWebStream = x =>
   !!(x && typeof x === 'object' &&
     isReadableWebStream(x.readable) && isWritableWebStream(x.writable));
 
-const asWebStream = (fn, _options) => {
+const asWebStream = (fn, options) => {
   if (isDuplexWebStream(fn) || isReadableWebStream(fn) || isWritableWebStream(fn)) {
     return fn;
   }
@@ -35,32 +35,43 @@ const asWebStream = (fn, _options) => {
     );
   }
 
+  // Queuing strategy options use the standard Web Streams `QueuingStrategy`
+  // shape (`{highWaterMark, size}`) — passed directly to the underlying
+  // `new ReadableStream(..., strategy)` / `new WritableStream(..., strategy)`.
+  // `strategy` is shorthand for "apply to both sides"; per-side options win.
+  const strategy = options && options.strategy;
+  const readableStrategy = (options && options.readableStrategy) || strategy;
+  const writableStrategy = (options && options.writableStrategy) || strategy;
+
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
   let stopped = false;
   let readableController;
   let pendingDrain = null;
 
-  const readable = new ReadableStream({
-    start(c) {
-      readableController = c;
-    },
-    pull() {
-      const resolve = pendingDrain;
-      if (resolve) {
-        pendingDrain = null;
-        resolve();
+  const readable = new ReadableStream(
+    {
+      start(c) {
+        readableController = c;
+      },
+      pull() {
+        const resolve = pendingDrain;
+        if (resolve) {
+          pendingDrain = null;
+          resolve();
+        }
+      },
+      cancel() {
+        stopped = true;
+        const resolve = pendingDrain;
+        if (resolve) {
+          pendingDrain = null;
+          resolve();
+        }
       }
     },
-    cancel() {
-      stopped = true;
-      const resolve = pendingDrain;
-      if (resolve) {
-        pendingDrain = null;
-        resolve();
-      }
-    }
-  });
+    readableStrategy
+  );
 
   // Per-item backpressure: enqueue, return Promise to await when over-capacity.
   // Promise resolves on the next pull() (consumer asked for more).
@@ -281,7 +292,8 @@ const asWebStream = (fn, _options) => {
     abort(reason) {
       readableController.error(reason);
     }
-  });
+  },
+  writableStrategy);
 
   return {readable, writable};
 };
