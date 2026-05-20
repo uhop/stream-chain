@@ -34,6 +34,7 @@ import {
 } from './defs.js';
 import gen from './gen.js';
 import asStream from './asStream.js';
+import asWebStream from './asWebStream.js';
 
 /**
  * Creates a stream object out of a list of functions and streams.
@@ -289,7 +290,7 @@ declare namespace chain {
 }
 
 export default chain;
-export {chain, chainUnchecked, dataSource, gen, asStream};
+export {chain, chainUnchecked, dataSource, gen, asStream, asWebStream};
 export {
   none,
   stop,

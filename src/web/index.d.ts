@@ -48,10 +48,10 @@ export default chain;
 export {chain, chainUnchecked};
 export {default as gen} from '../gen.js';
 export {default as fun} from '../fun.js';
-export {default as asWebStream} from './asWebStream.js';
+export {default as asWebStream} from '../asWebStream.js';
 export {
   isReadableWebStream,
   isWritableWebStream,
   isDuplexWebStream
-} from './asWebStream.js';
+} from '../asWebStream.js';
 export * from '../defs.js';

@@ -1,9 +1,13 @@
 /**
- * Wraps a function or Web Streams object as a Web Streams chain step.
- * Dual role mirroring 3.x `asStream`:
+ * Wraps a function as a Web Streams `TransformStream`. Dual role mirroring `asStream`:
  *   - Pass a Web Streams object (Readable/Writable/duplex pair) → returned as-is.
- *   - Pass a function → returns a `TransformStream` that runs the function per chunk
- *     via gen() dispatch (full Many/None/Stop/Final/flushable support).
+ *   - Pass a function → returns a `TransformStream` that runs the function per chunk.
+ *
+ * Implementation is a structural clone of `asStream` — full-blown executor with a
+ * fast path for `gen(...)` / `fun(...)` function-list compositions (inline loop into
+ * `controller.enqueue`), and a slow path with pump/queue/sanitize for promises,
+ * generators, many, finalValue, and stop. Backpressure is handled by TransformStream's
+ * internal queue.
  */
 declare function asWebStream<R>(input: ReadableStream<R>): ReadableStream<R>;
 declare function asWebStream<W>(input: WritableStream<W>): WritableStream<W>;

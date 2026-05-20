@@ -4,6 +4,7 @@ import {Readable, Writable, Duplex} from 'node:stream';
 import * as defs from './defs.js';
 import gen from './gen.js';
 import asStream from './asStream.js';
+import asWebStream from './asWebStream.js';
 
 // is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 const isReadableNodeStream = obj =>
@@ -263,9 +264,10 @@ chain.chain = chain; // for compatibility with 2.x
 chain.chainUnchecked = chain; // for TypeScript to bypass type checks
 chain.gen = gen;
 chain.asStream = asStream;
+chain.asWebStream = asWebStream;
 
 chain.dataSource = dataSource;
 
 export default chain;
-export {chain, chain as chainUnchecked, gen, asStream, dataSource};
+export {chain, chain as chainUnchecked, gen, asStream, asWebStream, dataSource};
 export * from './defs.js';

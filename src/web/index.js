@@ -7,22 +7,45 @@ import asWebStream, {
   isReadableWebStream,
   isWritableWebStream,
   isDuplexWebStream
-} from './asWebStream.js';
+} from '../asWebStream.js';
 
-// Normalize a chain item into a {readable, writable} stage.
-// readable may be null for terminal sinks; writable may be null for sources.
-const normalizeStage = (item, i, total) => {
-  if (isDuplexWebStream(item)) return item;
-  if (i === 0 && isReadableWebStream(item)) {
-    return {readable: item, writable: null};
+// Group consecutive functions into arrays (mirrors /node's groupFunctions) so the
+// produceStages step can bundle each group into a single asWebStream(gen(...group))
+// call — taking asWebStream's fast path (applyFns) instead of one TransformStream
+// per function.
+const groupFunctions = (output, item, index, items) => {
+  if (isDuplexWebStream(item)) {
+    output.push(item);
+    return output;
   }
-  if (i === total - 1 && isWritableWebStream(item)) {
-    return {readable: null, writable: item};
+  if (!index && isReadableWebStream(item)) {
+    output.push({readable: item, writable: null});
+    return output;
   }
-  if (typeof item === 'function') return asWebStream(item);
-  throw new TypeError(
-    `Item #${i} is not a Web Streams object, function, or asWebStream-wrapped item.`
-  );
+  if (index === items.length - 1 && isWritableWebStream(item)) {
+    output.push({readable: null, writable: item});
+    return output;
+  }
+  if (typeof item !== 'function') {
+    throw new TypeError(`Item #${index} is not a Web Streams object or function.`);
+  }
+  if (!output.length) output.push([]);
+  const last = output[output.length - 1];
+  if (Array.isArray(last)) {
+    last.push(item);
+  } else {
+    output.push([item]);
+  }
+  return output;
+};
+
+const produceStages = item => {
+  if (Array.isArray(item)) {
+    if (!item.length) return null;
+    if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0]);
+    return /** @type {any} */ (chain).asWebStream(/** @type {any} */ (chain).gen(...item));
+  }
+  return item;
 };
 
 const chain = (fns, _options) => {
@@ -40,7 +63,7 @@ const chain = (fns, _options) => {
     throw new TypeError("Chain's first argument is empty after flattening.");
   }
 
-  const stages = fns.map((item, i) => normalizeStage(item, i, fns.length));
+  const stages = fns.reduce(groupFunctions, []).map(produceStages).filter(s => s);
 
   // Pipe stages together. pipeTo handles backpressure + error propagation.
   for (let i = 0; i < stages.length - 1; ++i) {
@@ -52,8 +75,6 @@ const chain = (fns, _options) => {
     if (!to) {
       throw new TypeError(`Stage #${i + 1} has no writable side; cannot accept input.`);
     }
-    // Swallow rejection — Web Streams already propagates errors to both ends via pipeTo;
-    // the unhandled rejection would just be noise.
     from.pipeTo(to).catch(() => {});
   }
 
@@ -107,5 +128,5 @@ chain.asWebStream = asWebStream;
 
 export default chain;
 export {chain, chain as chainUnchecked, gen, fun, asWebStream};
-export {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from './asWebStream.js';
+export {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from '../asWebStream.js';
 export * from '../defs.js';

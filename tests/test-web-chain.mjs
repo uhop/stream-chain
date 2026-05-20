@@ -25,7 +25,8 @@ test.asPromise('/web chain: basic function pipeline', async (t, resolve) => {
   const c = chain([x => x * 2, x => x + 1]);
   t.ok(c.readable, 'has readable');
   t.ok(c.writable, 'has writable');
-  t.equal(c.streams.length, 2, '2 stages');
+  // Consecutive functions group into a single asWebStream(gen(...)) stage — fast path.
+  t.equal(c.streams.length, 1, 'consecutive functions grouped into 1 stage (perf path)');
 
   const collectP = collect(c.readable);
   await feed(c.writable, [1, 2, 3]);
@@ -137,8 +138,10 @@ test.asPromise('/web chain: source + transforms + sink (self-contained)', async 
 });
 
 test.asPromise('/web chain: ChainOutput shape parity (streams/input/output populated)', async (t, resolve) => {
-  const c = chain([x => x + 1, x => x + 1]);
-  t.equal(c.streams.length, 2, 'streams is an array');
+  // Use a Web stream between functions to defeat grouping so we get 3 distinct stages.
+  const wrapped = asWebStream(x => x.toString());
+  const c = chain([x => x + 1, wrapped, x => '[' + x + ']']);
+  t.equal(c.streams.length, 3, 'three distinct stages');
   t.ok(c.input, 'input populated');
   t.ok(c.output, 'output populated');
   t.equal(c.input, c.streams[0], 'input === first stage');

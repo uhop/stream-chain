@@ -33,6 +33,7 @@ test.asPromise('subpath /node: chain works and exposes Duplex', async (t, resolv
 
   t.equal(typeof chain, 'function', 'chain exported from /node');
   t.equal(typeof chain.asStream, 'function', 'chain.asStream available in /node');
+  t.equal(typeof chain.asWebStream, 'function', 'chain.asWebStream available in /node');
 
   const c = chain([readableFrom([1, 2, 3]), x => x * x]);
   t.ok(Array.isArray(c.streams), 'streams populated as array on /node');
@@ -62,5 +63,6 @@ test.asPromise('default entry resolves to /node', async (t, resolve) => {
   const node = await import('stream-chain/node');
   t.equal(main.chain, node.chain, 'default entry chain === /node chain');
   t.equal(main.default, node.default, 'default exports identical');
+  t.equal(typeof main.asWebStream, 'function', 'asWebStream exported from root');
   resolve();
 });
