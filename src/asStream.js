@@ -1,43 +1,50 @@
 // @ts-self-types="./asStream.d.ts"
 
-// Full-blown executor with PROPER per-item backpressure: applyFns awaits between
-// pushes. When stream.push() returns false, the next push returns the `paused`
-// Promise (resolves when read() fires). The queue stays at hwm regardless of
-// how many outputs one input chunk produces — safe for unbounded streams.
+// Wraps a function as a Node Duplex with per-item backpressure. When
+// stream.push() returns false, the next push returns a Promise that resolves
+// on the next read(). Queue stays at hwm + 1 regardless of how many outputs
+// one input chunk produces.
 
 import {Duplex} from 'node:stream';
 import * as defs from './defs.js';
 
 const asStream = (fn, options) => {
-  if (typeof fn != 'function') throw TypeError('Only a function is accepted as the first argument');
-
-  let paused = Promise.resolve();
-  let resolvePaused = null;
-  const resume = () => {
-    if (!resolvePaused) return;
-    resolvePaused();
-    resolvePaused = null;
-    paused = Promise.resolve();
-  };
-  const pause = () => {
-    if (resolvePaused) return;
-    paused = new Promise(resolve => (resolvePaused = resolve));
-  };
+  if (typeof fn != 'function') {
+    throw TypeError('Only a function is accepted as the first argument');
+  }
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
   let stopped = false;
+  let nullPushed = false;
+  let resolvePaused = null;
   let stream = null;
 
-  // Per-item backpressure: push and return `paused` if stream.push returned false.
+  const resume = () => {
+    if (!resolvePaused) return;
+    const resolve = resolvePaused;
+    resolvePaused = null;
+    resolve();
+  };
+
+  // Idempotent: prevents 'error' from push-after-end on duplicate end signals.
+  const signalEnd = () => {
+    if (nullPushed) return;
+    nullPushed = true;
+    stream.push(null);
+  };
+
+  // After Stop / destroy, enqueue silently no-ops so producers see clean
+  // completion instead of push-after-end errors.
   const enqueue = value => {
+    if (stopped) return;
     if (!stream.push(value)) {
-      pause();
-      return paused;
+      return new Promise(resolve => { resolvePaused = resolve; });
     }
   };
 
-  // Async applyFns: awaits between pushes so the queue stays bounded.
+  // applyFns is unconditionally async — per-item backpressure between pushes
+  // requires awaits at every push site.
   const applyFns = innerFns
     ? async function apply(value, i, push) {
         for (;;) {
@@ -45,7 +52,7 @@ const asStream = (fn, options) => {
             value = await value;
             continue;
           }
-          if (value === undefined || value === null || value === defs.none) return;
+          if (value == null || value === defs.none) return;
           if (value === defs.stop) throw new defs.Stop();
           if (defs.isFinalValue(value)) {
             const r = push(defs.getFinalValue(value));
@@ -85,73 +92,71 @@ const asStream = (fn, options) => {
       }
     : null;
 
+  // Slow-path generator queue (preserves iterator state across re-entry).
   const queue = [];
-
-  const pushResults = values => {
-    if (values && typeof values.next == 'function') {
-      queue.push(values);
-      return;
-    }
-    queue.push(values[Symbol.iterator]());
-  };
 
   const pump = async () => {
     while (queue.length) {
       const g = queue[queue.length - 1];
       let result = g.next();
-      if (result && typeof result.then == 'function') {
-        result = await result;
-      }
+      if (result && typeof result.then == 'function') result = await result;
       if (result.done) {
         queue.pop();
         continue;
       }
       let value = result.value;
-      if (value && typeof value.then == 'function') {
-        value = await value;
-      }
-      await sanitize(value);
+      if (value && typeof value.then == 'function') value = await value;
+      const r = processValue(value);
+      if (r) await r;
     }
   };
 
-  const sanitize = async value => {
-    if (value === undefined || value === null || value === defs.none) return;
+  // Sync-when-possible: returns undefined for plain non-backpressured paths,
+  // returns a Promise for promise unwrap / pump drain / backpressure await.
+  // Array-of-Many is iterated directly — no iterator allocation per Many.
+  const processValue = value => {
+    if (value && typeof value.then == 'function') {
+      return value.then(processValue);
+    }
+    if (value == null || value === defs.none) return;
     if (value === defs.stop) throw new defs.Stop();
     if (defs.isMany(value)) {
-      pushResults(defs.getManyValues(value));
-      return pump();
+      const values = defs.getManyValues(value);
+      let promise;
+      for (let i = 0; i < values.length; ++i) {
+        if (promise) {
+          const ii = i;
+          promise = promise.then(() => processValue(values[ii]));
+        } else {
+          const r = processValue(values[i]);
+          if (r) promise = r;
+        }
+      }
+      return promise;
     }
     if (defs.isFinalValue(value)) {
-      value = defs.getFinalValue(value);
-      return processValue(value);
-    }
-    const r = enqueue(value);
-    if (r) await r;
-  };
-
-  const processValue = async value => {
-    if (value && typeof value.then == 'function') {
-      return value.then(v => processValue(v));
+      return processValue(defs.getFinalValue(value));
     }
     if (value && typeof value.next == 'function') {
-      pushResults(value);
+      queue.push(value);
       return pump();
     }
-    return sanitize(value);
+    return enqueue(value);
   };
 
-  const processChunk = async (chunk, encoding) => {
-    try {
-      const value = fn(chunk, encoding);
-      await processValue(value);
-    } catch (error) {
-      if (error instanceof defs.Stop) {
-        stream.push(null);
-        stopped = true;
-        return;
-      }
-      throw error;
+  const absorbStop = error => {
+    if (error instanceof defs.Stop) {
+      stopped = true;
+      signalEnd();
+      return true;
     }
+    return false;
+  };
+
+  const finishWrite = (callback, error) => {
+    if (!error) return callback(null);
+    if (absorbStop(error)) return callback(null);
+    callback(error);
   };
 
   stream = new Duplex({
@@ -159,107 +164,63 @@ const asStream = (fn, options) => {
     readableObjectMode: true,
     ...options,
     write(chunk, encoding, callback) {
-      if (stopped) {
-        callback(null);
-        return;
-      }
+      if (stopped) return callback(null);
       if (applyFns) {
         applyFns(chunk, 0, enqueue).then(
           () => callback(null),
-          error => {
-            if (error instanceof defs.Stop) {
-              stream.push(null);
-              stopped = true;
-              callback(null);
-              return;
-            }
-            callback(error);
-          }
+          error => finishWrite(callback, error)
         );
         return;
       }
-      let value;
+      let r;
       try {
-        value = fn(chunk, encoding);
+        r = processValue(fn(chunk, encoding));
       } catch (error) {
-        if (error instanceof defs.Stop) {
-          stream.push(null);
-          stopped = true;
-          callback(null);
-          return;
-        }
-        callback(error);
-        return;
+        return finishWrite(callback, error);
       }
-      // Sync fast path
-      if (
-        !(value && (typeof value.then == 'function' || typeof value.next == 'function')) &&
-        value !== defs.stop &&
-        !defs.isMany(value) &&
-        !defs.isFinalValue(value)
-      ) {
-        if (value !== undefined && value !== null && value !== defs.none) {
-          if (!stream.push(value)) {
-            pause();
-            paused.then(() => callback(null));
-            return;
-          }
-        }
+      if (r) {
+        r.then(() => callback(null), error => finishWrite(callback, error));
+      } else {
         callback(null);
-        return;
       }
-      // Async slow path
-      processValue(value).then(
-        () => callback(null),
-        error => {
-          if (error instanceof defs.Stop) {
-            stream.push(null);
-            stopped = true;
-            callback(null);
-            return;
-          }
-          callback(error);
-        }
-      );
     },
     final(callback) {
+      const onComplete = () => { signalEnd(); callback(null); };
       if (applyFns) {
         (async () => {
-          try {
-            for (let i = 0; i < innerFns.length; ++i) {
-              if (defs.isFlushable(innerFns[i])) {
-                await applyFns(innerFns[i](defs.none), i + 1, enqueue);
-              }
+          for (let i = 0; i < innerFns.length; ++i) {
+            if (defs.isFlushable(innerFns[i])) {
+              await applyFns(innerFns[i](defs.none), i + 1, enqueue);
             }
-            stream.push(null);
-            callback(null);
-          } catch (error) {
-            if (error instanceof defs.Stop) {
-              stream.push(null);
-              stopped = true;
-              callback(null);
-              return;
-            }
-            callback(error);
           }
-        })();
+        })().then(onComplete, error => finishWrite(callback, error));
         return;
       }
       if (!defs.isFlushable(fn)) {
-        stream.push(null);
-        callback(null);
+        onComplete();
         return;
       }
-      processChunk(defs.none, null).then(
-        () => {
-          if (!stopped) stream.push(null);
-          callback(null);
-        },
-        error => callback(error)
-      );
+      let r;
+      try {
+        r = processValue(fn(defs.none, null));
+      } catch (error) {
+        return finishWrite(callback, error);
+      }
+      if (r) {
+        r.then(onComplete, error => finishWrite(callback, error));
+      } else {
+        onComplete();
+      }
     },
     read() {
       resume();
+    },
+    // Unblock any pending paused-promise so an in-flight write can settle —
+    // mirrors asWebStream's controller.signal listener for writer.abort().
+    destroy(error, callback) {
+      stopped = true;
+      resume();
+      callback(error);
     }
   });
 

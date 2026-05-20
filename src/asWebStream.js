@@ -1,13 +1,12 @@
 // @ts-self-types="./asWebStream.d.ts"
 
-// asWebStream is a structural clone of asStream — full-blown executor.
-// PROPER per-item backpressure: applyFns awaits between enqueues. When
-// controller.desiredSize <= 0 after an enqueue, the next push returns a Promise
-// that resolves when pull() fires (= consumer requested more). The queue never
-// swells beyond hwm — safe for unbounded streams.
+// asWebStream returns a Web Streams duplex pair ({readable, writable}) that
+// runs `fn` per chunk. Per-item backpressure: when desiredSize drops to 0
+// after enqueue, the next push returns a Promise that resolves on the next
+// pull(). Queue stays at hwm + 1.
 //
-// Returns {readable, writable} — a Web Streams duplex pair, not a TransformStream
-// (TransformStream's per-chunk transform() can't suspend mid-call for consumer drain).
+// NOT a TransformStream — TransformStream.transform() can't suspend mid-call
+// to await consumer drain, which is what per-item backpressure needs.
 
 import * as defs from './defs.js';
 
@@ -35,10 +34,8 @@ const asWebStream = (fn, options) => {
     );
   }
 
-  // Queuing strategy options use the standard Web Streams `QueuingStrategy`
-  // shape (`{highWaterMark, size}`) — passed directly to the underlying
-  // `new ReadableStream(..., strategy)` / `new WritableStream(..., strategy)`.
-  // `strategy` is shorthand for "apply to both sides"; per-side options win.
+  // Web Streams' standard `QueuingStrategy` shape ({highWaterMark, size}).
+  // `strategy` is shorthand for "apply to both sides"; per-side wins.
   const strategy = options && options.strategy;
   const readableStrategy = (options && options.readableStrategy) || strategy;
   const writableStrategy = (options && options.writableStrategy) || strategy;
@@ -46,50 +43,66 @@ const asWebStream = (fn, options) => {
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
   let stopped = false;
+  let readableClosed = false;
+  let writableErrored = false;
   let readableController;
+  let writableController;
   let pendingDrain = null;
+
+  const unblockDrain = () => {
+    if (!pendingDrain) return;
+    const resolve = pendingDrain;
+    pendingDrain = null;
+    resolve();
+  };
+
+  // Idempotent: cancel() marks `readableClosed` because the consumer side
+  // auto-closes the controller (re-calling close() would throw).
+  const closeReadable = () => {
+    if (readableClosed) return;
+    readableClosed = true;
+    readableController.close();
+  };
+  const errorReadable = reason => {
+    if (readableClosed) return;
+    readableClosed = true;
+    readableController.error(reason);
+  };
+
+  // Mirror TransformStream: cancel on the readable side propagates to the
+  // writable as an error so the producer learns the consumer gave up.
+  const errorWritable = reason => {
+    if (writableErrored || !writableController) return;
+    writableErrored = true;
+    writableController.error(reason);
+  };
 
   const readable = new ReadableStream(
     {
-      start(c) {
-        readableController = c;
-      },
-      pull() {
-        const resolve = pendingDrain;
-        if (resolve) {
-          pendingDrain = null;
-          resolve();
-        }
-      },
-      cancel() {
+      start(c) { readableController = c; },
+      pull() { unblockDrain(); },
+      cancel(reason) {
         stopped = true;
-        const resolve = pendingDrain;
-        if (resolve) {
-          pendingDrain = null;
-          resolve();
-        }
+        readableClosed = true;
+        unblockDrain();
+        errorWritable(reason);
       }
     },
     readableStrategy
   );
 
-  // Per-item backpressure: enqueue, return Promise to await when over-capacity.
-  // Promise resolves on the next pull() (consumer asked for more).
+  // After cancel/abort, enqueue silently no-ops so producers see clean
+  // completion instead of TypeError from enqueue-on-closed-controller.
   const enqueue = value => {
+    if (stopped) return;
     readableController.enqueue(value);
-    if (
-      readableController.desiredSize !== null &&
-      readableController.desiredSize <= 0
-    ) {
-      return new Promise(resolve => {
-        pendingDrain = resolve;
-      });
+    if (readableController.desiredSize <= 0) {
+      return new Promise(resolve => { pendingDrain = resolve; });
     }
   };
 
-  // Async applyFns: awaits between enqueues to honor per-item backpressure.
-  // Same semantic structure as asStream's apply — just always async so the
-  // per-item await pattern works cleanly.
+  // applyFns is unconditionally async: per-item backpressure between pushes
+  // requires awaits at every push site. Same structure as asStream's apply.
   const applyFns = innerFns
     ? async function apply(value, i, push) {
         for (;;) {
@@ -97,7 +110,7 @@ const asWebStream = (fn, options) => {
             value = await value;
             continue;
           }
-          if (value === undefined || value === null || value === defs.none) return;
+          if (value == null || value === defs.none) return;
           if (value === defs.stop) throw new defs.Stop();
           if (defs.isFinalValue(value)) {
             const r = push(defs.getFinalValue(value));
@@ -137,163 +150,126 @@ const asWebStream = (fn, options) => {
       }
     : null;
 
+  // Slow-path generator queue (preserves iterator state across re-entry).
   const queue = [];
-
-  const pushResults = values => {
-    if (values && typeof values.next == 'function') {
-      queue.push(values);
-      return;
-    }
-    queue.push(values[Symbol.iterator]());
-  };
 
   const pump = async () => {
     while (queue.length) {
       const g = queue[queue.length - 1];
       let result = g.next();
-      if (result && typeof result.then == 'function') {
-        result = await result;
-      }
+      if (result && typeof result.then == 'function') result = await result;
       if (result.done) {
         queue.pop();
         continue;
       }
       let value = result.value;
-      if (value && typeof value.then == 'function') {
-        value = await value;
-      }
-      await sanitize(value);
+      if (value && typeof value.then == 'function') value = await value;
+      const r = processValue(value);
+      if (r) await r;
     }
   };
 
-  const sanitize = async value => {
-    if (value === undefined || value === null || value === defs.none) return;
+  // Sync-when-possible: returns undefined for plain non-backpressured paths,
+  // returns a Promise for promise unwrap / pump drain / backpressure await.
+  // Array-of-Many is iterated directly — no iterator allocation per Many.
+  const processValue = value => {
+    if (value && typeof value.then == 'function') {
+      return value.then(processValue);
+    }
+    if (value == null || value === defs.none) return;
     if (value === defs.stop) throw new defs.Stop();
     if (defs.isMany(value)) {
-      pushResults(defs.getManyValues(value));
-      return pump();
+      const values = defs.getManyValues(value);
+      let promise;
+      for (let i = 0; i < values.length; ++i) {
+        if (promise) {
+          const ii = i;
+          promise = promise.then(() => processValue(values[ii]));
+        } else {
+          const r = processValue(values[i]);
+          if (r) promise = r;
+        }
+      }
+      return promise;
     }
     if (defs.isFinalValue(value)) {
-      value = defs.getFinalValue(value);
-      return processValue(value);
-    }
-    const r = enqueue(value);
-    if (r) await r;
-  };
-
-  const processValue = async value => {
-    if (value && typeof value.then == 'function') {
-      return value.then(v => processValue(v));
+      return processValue(defs.getFinalValue(value));
     }
     if (value && typeof value.next == 'function') {
-      pushResults(value);
+      queue.push(value);
       return pump();
     }
-    return sanitize(value);
+    return enqueue(value);
   };
 
-  const processChunk = async chunk => {
-    try {
-      const value = fn(chunk);
-      await processValue(value);
-    } catch (error) {
-      if (error instanceof defs.Stop) {
-        stopped = true;
-        return;
-      }
-      throw error;
+  const absorbStop = error => {
+    if (error instanceof defs.Stop) {
+      stopped = true;
+      return true;
     }
+    return false;
   };
 
-  const writable = new WritableStream({
-    async write(chunk) {
-      if (stopped) return;
-
-      if (applyFns) {
+  const writable = new WritableStream(
+    {
+      // `controller.signal` aborts during writer.abort() BEFORE the sink's
+      // abort() callback runs. The spec waits for in-flight write() to
+      // settle first — so if write() is awaiting pendingDrain, we'd
+      // deadlock unless the signal listener wakes it.
+      start(controller) {
+        writableController = controller;
+        controller.signal.addEventListener('abort', () => {
+          stopped = true;
+          unblockDrain();
+        });
+      },
+      async write(chunk) {
+        if (stopped) return;
         try {
-          await applyFns(chunk, 0, enqueue);
-        } catch (error) {
-          if (error instanceof defs.Stop) {
-            stopped = true;
+          if (applyFns) {
+            await applyFns(chunk, 0, enqueue);
             return;
           }
+          const r = processValue(fn(chunk));
+          if (r) await r;
+        } catch (error) {
+          if (absorbStop(error)) return;
+          // Propagate user-function errors to the readable side so downstream
+          // consumers (and pipeTo'd stages) learn — matches TransformStream.
+          errorReadable(error);
           throw error;
         }
-        return;
-      }
-
-      let value;
-      try {
-        value = fn(chunk);
-      } catch (error) {
-        if (error instanceof defs.Stop) {
-          stopped = true;
-          return;
-        }
-        throw error;
-      }
-
-      // Sync fast path: plain value (not promise/generator/special).
-      if (
-        !(value && (typeof value.then == 'function' || typeof value.next == 'function')) &&
-        value !== defs.stop &&
-        !defs.isMany(value) &&
-        !defs.isFinalValue(value)
-      ) {
-        if (value !== undefined && value !== null && value !== defs.none) {
-          const r = enqueue(value);
-          if (r) await r;
-        }
-        return;
-      }
-
-      // Async slow path.
-      try {
-        await processValue(value);
-      } catch (error) {
-        if (error instanceof defs.Stop) {
-          stopped = true;
-          return;
-        }
-        throw error;
-      }
-    },
-    async close() {
-      if (stopped) {
-        readableController.close();
-        return;
-      }
-      if (applyFns) {
+      },
+      async close() {
         try {
-          for (let i = 0; i < innerFns.length; ++i) {
-            if (defs.isFlushable(innerFns[i])) {
-              await applyFns(innerFns[i](defs.none), i + 1, enqueue);
+          if (!stopped) {
+            if (applyFns) {
+              for (let i = 0; i < innerFns.length; ++i) {
+                if (defs.isFlushable(innerFns[i])) {
+                  await applyFns(innerFns[i](defs.none), i + 1, enqueue);
+                }
+              }
+            } else if (defs.isFlushable(fn)) {
+              const r = processValue(fn(defs.none));
+              if (r) await r;
             }
           }
         } catch (error) {
-          if (!(error instanceof defs.Stop)) throw error;
-          stopped = true;
+          if (!absorbStop(error)) {
+            errorReadable(error);
+            throw error;
+          }
         }
-        readableController.close();
-        return;
-      }
-      if (!defs.isFlushable(fn)) {
-        readableController.close();
-        return;
-      }
-      try {
-        await processChunk(defs.none);
-      } catch (error) {
-        if (!(error instanceof defs.Stop)) throw error;
+        closeReadable();
+      },
+      abort(reason) {
         stopped = true;
+        unblockDrain();
+        errorReadable(reason);
       }
-      readableController.close();
     },
-    abort(reason) {
-      readableController.error(reason);
-    }
-  },
-  writableStrategy);
+    writableStrategy
+  );
 
   return {readable, writable};
 };
