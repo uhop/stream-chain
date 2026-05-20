@@ -27,7 +27,7 @@ export interface CoreChainOutput<W, R> {
  * @param fns array of functions, `fun(...)` wrappers, `gen(...)` wrappers, or nested arrays
  * @returns a callable async-iterable factory with null stream-shape statics
  */
-declare function chain<L extends readonly unknown[]>(
+declare function chain<const L extends readonly unknown[]>(
   fns: L,
   options?: CoreChainOptions
 ): CoreChainOutput<Arg0<L>, Ret<L>>;
