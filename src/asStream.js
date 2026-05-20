@@ -39,7 +39,9 @@ const asStream = (fn, options) => {
   const enqueue = value => {
     if (stopped) return;
     if (!stream.push(value)) {
-      return new Promise(resolve => { resolvePaused = resolve; });
+      return new Promise(resolve => {
+        resolvePaused = resolve;
+      });
     }
   };
 
@@ -196,13 +198,19 @@ const asStream = (fn, options) => {
         return finishWrite(callback, error);
       }
       if (r) {
-        r.then(() => callback(null), error => finishWrite(callback, error));
+        r.then(
+          () => callback(null),
+          error => finishWrite(callback, error)
+        );
       } else {
         callback(null);
       }
     },
     final(callback) {
-      const onComplete = () => { signalEnd(); callback(null); };
+      const onComplete = () => {
+        signalEnd();
+        callback(null);
+      };
       if (applyFns) {
         (async () => {
           for (let i = 0; i < innerFns.length; ++i) {

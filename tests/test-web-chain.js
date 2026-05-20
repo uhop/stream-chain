@@ -3,7 +3,7 @@ import {test} from 'tape-six';
 import chain, {asWebStream, gen, fun, many, none} from '../src/web/index.js';
 
 // Drain a ReadableStream into an array.
-const collect = async (readable) => {
+const collect = async readable => {
   const out = [];
   const reader = readable.getReader();
   for (;;) {
@@ -35,10 +35,7 @@ test.asPromise('/web chain: basic function pipeline', async (t, resolve) => {
 });
 
 test.asPromise('/web chain: async functions', async (t, resolve) => {
-  const c = chain([
-    async x => x * 2,
-    async x => x + 100
-  ]);
+  const c = chain([async x => x * 2, async x => x + 100]);
   const collectP = collect(c.readable);
   await feed(c.writable, [1, 2, 3]);
   t.deepEqual(await collectP, [102, 104, 106], 'async functions work');
@@ -47,7 +44,11 @@ test.asPromise('/web chain: async functions', async (t, resolve) => {
 
 test.asPromise('/web chain: gen produces multiple outputs per input', async (t, resolve) => {
   const c = chain([
-    gen(x => x * 10, x => x + 1, x => many([x, x + 0.5]))
+    gen(
+      x => x * 10,
+      x => x + 1,
+      x => many([x, x + 0.5])
+    )
   ]);
   const collectP = collect(c.readable);
   await feed(c.writable, [1, 2]);
@@ -56,10 +57,7 @@ test.asPromise('/web chain: gen produces multiple outputs per input', async (t, 
 });
 
 test.asPromise('/web chain: none filters', async (t, resolve) => {
-  const c = chain([
-    x => (x % 2 === 0 ? x : none),
-    x => x * 100
-  ]);
+  const c = chain([x => (x % 2 === 0 ? x : none), x => x * 100]);
   const collectP = collect(c.readable);
   await feed(c.writable, [1, 2, 3, 4, 5]);
   t.deepEqual(await collectP, [200, 400], 'none filters out odd values');
@@ -137,17 +135,20 @@ test.asPromise('/web chain: source + transforms + sink (self-contained)', async 
   resolve();
 });
 
-test.asPromise('/web chain: ChainOutput shape parity (streams/input/output populated)', async (t, resolve) => {
-  // Use a Web stream between functions to defeat grouping so we get 3 distinct stages.
-  const wrapped = asWebStream(x => x.toString());
-  const c = chain([x => x + 1, wrapped, x => '[' + x + ']']);
-  t.equal(c.streams.length, 3, 'three distinct stages');
-  t.ok(c.input, 'input populated');
-  t.ok(c.output, 'output populated');
-  t.equal(c.input, c.streams[0], 'input === first stage');
-  t.equal(c.output, c.streams[c.streams.length - 1], 'output === last stage');
-  resolve();
-});
+test.asPromise(
+  '/web chain: ChainOutput shape parity (streams/input/output populated)',
+  async (t, resolve) => {
+    // Use a Web stream between functions to defeat grouping so we get 3 distinct stages.
+    const wrapped = asWebStream(x => x.toString());
+    const c = chain([x => x + 1, wrapped, x => '[' + x + ']']);
+    t.equal(c.streams.length, 3, 'three distinct stages');
+    t.ok(c.input, 'input populated');
+    t.ok(c.output, 'output populated');
+    t.equal(c.input, c.streams[0], 'input === first stage');
+    t.equal(c.output, c.streams[c.streams.length - 1], 'output === last stage');
+    resolve();
+  }
+);
 
 test.asPromise('/web asWebStream: passes Web stream objects through unchanged', (t, resolve) => {
   const r = new ReadableStream();

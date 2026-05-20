@@ -203,17 +203,17 @@ npm run bench -- bench/<name>.js
 
 ### Key benchmark files
 
-| File                       | What it measures                                                                                                                            |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bench/chain-1-stage.js`   | 1-stage chain: `/node` (`asStream(gen(...))`) vs `/web` (`asWebStream(gen(...))`) on the same function pipeline. Shows substrate overhead.  |
-| `bench/chain-2-stage.js`   | Same as above but 2 stages. Shows per-composition overhead.                                                                                 |
-| `bench/raw-streams.js`     | Raw Node Duplex vs raw Web Streams duplex (`{readable, writable}`). Substrate baseline without `stream-chain` involvement.                  |
-| `bench/raw-streams-burst.js` | Web-streams burst-enqueue behavior: synchronous enqueue-then-drain vs per-item drain.                                                     |
-| `bench/core-chain.js`      | `/core` chain throughput — no substrate cost; isolates `gen()`'s overhead.                                                                  |
-| `bench/gen-fun-stream.js`  | Compares `gen()`, `fun()`, and `chain(asStream(...))` on the same pipeline of sync functions.                                               |
-| `bench/gen-fun.js`         | Head-to-head `gen()` vs `fun()` without stream overhead.                                                                                    |
-| `bench/gen-opt.js`         | `gen()` function-list inlining optimization: flat vs nested-with-inlining vs nested-with-`clearFunctionList()`.                             |
-| `bench/fun-opt.js`         | Same as `gen-opt.js` but for `fun()`.                                                                                                       |
+| File                         | What it measures                                                                                                                           |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `bench/chain-1-stage.js`     | 1-stage chain: `/node` (`asStream(gen(...))`) vs `/web` (`asWebStream(gen(...))`) on the same function pipeline. Shows substrate overhead. |
+| `bench/chain-2-stage.js`     | Same as above but 2 stages. Shows per-composition overhead.                                                                                |
+| `bench/raw-streams.js`       | Raw Node Duplex vs raw Web Streams duplex (`{readable, writable}`). Substrate baseline without `stream-chain` involvement.                 |
+| `bench/raw-streams-burst.js` | Web-streams burst-enqueue behavior: synchronous enqueue-then-drain vs per-item drain.                                                      |
+| `bench/core-chain.js`        | `/core` chain throughput — no substrate cost; isolates `gen()`'s overhead.                                                                 |
+| `bench/gen-fun-stream.js`    | Compares `gen()`, `fun()`, and `chain(asStream(...))` on the same pipeline of sync functions.                                              |
+| `bench/gen-fun.js`           | Head-to-head `gen()` vs `fun()` without stream overhead.                                                                                   |
+| `bench/gen-opt.js`           | `gen()` function-list inlining optimization: flat vs nested-with-inlining vs nested-with-`clearFunctionList()`.                            |
+| `bench/fun-opt.js`           | Same as `gen-opt.js` but for `fun()`.                                                                                                      |
 
 All benchmarks use a pipeline of simple sync arithmetic functions (`x => x - 2`, `x => x + 1`, etc.) to isolate framework overhead from application logic.
 
@@ -228,9 +228,9 @@ import {chain, none, stop, many, gen, asStream, asWebStream, dataSource} from 's
 const {chain} = require('stream-chain');
 
 // Substrate variants
-import chain from 'stream-chain/node';     // same as the default
-import chain from 'stream-chain/web';      // native Web Streams chain
-import chain from 'stream-chain/core';     // substrate-free async-iterable chain
+import chain from 'stream-chain/node'; // same as the default
+import chain from 'stream-chain/web'; // native Web Streams chain
+import chain from 'stream-chain/core'; // substrate-free async-iterable chain
 
 // Individual modules
 import gen from 'stream-chain/gen.js';

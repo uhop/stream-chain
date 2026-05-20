@@ -48,15 +48,18 @@ test.asPromise('subpath /node: chain works and exposes Duplex', async (t, resolv
   });
 });
 
-test.asPromise('subpath /web: chain runtime + asWebStream exported (Phase 2)', async (t, resolve) => {
-  const {chain, asWebStream, gen, fun, none} = await import('stream-chain/web');
-  t.equal(typeof chain, 'function', '/web chain exported');
-  t.equal(typeof asWebStream, 'function', '/web asWebStream exported');
-  t.equal(typeof gen, 'function', '/web gen exported');
-  t.equal(typeof fun, 'function', '/web fun exported');
-  t.equal(typeof none, 'symbol', '/web none exported');
-  resolve();
-});
+test.asPromise(
+  'subpath /web: chain runtime + asWebStream exported (Phase 2)',
+  async (t, resolve) => {
+    const {chain, asWebStream, gen, fun, none} = await import('stream-chain/web');
+    t.equal(typeof chain, 'function', '/web chain exported');
+    t.equal(typeof asWebStream, 'function', '/web asWebStream exported');
+    t.equal(typeof gen, 'function', '/web gen exported');
+    t.equal(typeof fun, 'function', '/web fun exported');
+    t.equal(typeof none, 'symbol', '/web none exported');
+    resolve();
+  }
+);
 
 test.asPromise('default entry resolves to /node', async (t, resolve) => {
   const main = await import('stream-chain');

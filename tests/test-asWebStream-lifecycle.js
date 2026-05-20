@@ -20,7 +20,10 @@ test.asPromise('asWebStream: writer.abort() unblocks pending drain', async (t, r
 
   // Without the controller.signal listener, writePromise would hang forever.
   const settled = await Promise.race([
-    writePromise.then(() => 'resolved', e => 'rejected:' + (e?.message ?? e)),
+    writePromise.then(
+      () => 'resolved',
+      e => 'rejected:' + (e?.message ?? e)
+    ),
     new Promise(r => setTimeout(() => r('HANG'), 200))
   ]);
   t.notEqual(settled, 'HANG', 'pending write must settle, not hang');

@@ -46,10 +46,7 @@ const makeProduceStages = options => item => {
   if (Array.isArray(item)) {
     if (!item.length) return null;
     if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0], options);
-    return /** @type {any} */ (chain).asWebStream(
-      /** @type {any} */ (chain).gen(...item),
-      options
-    );
+    return /** @type {any} */ (chain).asWebStream(/** @type {any} */ (chain).gen(...item), options);
   }
   return item;
 };
@@ -69,7 +66,10 @@ const chain = (fns, options) => {
     throw new TypeError("Chain's first argument is empty after flattening.");
   }
 
-  const stages = fns.reduce(groupFunctions, []).map(makeProduceStages(options)).filter(s => s);
+  const stages = fns
+    .reduce(groupFunctions, [])
+    .map(makeProduceStages(options))
+    .filter(s => s);
 
   // Pipe stages together. pipeTo handles backpressure + error propagation.
   for (let i = 0; i < stages.length - 1; ++i) {

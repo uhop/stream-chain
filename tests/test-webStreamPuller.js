@@ -56,29 +56,47 @@ test.asPromise('makeWebStreamPuller: propagates stream error', async (t, resolve
   resolve();
 });
 
-test.asPromise('makeWebStreamPuller: break leaves source uncanceled (preventCancel: true)', async (t, resolve) => {
-  let canceled = false;
-  const stream = new ReadableStream({
-    start(c) { c.enqueue(1); c.enqueue(2); c.enqueue(3); c.close(); },
-    cancel() { canceled = true; }
-  });
-  for await (const v of makeWebStreamPuller(stream)) {
-    if (v === 2) break;
+test.asPromise(
+  'makeWebStreamPuller: break leaves source uncanceled (preventCancel: true)',
+  async (t, resolve) => {
+    let canceled = false;
+    const stream = new ReadableStream({
+      start(c) {
+        c.enqueue(1);
+        c.enqueue(2);
+        c.enqueue(3);
+        c.close();
+      },
+      cancel() {
+        canceled = true;
+      }
+    });
+    for await (const v of makeWebStreamPuller(stream)) {
+      if (v === 2) break;
+    }
+    t.equal(canceled, false, 'source not canceled after early break');
+    resolve();
   }
-  t.equal(canceled, false, 'source not canceled after early break');
-  resolve();
-});
+);
 
-test.asPromise('makeWebStreamPuller: cancel() cancels stream + releases lock', async (t, resolve) => {
-  let cancelReason = null;
-  const stream = new ReadableStream({
-    start(c) { c.enqueue(1); c.enqueue(2); },
-    cancel(reason) { cancelReason = reason; }
-  });
-  const puller = makeWebStreamPuller(stream);
-  await puller.next();
-  await puller.cancel(new Error('done'));
-  t.equal(cancelReason?.message, 'done', 'cancel reason propagated to stream');
-  t.equal(stream.locked, false, 'lock released after cancel');
-  resolve();
-});
+test.asPromise(
+  'makeWebStreamPuller: cancel() cancels stream + releases lock',
+  async (t, resolve) => {
+    let cancelReason = null;
+    const stream = new ReadableStream({
+      start(c) {
+        c.enqueue(1);
+        c.enqueue(2);
+      },
+      cancel(reason) {
+        cancelReason = reason;
+      }
+    });
+    const puller = makeWebStreamPuller(stream);
+    await puller.next();
+    await puller.cancel(new Error('done'));
+    t.equal(cancelReason?.message, 'done', 'cancel reason propagated to stream');
+    t.equal(stream.locked, false, 'lock released after cancel');
+    resolve();
+  }
+);

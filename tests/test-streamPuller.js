@@ -6,8 +6,7 @@ import {Readable} from 'node:stream';
 
 import makeStreamPuller from '../src/utils/streamPuller.js';
 
-const makeReadable = values =>
-  Readable.from(values, {objectMode: true});
+const makeReadable = values => Readable.from(values, {objectMode: true});
 
 test.asPromise('makeStreamPuller: drains values then signals done', async (t, resolve) => {
   const puller = makeStreamPuller(makeReadable([1, 2, 3]));
@@ -28,26 +27,29 @@ test.asPromise('makeStreamPuller: for-await iterates', async (t, resolve) => {
   resolve();
 });
 
-test.asPromise('makeStreamPuller: preserves original error (no AbortError wrap)', async (t, resolve) => {
-  const original = new Error('source boom');
-  const stream = new Readable({
-    objectMode: true,
-    read() {
-      this.push(1);
-      this.destroy(original);
+test.asPromise(
+  'makeStreamPuller: preserves original error (no AbortError wrap)',
+  async (t, resolve) => {
+    const original = new Error('source boom');
+    const stream = new Readable({
+      objectMode: true,
+      read() {
+        this.push(1);
+        this.destroy(original);
+      }
+    });
+    const puller = makeStreamPuller(stream);
+    const {value} = await puller.next();
+    t.equal(value, 1);
+    try {
+      await puller.next();
+      t.fail('next() should reject');
+    } catch (e) {
+      t.equal(e, original, 'rejection is the original error, not wrapped');
     }
-  });
-  const puller = makeStreamPuller(stream);
-  const {value} = await puller.next();
-  t.equal(value, 1);
-  try {
-    await puller.next();
-    t.fail('next() should reject');
-  } catch (e) {
-    t.equal(e, original, 'rejection is the original error, not wrapped');
+    resolve();
   }
-  resolve();
-});
+);
 
 test.asPromise('makeStreamPuller: premature close surfaces synthetic error', async (t, resolve) => {
   const stream = new Readable({objectMode: true, read() {}});
@@ -63,11 +65,14 @@ test.asPromise('makeStreamPuller: premature close surfaces synthetic error', asy
   resolve();
 });
 
-test.asPromise('makeStreamPuller: break leaves source alive (destroyOnReturn: false)', async (t, resolve) => {
-  const stream = makeReadable([1, 2, 3, 4, 5]);
-  for await (const v of makeStreamPuller(stream)) {
-    if (v === 2) break;
+test.asPromise(
+  'makeStreamPuller: break leaves source alive (destroyOnReturn: false)',
+  async (t, resolve) => {
+    const stream = makeReadable([1, 2, 3, 4, 5]);
+    for await (const v of makeStreamPuller(stream)) {
+      if (v === 2) break;
+    }
+    t.equal(stream.destroyed, false, 'source not destroyed after early break');
+    resolve();
   }
-  t.equal(stream.destroyed, false, 'source not destroyed after early break');
-  resolve();
-});
+);

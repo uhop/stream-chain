@@ -54,9 +54,10 @@ declare function asWebStream<W>(input: WritableStream<W>): WritableStream<W>;
  * @param input a Web Streams duplex pair.
  * @returns the same duplex pair unchanged.
  */
-declare function asWebStream<W, R>(
-  input: {readable: ReadableStream<R>; writable: WritableStream<W>}
-): {readable: ReadableStream<R>; writable: WritableStream<W>};
+declare function asWebStream<W, R>(input: {
+  readable: ReadableStream<R>;
+  writable: WritableStream<W>;
+}): {readable: ReadableStream<R>; writable: WritableStream<W>};
 /**
  * Wraps a function as a Web Streams `{readable, writable}` duplex pair.
  * @param input the function to wrap. Regular, async, generator, or async generator. May return any value type including `none`/`stop`/`many(...)`/`finalValue(...)`.

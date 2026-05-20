@@ -16,9 +16,7 @@ const asWebStream = (fn, options) => {
     return fn;
   }
   if (typeof fn !== 'function') {
-    throw new TypeError(
-      'Only a function or Web Streams object is accepted as the first argument'
-    );
+    throw new TypeError('Only a function or Web Streams object is accepted as the first argument');
   }
 
   // Web Streams' standard `QueuingStrategy` shape ({highWaterMark, size}).
@@ -66,8 +64,12 @@ const asWebStream = (fn, options) => {
 
   const readable = new ReadableStream(
     {
-      start(c) { readableController = c; },
-      pull() { unblockDrain(); },
+      start(c) {
+        readableController = c;
+      },
+      pull() {
+        unblockDrain();
+      },
       cancel(reason) {
         stopped = true;
         readableClosed = true;
@@ -84,7 +86,9 @@ const asWebStream = (fn, options) => {
     if (stopped) return;
     readableController.enqueue(value);
     if (readableController.desiredSize <= 0) {
-      return new Promise(resolve => { pendingDrain = resolve; });
+      return new Promise(resolve => {
+        pendingDrain = resolve;
+      });
     }
   };
 

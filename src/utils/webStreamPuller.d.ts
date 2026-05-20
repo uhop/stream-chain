@@ -33,9 +33,7 @@ export interface WebStreamPuller<T> extends AsyncIterableIterator<T> {
  *   immediately (locking the stream); finalize via `for await` exit,
  *   `puller.return()`, or `puller.cancel(reason)`.
  */
-declare function makeWebStreamPuller<T = unknown>(
-  stream: ReadableStream<T>
-): WebStreamPuller<T>;
+declare function makeWebStreamPuller<T = unknown>(stream: ReadableStream<T>): WebStreamPuller<T>;
 
 export default makeWebStreamPuller;
 export {makeWebStreamPuller};

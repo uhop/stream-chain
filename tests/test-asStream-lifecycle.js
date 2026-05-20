@@ -15,7 +15,9 @@ test.asPromise('asStream: destroy() unblocks a write waiting on paused', (t, res
 
   stream.write('a', null, () => {});
   let bCallbackFired = false;
-  stream.write('b', null, () => { bCallbackFired = true; });
+  stream.write('b', null, () => {
+    bCallbackFired = true;
+  });
 
   setTimeout(() => stream.destroy(), 20);
 
@@ -34,7 +36,9 @@ test.asPromise('asStream: thrown error in fn emits error event', (t, resolve) =>
   stream.resume(); // drain
 
   let observed = null;
-  stream.on('error', e => { observed = e; });
+  stream.on('error', e => {
+    observed = e;
+  });
   stream.on('close', () => {
     t.ok(observed, 'error event fired');
     t.equal(observed?.message, 'boom');
