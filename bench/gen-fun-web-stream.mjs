@@ -2,6 +2,7 @@ import gen from 'stream-chain/gen.js';
 import fun from 'stream-chain/fun.js';
 import chain, {asStream, asWebStream, getManyValues} from 'stream-chain';
 import webChain from 'stream-chain/web';
+import coreChain from 'stream-chain/core';
 
 const fns = [x => x - 2, x => x + 1, x => 2 * x, x => x + 2, x => x >> 1];
 
@@ -25,6 +26,17 @@ export default {
         acc += x;
       }
     }
+    return acc;
+  },
+  async ['core chain'](n) {
+    let acc = 0;
+    const c = coreChain([
+      function* (m) {
+        for (let i = 1; i <= m; ++i) yield i;
+      },
+      g
+    ]);
+    for await (const x of c([n])) acc += x;
     return acc;
   },
   async ['node stream'](n) {
