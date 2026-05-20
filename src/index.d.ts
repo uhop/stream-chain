@@ -38,8 +38,9 @@ import asWebStream from './asWebStream.js';
 
 /**
  * Creates a stream object out of a list of functions and streams.
- * @param fns array of functions, streams, or other arrays
- * @returns a duplex stream with additional properties
+ * @param fns array of functions, streams, or arrays (flattened recursively). Falsy items are ignored.
+ * @param options optional `Duplex` options plus `{noGrouping?, skipEvents?}`. See {@link ChainOptions}. Defaults to `{writableObjectMode: true, readableObjectMode: true}`.
+ * @returns a `Duplex` stream extended with `.streams`, `.input`, and `.output` properties.
  * @remarks This is the main function of this library.
  */
 declare function chain<L extends readonly unknown[]>(
@@ -47,6 +48,13 @@ declare function chain<L extends readonly unknown[]>(
   options?: chain.ChainOptions
 ): chain.ChainOutput<chain.Arg0<L>, chain.Ret<L>>;
 
+/**
+ * Same as {@link chain} but bypasses TypeScript type checking on `fns`. Use when
+ * you need an escape hatch for inputs the strict signature can't express.
+ * @param fns array of functions, streams, or nested arrays (flattened recursively). Type checking is intentionally not applied.
+ * @param options optional `Duplex` options plus `{noGrouping?, skipEvents?}`. See {@link ChainOptions}.
+ * @returns a `Duplex` stream extended with `.streams`, `.input`, and `.output` properties, typed as `ChainOutput<W, R>` (caller-supplied type parameters).
+ */
 declare function chainUnchecked<W = any, R = any>(
   fns: readonly any[],
   options?: chain.ChainOptions

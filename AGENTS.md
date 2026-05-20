@@ -1,9 +1,10 @@
 # AGENTS.md — stream-chain
 
-> `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generators, and existing streams, while properly handling backpressure. The result is a Duplex stream. It is a lightweight, zero-dependency micro-package.
+> `stream-chain` creates a chain of streams out of regular functions, asynchronous functions, generators, Node streams, and Web streams, with proper per-item backpressure. The default chain returns a Node `Duplex`; subpath variants run natively on Web Streams (`stream-chain/web`) or pure async iterables (`stream-chain/core`). Zero runtime dependencies.
 
 For project structure, module dependencies, and the architecture overview see [ARCHITECTURE.md](./ARCHITECTURE.md).
 For detailed usage docs and API references see the [wiki](https://github.com/uhop/stream-chain/wiki).
+For migrating from 3.x see [Migration-V3-to-V4](https://github.com/uhop/stream-chain/wiki/Migration-V3-to-V4).
 
 ## Setup
 
@@ -22,10 +23,11 @@ npm install
 - **Test (Bun):** `npm run test:bun`
 - **Test (Deno):** `npm run test:deno`
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
-- **Test (single file):** `node tests/test-<name>.mjs`
+- **Test (single file):** `node tests/test-<name>.js`
 - **TypeScript check:** `npm run ts-check`
+- **JavaScript type check (dual tsconfig):** `npm run js-check`
 - **TypeScript tests:** `npm run ts-test` (also `ts-test:bun`, `ts-test:deno`)
-- **Bench:** `npm run bench -- bench/<name>.mjs`
+- **Bench:** `npm run bench -- bench/<name>.js`
 - **Lint:** `npm run lint` (Prettier check)
 - **Lint fix:** `npm run lint:fix` (Prettier write)
 
@@ -33,52 +35,70 @@ npm install
 
 ```
 stream-chain/
-├── package.json          # Package config; "tape6" section configures test discovery
-├── src/                  # Source code
-│   ├── index.js          # Main entry point: chain() factory + re-exports
-│   ├── index.d.ts        # TypeScript definitions for the full public API
-│   ├── defs.js           # Special values (none, stop, many, finalValue, flushable, etc.)
-│   ├── defs.d.ts         # TypeScript definitions for defs
-│   ├── gen.js            # Creates async generator pipeline from functions
-│   ├── gen.d.ts          # TypeScript definitions for gen
-│   ├── fun.js            # Creates function pipeline from functions (sync-first)
-│   ├── fun.d.ts          # TypeScript definitions for fun
-│   ├── asStream.js       # Converts a function into a Duplex stream
-│   ├── asStream.d.ts     # TypeScript definitions for asStream
-│   ├── typed-streams.js  # TypeScript helpers: TypedReadable, TypedWritable, TypedDuplex, TypedTransform
+├── package.json                  # Package config; "tape6" section configures test discovery
+├── src/                          # Source code
+│   ├── index.js                  # /node entry: chain() factory + asStream + asWebStream + gen + re-exports
+│   ├── index.d.ts                # TypeScript definitions for the /node public API
+│   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, etc.) + Web Streams type guards
+│   ├── defs.d.ts                 # TypeScript definitions for defs
+│   ├── gen.js                    # Creates async generator pipeline from functions
+│   ├── gen.d.ts
+│   ├── fun.js                    # Creates function pipeline from functions (sync-first; exported via /web and /core)
+│   ├── fun.d.ts
+│   ├── asStream.js               # Wraps a function as a Node Duplex with per-item backpressure
+│   ├── asStream.d.ts
+│   ├── asWebStream.js            # Wraps a function as a Web Streams {readable, writable} duplex pair
+│   ├── asWebStream.d.ts
+│   ├── typed-streams.js          # TypeScript helpers: TypedReadable, TypedWritable, TypedDuplex, TypedTransform
 │   ├── typed-streams.d.ts
-│   ├── jsonl/            # JSONL (line-separated JSON) support
-│   │   ├── parser.js     # JSONL parser function (returns gen() pipeline)
-│   │   ├── parserStream.js   # JSONL parser as a stream
-│   │   └── stringerStream.js # JSONL stringer as a stream
-│   └── utils/            # Utility functions
-│       ├── take.js       # Take N items from stream
-│       ├── takeWhile.js  # Take items while condition is true
-│       ├── takeWithSkip.js # Skip then take
-│       ├── skip.js       # Skip N items
-│       ├── skipWhile.js  # Skip items while condition is true
-│       ├── fold.js       # Reduce/fold stream to single value
-│       ├── reduce.js     # Alias for fold
-│       ├── reduceStream.js # Reduce as a Writable stream
-│       ├── scan.js       # Running accumulator (like fold but emits each step)
-│       ├── batch.js      # Group items into fixed-size arrays
-│       ├── readableFrom.js # Convert iterable to Readable stream
-│       ├── fixUtf8Stream.js # Fix multi-byte UTF-8 splits across chunks
-│       └── lines.js      # Split byte stream into lines
-├── tests/                # Test files (test-*.mjs, test-*.mts, test-*.cjs)
-├── bench/                # Benchmarks
-├── wiki/                 # GitHub wiki documentation (git submodule)
-└── .github/              # CI workflows, Dependabot config
+│   ├── node/                     # Subpath: stream-chain/node — canonical Node Streams chain (re-export of root)
+│   │   ├── index.js
+│   │   └── index.d.ts
+│   ├── web/                      # Subpath: stream-chain/web — native Web Streams chain (no node:stream)
+│   │   ├── index.js              # chain() over {readable, writable} duplex pairs
+│   │   └── index.d.ts
+│   ├── core/                     # Subpath: stream-chain/core — substrate-free async-iterable chain
+│   │   ├── index.js              # chain() returning a callable async-generator factory
+│   │   └── index.d.ts
+│   ├── jsonl/                    # JSONL (line-separated JSON) support
+│   │   ├── parser.js             # JSONL parser function (returns gen() pipeline)
+│   │   ├── parser.d.ts
+│   │   ├── parserStream.js       # JSONL parser as a Duplex stream
+│   │   ├── parserStream.d.ts
+│   │   ├── stringerStream.js     # JSONL stringer as a Duplex stream
+│   │   └── stringerStream.d.ts
+│   └── utils/                    # Utility functions
+│       ├── take.js               # Take N items from stream
+│       ├── takeWhile.js          # Take items while condition is true
+│       ├── takeWithSkip.js       # Skip then take
+│       ├── skip.js               # Skip N items
+│       ├── skipWhile.js          # Skip items while condition is true
+│       ├── fold.js               # Reduce/fold stream to single value
+│       ├── reduce.js             # Alias for fold
+│       ├── reduceStream.js       # Reduce as a Writable stream
+│       ├── scan.js               # Running accumulator (like fold but emits each step)
+│       ├── batch.js              # Group items into fixed-size arrays
+│       ├── readableFrom.js       # Convert iterable to Readable stream
+│       ├── fixUtf8Stream.js      # Fix multi-byte UTF-8 splits across chunks
+│       ├── lines.js              # Split byte stream into lines
+│       ├── streamPuller.js       # Wrap Node Readable as a non-destructive async iterator
+│       ├── webStreamPuller.js    # Wrap Web ReadableStream as a non-destructive async iterator
+│       └── *.d.ts                # TypeScript definitions for each utility
+├── tests/                        # Test files (test-*.js for runtime, test-*.ts for typing tests, test-*.cjs for CJS)
+├── bench/                        # Benchmarks
+├── wiki/                         # GitHub wiki documentation (git submodule)
+└── .github/                      # CI workflows, Dependabot config
 ```
 
 ## Code style
 
-- **CommonJS** throughout (`"type": "commonjs"` in package.json).
+- **ESM throughout** (`"type": "module"` in package.json). Source uses `import` syntax.
 - **No transpilation** — code runs directly.
 - **Prettier** for formatting (see `.prettierrc`): 100 char width, single quotes, no bracket spacing, no trailing commas, arrow parens "avoid".
 - 2-space indentation.
 - Semicolons are enforced by Prettier (default `semi: true`).
-- Imports use `require()` syntax in source, `import` in tests (`.mjs`/`.mts`).
+- All public modules declare both `export default X` and `export {X}` for the same value (default = ESM DX, named = CJS destructure + cleaner re-exports). See [fleet slice 17](https://github.com/uhop/claude-config/blob/master/topics/esm-default-export-with-named-mirror.md).
+- `// @ts-self-types="./<file>.d.ts"` directive at the top of every `.js`; JSDoc lives in the paired `.d.ts`, not in `.js`.
 - The package is `stream-chain`. Internal symbols use `Symbol.for('object-stream.*')`.
 
 ## Critical rules
@@ -88,20 +108,26 @@ stream-chain/
 - **Do not add comments or remove comments** unless explicitly asked.
 - **Keep `src/index.js` and `src/index.d.ts` in sync.** All public API is exported from `index.js` and typed in `index.d.ts`.
 - **Keep `.js` and `.d.ts` files in sync** for all modules under `src/`.
-- **Object mode by default.** `chain()` defaults to `{writableObjectMode: true, readableObjectMode: true}`.
-- **Backpressure must be handled correctly.** This is a core concern of the library.
+- **Object mode by default.** `chain()` (the /node variant) defaults to `{writableObjectMode: true, readableObjectMode: true}`.
+- **Per-item backpressure must be preserved.** `asStream`'s `applyFns` and `asWebStream`'s `applyFns` are async and `await` between every push. Keeps queue at hwm+1 under unbounded expansion.
+- **Generators yield plain values.** Generators (sync `function*`, async `async function*`) must NOT yield `defs.none`, `defs.stop`, `defs.many(...)`, or `defs.finalValue(...)` — those special markers are for regular function returns only. See [wiki/defs.md](https://github.com/uhop/stream-chain/wiki/defs#convention-generators-yield-plain-values).
+- **`chain.asStream` / `chain.gen` are override hooks** — internal references go through the static-property indirection so users can monkey-patch. Don't refactor to direct imports.
 
 ## Architecture
 
-- `chain(fns, options)` is the main entry point. It accepts an array of functions, streams, or arrays (which are flattened). Returns a `Duplex` stream with `.streams`, `.input`, `.output` properties.
-- Functions in the chain are grouped together using `gen()` for efficiency (unless `noGrouping: true`).
-- `gen(...fns)` creates an async generator pipeline from a list of functions. It handles all special return values (`none`, `stop`, `many()`, `finalValue()`, flushable functions).
-- `fun(...fns)` is like `gen()` but returns a function instead of a generator. Returns sync results for sync pipelines, `Promise` for async.
-- `asStream(fn)` wraps any function as a `Duplex` stream.
+- `chain(fns, options)` is the main entry point (default = /node). Returns a Node `Duplex` with `.streams`, `.input`, `.output` properties.
+- `stream-chain/web` exposes a parallel `chain()` that returns `{readable, writable, streams, input, output}` — a native Web Streams duplex pair.
+- `stream-chain/core` exposes a callable async-iterable factory — no Node streams, no Web Streams. Browser-safe and substrate-free.
+- Functions in a chain are grouped together via `gen()` for efficiency (unless `noGrouping: true`).
+- `gen(...fns)` creates an async generator pipeline. Handles all special return values from regular functions: `none`, `stop`, `many()`, `finalValue()`, flushable.
+- `fun(...fns)` creates a function pipeline (sync when possible). Collects all outputs into a `Many` per input, so memory scales with output size — **not safe for unbounded pipelines**. Intentionally NOT on the default `stream-chain` / `/node` export; requires an explicit import from `stream-chain/fun.js` (also re-exported via `/web` and `/core`). The friction is deliberate.
+- `asStream(fn[, options])` wraps a function as a Node `Duplex` with per-item backpressure.
+- `asWebStream(fn[, options])` wraps a function as a Web Streams `{readable, writable}` pair with per-item backpressure.
 - Special return values are defined in `defs.js`: `none` (skip), `stop` (terminate), `many(values)` (emit multiple), `finalValue(value)` (skip rest of chain), `flushable(fn)` (called at stream end).
-- Web streams (`ReadableStream`, `WritableStream`, duplex `{readable, writable}`) are automatically adapted to Node streams.
+- Web Streams type guards (`isReadableWebStream`, `isWritableWebStream`, `isDuplexWebStream`) live in `defs.js` and are re-exported from `index.js` and `web/index.js`.
+- The `/node` chain adapts Web Stream objects to Node streams via `Readable.fromWeb()` / `Writable.fromWeb()` / `Duplex.fromWeb()` with `{objectMode: true}`. The `/web` chain handles them natively.
 - JSONL support is in `src/jsonl/` — parser and stringer for line-separated JSON.
-- Utility functions in `src/utils/` provide common stream operations: slicing (`take`, `skip`), folding (`fold`, `scan`), batching, line splitting, UTF-8 fixing.
+- Utility functions in `src/utils/` provide common stream operations: slicing (`take`, `skip`), folding (`fold`, `scan`), batching, line splitting, UTF-8 fixing, and async-iterator wrappers (`makeStreamPuller`, `makeWebStreamPuller`).
 
 ## Writing tests
 
@@ -128,10 +154,10 @@ test('example', async t => {
 });
 ```
 
-- Test files use `tape-six`: `.mjs` for runtime tests, `.mts` for TypeScript typing tests, `.cjs` for CommonJS tests.
-- Test file naming convention: `test-*.*js` and `test-*.*ts`.
+- Test files use `tape-six`: `.js` for runtime tests, `.ts` for TypeScript typing tests, `.cjs` for CommonJS tests.
+- Test file naming convention: `test-*.js` and `test-*.ts`.
 - Tests are configured in `package.json` under the `"tape6"` section.
-- Test files should be directly executable: `node tests/test-foo.mjs`.
+- Test files should be directly executable: `node tests/test-foo.js`.
 
 ## Key conventions
 
@@ -139,4 +165,5 @@ test('example', async t => {
 - All public API is exported from `src/index.js` and typed in `src/index.d.ts`. Keep them in sync.
 - Wiki documentation lives in the `wiki/` submodule.
 - Symbols use the `object-stream` namespace: `Symbol.for('object-stream.none')`, etc.
-- The library supports both CommonJS (`require`) and ESM (`import`) consumers.
+- The library is ESM. CJS consumers use destructure: `const {chain} = require('stream-chain')`. The bare-callable `const chain = require('stream-chain')` form from 3.x is gone.
+- Supported Node majors: 22, 24, 26 (latest minor of each).

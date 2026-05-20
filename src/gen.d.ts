@@ -1,14 +1,18 @@
 import type {Arg0, Ret, AsFlatList, Fn} from './defs.js';
 
 /**
- * Returns a wrapped identity function. Rarely used.
+ * Returns a wrapped identity function — `gen()` with no arguments produces a
+ * function that yields its input as a single value. Rarely used directly.
+ * @returns an async generator function whose result is an `AsyncGenerator` yielding the input.
  */
 declare function gen(): (arg: unknown) => AsyncGenerator<unknown, void, unknown>;
 /**
- * Returns a function that applies the given functions in sequence wrapping them as
- * an asynchronous generator.
- * @param fns functions to be wrapped
- * @returns an asynchronous generator
+ * Returns an async generator function that applies the given functions in sequence,
+ * handling all special return values (`none`, `stop`, `many`, `finalValue`, `flushable`).
+ * Nested function lists are inlined. Falsy items are filtered out.
+ * @param fns functions to be composed: regular, async, generator, async generator, or
+ *   nested arrays/function-lists. Falsy items are ignored.
+ * @returns an async generator function whose call yields each output value of the composed pipeline.
  */
 declare function gen<L extends readonly unknown[]>(
   ...fns: gen.FnList<Arg0<L>, L>

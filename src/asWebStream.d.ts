@@ -37,11 +37,32 @@ export interface AsWebStreamOptions<W = unknown, R = unknown> {
  * Returns `{readable, writable}` (a Web Streams duplex pair), NOT a
  * `TransformStream`.
  */
+/**
+ * Pass-through overload: a `ReadableStream` is returned as-is.
+ * @param input a Web Streams `ReadableStream`.
+ * @returns the same `ReadableStream` unchanged.
+ */
 declare function asWebStream<R>(input: ReadableStream<R>): ReadableStream<R>;
+/**
+ * Pass-through overload: a `WritableStream` is returned as-is.
+ * @param input a Web Streams `WritableStream`.
+ * @returns the same `WritableStream` unchanged.
+ */
 declare function asWebStream<W>(input: WritableStream<W>): WritableStream<W>;
+/**
+ * Pass-through overload: a duplex pair `{readable, writable}` is returned as-is.
+ * @param input a Web Streams duplex pair.
+ * @returns the same duplex pair unchanged.
+ */
 declare function asWebStream<W, R>(
   input: {readable: ReadableStream<R>; writable: WritableStream<W>}
 ): {readable: ReadableStream<R>; writable: WritableStream<W>};
+/**
+ * Wraps a function as a Web Streams `{readable, writable}` duplex pair.
+ * @param input the function to wrap. Regular, async, generator, or async generator. May return any value type including `none`/`stop`/`many(...)`/`finalValue(...)`.
+ * @param options optional `{strategy?, readableStrategy?, writableStrategy?}` Web Streams `QueuingStrategy` configuration. `strategy` is shorthand for both sides; per-side wins. Defaults to Web Streams' built-in `{highWaterMark: 1}` on each side.
+ * @returns a Web Streams duplex pair `{readable: ReadableStream<R>, writable: WritableStream<W>}` with per-item backpressure.
+ */
 declare function asWebStream<W = unknown, R = unknown>(
   input: (chunk: W) => R | Promise<R> | Iterator<R> | AsyncIterator<R>,
   options?: AsWebStreamOptions<W, R>

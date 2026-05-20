@@ -46,11 +46,24 @@ export interface ChainWebStream<W, R> {
   __streamTypeR(): R;
 }
 
+/**
+ * `/web` chain factory. Composes functions and Web Streams objects into a
+ * native Web Streams duplex pair (no `node:stream` interop). Browser-safe.
+ * @param fns array of functions, `gen(...)`/`fun(...)` wrappers, Web Streams objects (`ReadableStream`, `WritableStream`, `{readable, writable}` pairs), or nested arrays (flattened). Falsy items are ignored. Source-only and sink-only streams are allowed at first and last positions respectively.
+ * @param options optional `{strategy?, readableStrategy?, writableStrategy?}` Web Streams' `QueuingStrategy` shape. Forwarded to every newly-wrapped `asWebStream` stage; existing stream items keep their own settings.
+ * @returns a {@link ChainWebStream} — a `{readable, writable, streams, input, output}` object suitable for piping into / from other Web Streams.
+ */
 declare function chain<const L extends readonly unknown[]>(
   fns: L,
   options?: ChainWebStreamOptions
 ): ChainWebStream<Arg0<L>, Ret<L>>;
 
+/**
+ * Same as {@link chain} but bypasses TypeScript type checking on `fns`.
+ * @param fns array of functions and stream objects. Type checking is intentionally not applied.
+ * @param options optional `Web Streams` queuing-strategy options — see {@link ChainWebStreamOptions}.
+ * @returns a {@link ChainWebStream} typed as `ChainWebStream<W, R>` (caller-supplied type parameters).
+ */
 declare function chainUnchecked<W = any, R = any>(
   fns: readonly any[],
   options?: ChainWebStreamOptions

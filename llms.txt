@@ -1,10 +1,12 @@
 # stream-chain
 
-> Chain functions, generators, and streams into a single Duplex stream with proper backpressure handling. Zero dependencies.
+> Chain functions, generators, and streams into a single pipeline with proper per-item backpressure. Zero dependencies. 4.x is ESM-only and ships three substrate variants: `stream-chain` (default = Node Streams), `stream-chain/web` (native Web Streams), `stream-chain/core` (substrate-free async iterables).
 
 ## Install
 
 npm i stream-chain
+
+Requires Node 22, 24, or 26.
 
 ## Quick start
 
@@ -52,6 +54,8 @@ const pipeline = chainUnchecked([x => x * x]);
 - `finalValue(value)` — skip remaining chain steps, emit value directly (gen/fun only).
 - `flushable(fn, final?)` — mark function to be called at stream end.
 
+**Convention:** Generators (sync `function*` and async `async function*`) must yield plain values only — not `none`/`stop`/`many(...)`/`finalValue(...)`. Use language constructs instead: skip with `continue`, stop with `return`, emit multiple via separate `yield`s. The markers are for regular-function returns only.
+
 ```js
 import chain from 'stream-chain';
 import {none, stop, many, finalValue, flushable} from 'stream-chain/defs.js';
@@ -77,6 +81,10 @@ for await (const v of g(2)) console.log(v); // 9
 
 Like `gen()` but returns an async function. Generator results are collected into `many()`.
 
+**Memory caveat:** `fun()` collects all outputs for a single input into one `Many` before returning. Memory scales with output-per-input. Unsafe for unbounded expansions; `gen()` is the safe default.
+
+Intentionally NOT exported from the default `stream-chain` / `stream-chain/node` entry — requires an explicit import. Available from `stream-chain/fun.js` directly and re-exported by `/web` and `/core`.
+
 ```js
 import fun from 'stream-chain/fun.js';
 
@@ -86,12 +94,46 @@ console.log(await f(2)); // 9
 
 ### asStream(fn[, options])
 
-Wraps any function as a Duplex stream.
+Wraps any function as a Node Duplex stream with per-item backpressure.
 
 ```js
 import asStream from 'stream-chain/asStream.js';
 const stream = asStream(x => x * x);
 ```
+
+### asWebStream(fn[, options])
+
+Wraps any function as a Web Streams `{readable, writable}` duplex pair with per-item backpressure. NOT a TransformStream — `transform()` can't suspend mid-call for per-item drain.
+
+```js
+import asWebStream from 'stream-chain/asWebStream.js';
+const {readable, writable} = asWebStream(x => x * x);
+```
+
+`options` accepts `{strategy, readableStrategy, writableStrategy}` — Web Streams' standard `QueuingStrategy` shape.
+
+### Subpaths
+
+```js
+import chain from 'stream-chain';       // default — same as /node
+import chain from 'stream-chain/node';  // canonical Node Streams chain
+import chain from 'stream-chain/web';   // native Web Streams chain (browser-safe)
+import chain from 'stream-chain/core';  // async-iterable chain (no streams at all)
+```
+
+The `/node` chain returns a `Duplex`. The `/web` chain returns `{readable, writable}`. The `/core` chain returns a callable: `(input?) => AsyncGenerator<R>`.
+
+### Web Streams type guards
+
+```js
+import {
+  isReadableWebStream,
+  isWritableWebStream,
+  isDuplexWebStream
+} from 'stream-chain/defs.js';
+```
+
+Also accessible as `chain.isReadableWebStream` etc.
 
 ### dataSource(fn)
 
@@ -127,6 +169,21 @@ All utilities return functions for use in `chain()`.
 - `lines()` — split byte stream into lines.
 - `fixUtf8Stream()` — repartition chunks for valid UTF-8.
 - `readableFrom({iterable})` — convert iterable to Readable stream.
+
+### Async-iterator wrappers (4.x)
+
+- `makeStreamPuller(readable)` — wrap a Node `Readable` as a non-destructive async iterator (`stream-chain/utils/streamPuller.js`).
+- `makeWebStreamPuller(readable)` — wrap a Web `ReadableStream` as a non-destructive async iterator with `cancel(reason)` extension (`stream-chain/utils/webStreamPuller.js`).
+
+Both implement `for await` directly. Used by stream-join / stream-sorting for downstream merge operations.
+
+```js
+import makeStreamPuller from 'stream-chain/utils/streamPuller.js';
+
+for await (const v of makeStreamPuller(readable)) {
+  if (shouldStop(v)) break;  // source remains alive — non-destructive
+}
+```
 
 ```js
 import take from 'stream-chain/utils/take.js';

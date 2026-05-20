@@ -27,11 +27,24 @@ export interface CoreChainOutput<W, R> {
  * @param fns array of functions, `fun(...)` wrappers, `gen(...)` wrappers, or nested arrays
  * @returns a callable async-iterable factory with null stream-shape statics
  */
+/**
+ * `/core` chain factory. Composes functions / `fun(...)` / `gen(...)` into a
+ * callable async-iterable factory; no Node streams or Web Streams involved.
+ * @param fns array of functions, `fun(...)`/`gen(...)` wrappers, or nested arrays (flattened). Falsy items are ignored. Passing an actual stream object is unsupported in `/core`.
+ * @param options optional configuration object. Currently no recognized fields — reserved for future use ({@link CoreChainOptions} is intentionally empty).
+ * @returns a callable async-iterable factory: `(input?) => AsyncGenerator<R>`. Calling it with an iterable runs each value through the composed pipeline.
+ */
 declare function chain<const L extends readonly unknown[]>(
   fns: L,
   options?: CoreChainOptions
 ): CoreChainOutput<Arg0<L>, Ret<L>>;
 
+/**
+ * Same as {@link chain} but bypasses TypeScript type checking on `fns`.
+ * @param fns array of functions and wrappers. Type checking is intentionally not applied.
+ * @param options optional configuration object — see {@link CoreChainOptions}.
+ * @returns a callable async-iterable factory typed as `CoreChainOutput<W, R>` (caller-supplied type parameters).
+ */
 declare function chainUnchecked<W = any, R = any>(
   fns: readonly any[],
   options?: CoreChainOptions

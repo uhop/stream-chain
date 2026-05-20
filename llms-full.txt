@@ -1,15 +1,17 @@
 # stream-chain
 
-> A library for chaining functions, generators, and streams into a single Duplex stream with proper backpressure handling. Zero runtime dependencies. Works with Node.js and Bun. Supports both CommonJS and ESM consumers.
+> A library for chaining functions, generators, and streams into a single pipeline with proper per-item backpressure. Zero runtime dependencies. Works with Node.js (22, 24, 26), Bun, and Deno. ESM-only; CJS consumers use destructure.
 
+- Three substrate variants: `stream-chain` / `stream-chain/node` (Node Streams `Duplex`), `stream-chain/web` (native Web Streams `{readable, writable}`), `stream-chain/core` (substrate-free async-iterable factory).
 - Chain regular functions, async functions, generator functions, async generator functions, and existing streams
-- Proper backpressure handling via Node.js stream infrastructure
-- Object mode by default — ideal for data processing pipelines
-- Web stream support (ReadableStream, WritableStream, duplex {readable, writable})
+- Per-item backpressure — queue stays at hwm+1 even under unbounded `many()` / generator expansion
+- Object mode by default in the Node-streams variant — ideal for data processing pipelines
+- Native Web Streams support throughout: `asWebStream()` adapter, web type guards, `/web` chain
 - Function grouping optimization for efficient pipelines
 - Special return values for flow control: skip, stop, emit multiple, final value, flush at end
 - Built-in JSONL (line-separated JSON) parser and stringer
 - Utility functions for common stream operations: take, skip, fold, scan, batch, lines
+- Non-destructive async-iterator wrappers (`makeStreamPuller`, `makeWebStreamPuller`)
 - TypeScript support with typed streams
 
 ## Quick start
@@ -43,21 +45,24 @@ Run: `node example.mjs`
 ## Importing
 
 ```js
-// ESM (default export)
+// ESM (shortest form is the default export)
 import chain from 'stream-chain';
+import {none, stop, many, finalValue, flushable} from 'stream-chain';
 
-// ESM (named exports)
-import {chain, none, stop, many, finalValue, flushable, gen, asStream} from 'stream-chain';
+// CommonJS (4.x requires destructure — no bare-callable form)
+const {chain, none, stop, many} = require('stream-chain');
 
-// CommonJS
-const chain = require('stream-chain');
-const {none, stop, many} = require('stream-chain');
+// Substrate variants (each subpath's default is its own `chain`)
+import chain from 'stream-chain/node';   // canonical Node Streams chain (same as default)
+import chain from 'stream-chain/web';    // native Web Streams chain (browser-safe)
+import chain from 'stream-chain/core';   // substrate-free async-iterable chain
 
 // Individual modules (ESM)
 import gen from 'stream-chain/gen.js';
 import fun from 'stream-chain/fun.js';
 import asStream from 'stream-chain/asStream.js';
-import {none, stop, many, finalValue, flushable} from 'stream-chain/defs.js';
+import asWebStream from 'stream-chain/asWebStream.js';
+import {none, stop, many, finalValue, flushable, isReadableWebStream, isWritableWebStream, isDuplexWebStream} from 'stream-chain/defs.js';
 
 // Utilities
 import take from 'stream-chain/utils/take.js';
@@ -130,6 +135,8 @@ const pipeline = chainUnchecked<number, string>([x => String(x * x)]);
 ## Special values (defs.js)
 
 All special values can be imported from `'stream-chain'` or `'stream-chain/defs.js'`.
+
+**Convention:** the special markers below (`none`/`stop`/`many`/`finalValue`) are for **regular function returns only**. Generators (sync `function*` and async `async function*`) must yield plain values — express skip via `continue`, stop via `return`, emit multiple via separate `yield`s. Yielding a marker from a generator is unsupported and may pass through as opaque data.
 
 ### none
 
@@ -263,6 +270,10 @@ for await (const v of pipeline(3)) {
 
 Like `gen()` but returns a function instead of a generator. Values from generators are collected into `many()` arrays. For purely synchronous pipelines it returns a synchronous result; for asynchronous pipelines it returns a `Promise`. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`/`chain()`).
 
+**Memory caveat:** `fun()` collects the entire output for a single input into one `Many` before returning. Memory scales with output-per-input. For unbounded pipelines (a stage that produces unbounded values from a single input), use `gen()` instead.
+
+**Explicit-import policy:** `fun()` is intentionally NOT on the default `stream-chain` / `stream-chain/node` export. Import it from `stream-chain/fun.js` directly, or use the `/web` / `/core` chains where it's re-exported. The friction is deliberate — it makes the output-size profile explicit at the call site.
+
 ```js
 import fun from 'stream-chain/fun.js';
 import {getManyValues} from 'stream-chain/defs.js';
@@ -277,10 +288,11 @@ console.log(getManyValues(result)); // [0, 1, 4]
 
 ## asStream(fn, options?)
 
-Wraps any function as a Duplex stream. Supports regular, async, generator, and async generator functions. Handles all special return values. Treats `null`/`undefined` as `none` (skip) because Node.js streams reserve them for end-of-stream signaling — this differs from `gen()`/`fun()` which pass them through.
+Wraps any function as a Node Duplex stream with per-item backpressure. Supports regular, async, generator, and async generator functions. Handles all special return values. Treats `null`/`undefined` as `none` (skip) because Node.js streams reserve them for end-of-stream signaling — this differs from `gen()`/`fun()` which pass them through.
 
 - `fn` — any function.
 - `options` — Duplex options (default: `{writableObjectMode: true, readableObjectMode: true}`).
+- Returns: a `Duplex` stream.
 
 ```js
 import asStream from 'stream-chain/asStream.js';
@@ -288,6 +300,25 @@ import asStream from 'stream-chain/asStream.js';
 const stream = asStream(x => x * x);
 source.pipe(stream).pipe(destination);
 ```
+
+If `fn` is already a Node stream object (`Readable`/`Writable`/`Duplex`) or a Web Stream object, it is returned as-is (passthrough).
+
+## asWebStream(fn, options?)
+
+Wraps any function as a Web Streams `{readable, writable}` duplex pair with per-item backpressure. Same dual-role API as `asStream` — pass a Web Streams object → returned as-is; pass a function → returns a duplex pair. NOT a `TransformStream` (`transform()` can't suspend mid-call for per-item drain).
+
+- `fn` — any function (regular, async, generator, async generator).
+- `options` — `{strategy?, readableStrategy?, writableStrategy?}` Web Streams' standard `QueuingStrategy` shape. `strategy` is shorthand for "apply to both sides"; per-side wins.
+- Returns: `{readable: ReadableStream<R>, writable: WritableStream<W>}`.
+
+```js
+import asWebStream from 'stream-chain/asWebStream.js';
+
+const {readable, writable} = asWebStream(x => x * x);
+sourceReadable.pipeTo(writable);
+```
+
+Lifecycle parity with `TransformStream`: `reader.cancel(reason)` propagates to the writable side as an error; `writer.abort(reason)` errors both sides and unblocks any pending backpressure await; user-function errors propagate to both sides.
 
 ## dataSource(fn)
 
@@ -429,6 +460,38 @@ Convert an iterable/iterator to a Readable stream.
 ```js
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 chain([readableFrom({iterable: [1, 2, 3]}), x => x * 2]);
+```
+
+### makeStreamPuller(readable)
+
+Wraps a Node `Readable` as a non-destructive async iterator. Thin facade over `readable.iterator({destroyOnReturn: false})`.
+
+- `readable` — a Node `Readable`.
+- Returns: an `AsyncIterableIterator<T>` exposing `next()`, `return()`, `[Symbol.asyncIterator]()`.
+
+Properties: preserves the original `'error'` value (no `AbortError` wrapping); synthesizes `Error('Premature close')` on `destroy()` without `end`/`error`; breaking out of `for await` does NOT destroy the source.
+
+```js
+import makeStreamPuller from 'stream-chain/utils/streamPuller.js';
+
+for await (const v of makeStreamPuller(readable)) {
+  if (shouldStop(v)) break; // source remains alive
+}
+```
+
+### makeWebStreamPuller(readable)
+
+Wraps a Web Streams `ReadableStream` as a non-destructive async iterator. Built on `stream[Symbol.asyncIterator]({preventCancel: true})` plus a `cancel(reason)` extension (the iterator-protocol `return()` can't carry a cancel reason cleanly).
+
+- `readable` — a Web Streams `ReadableStream`.
+- Returns: `{next(), return(), cancel(reason?), [Symbol.asyncIterator]()}` — async-iterator + `cancel`.
+
+```js
+import makeWebStreamPuller from 'stream-chain/utils/webStreamPuller.js';
+
+const puller = makeWebStreamPuller(readable);
+for await (const v of puller) { /* ... */ }
+await puller.cancel(new Error('user aborted')); // explicit cancel-with-reason
 ```
 
 ## JSONL support

@@ -13,7 +13,7 @@ Originally `stream-chain` was used internally with [stream-fork](https://www.npm
 
 ```js
 import chain from 'stream-chain';
-// or: const chain = require('stream-chain');
+// or: const {chain} = require('stream-chain');
 
 import fs from 'node:fs';
 import zlib from 'node:zlib';
@@ -195,8 +195,7 @@ The factory function accepts the following arguments:
         - [Two reading modes](https://nodejs.org/api/stream.html#two-reading-modes).
         - [Three states](https://nodejs.org/api/stream.html#three-states).
         - [readable.resume()](https://nodejs.org/api/stream.html#stream_readable_resume).
-  - _(Since 3.1.0)_ If a value is a web stream object (like `ReadableStream` or `WritableStream`), it is adapted to a corresponding Node stream and included in the pipeline.
-    - Note that the support of web streams is still experimental in Node.
+  - If a value is a web stream object (like `ReadableStream` or `WritableStream`), the `/node` chain (the default) adapts it to a corresponding Node stream and includes it in the pipeline. For a chain that runs natively on Web Streams without Node-interop, import from `stream-chain/web`.
 
 - `options` is an optional object detailed in the [Node's documentation](https://nodejs.org/api/stream.html#stream_new_stream_duplex_options).
   - The default options is this object:
