@@ -3,7 +3,7 @@
 import test from 'tape-six';
 
 import {Transform} from 'node:stream';
-import {streamToArray, delay} from './helpers.mjs';
+import {streamToArray, delay} from './helpers.js';
 import chain from '../src/index.js';
 import fromIterable from '../src/utils/readableFrom.js';
 

@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import {Writable, Transform} from 'node:stream';
 
-import {readString, writeToArray} from './helpers.mjs';
+import {readString, writeToArray} from './helpers.js';
 
 import parserStream from '../src/jsonl/parserStream.js';
 import stringerStream from '../src/jsonl/stringerStream.js';

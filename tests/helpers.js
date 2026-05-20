@@ -53,3 +53,31 @@ export const delay =
         }
       }, ms);
     });
+
+// Web Streams helpers — mirror the Node helpers above for parallel test suites.
+
+export const webStreamToArray = array =>
+  new WritableStream({
+    write(chunk) {
+      array.push(chunk);
+    }
+  });
+
+export const writeAndCollect = async (transform, values) => {
+  // Feed values + close in parallel with draining the readable side.
+  // Used by asWebStream fast-path tests to mirror "stream.write(...); stream.end()" patterns.
+  const writer = transform.writable.getWriter();
+  const writePromise = (async () => {
+    for (const v of values) await writer.write(v);
+    await writer.close();
+  })();
+  const out = [];
+  const reader = transform.readable.getReader();
+  for (;;) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    out.push(value);
+  }
+  await writePromise;
+  return out;
+};

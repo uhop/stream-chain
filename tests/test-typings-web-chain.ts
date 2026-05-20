@@ -2,14 +2,14 @@ import {test} from 'tape-six';
 
 import chain, {asWebStream, gen, fun} from '../src/web/index.js';
 
-// IsAny pattern (from test-typings-defs.mts): compile-time check that T is not `any`.
+// IsAny pattern (from test-typings-defs.ts): compile-time check that T is not `any`.
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type AssertNotAny<T> = IsAny<T> extends false ? true : never;
 type AssertEquals<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
 
 test('/web typings: chain returns ChainWebStream with W/R inferred', t => {
   const c = chain([(x: number) => x * 2, (x: number) => x.toString()]);
-  // Compile-time assertions (the cast pattern from test-typings-*.mts).
+  // Compile-time assertions (the cast pattern from test-typings-*.ts).
 
   type C = typeof c;
   // ChainWebStream should be inferred with W=number, R=string.

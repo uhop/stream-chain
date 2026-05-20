@@ -2,7 +2,7 @@
 
 import test from 'tape-six';
 
-import {streamToArray, delay} from './helpers.mjs';
+import {streamToArray, delay} from './helpers.js';
 import chain from '../src/index.js';
 import readableFrom from '../src/utils/readableFrom.js';
 

@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import chain from '../src/index.js';
 
-import {readString} from './helpers.mjs';
+import {readString} from './helpers.js';
 import parser from '../src/jsonl/parser.js';
 
 import batch from '../src/utils/batch.js';

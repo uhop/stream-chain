@@ -7,7 +7,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import {Writable} from 'node:stream';
 
-import {readString} from './helpers.mjs';
+import {readString} from './helpers.js';
 
 import parserStream from '../src/jsonl/parserStream.js';
 

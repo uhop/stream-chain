@@ -2,7 +2,7 @@
 
 import test from 'tape-six';
 
-import {streamToArray} from './helpers.mjs';
+import {streamToArray} from './helpers.js';
 import chain, {gen, none, finalValue, clearFunctionList} from '../src/index.js';
 import fromIterable from '../src/utils/readableFrom.js';
 

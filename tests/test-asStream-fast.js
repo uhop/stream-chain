@@ -2,7 +2,7 @@
 
 import test from 'tape-six';
 
-import {streamToArray, delay} from './helpers.mjs';
+import {streamToArray, delay} from './helpers.js';
 import {none, stop, many, finalValue, flushable} from '../src/defs.js';
 import gen from '../src/gen.js';
 import asStream from '../src/asStream.js';
