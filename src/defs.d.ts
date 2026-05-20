@@ -204,6 +204,26 @@ export declare function combineManyMut<A, T extends unknown[]>(
   ...args: T
 ): Many<CombineManyItem<A> | CombineManyItem<T[number]>>;
 
+// Web Streams type guards
+
+/**
+ * Type predicate for a Web Streams `ReadableStream`. Shape-based — checks for
+ * `getReader` and `pipeTo` methods, which Node Streams do not expose.
+ */
+export declare function isReadableWebStream(x: unknown): x is ReadableStream;
+/**
+ * Type predicate for a Web Streams `WritableStream`. Shape-based — checks for
+ * `getWriter` and `abort` methods, which Node Streams do not expose.
+ */
+export declare function isWritableWebStream(x: unknown): x is WritableStream;
+/**
+ * Type predicate for a Web Streams duplex pair `{readable, writable}` (the
+ * shape returned by `TransformStream` and `asWebStream`).
+ */
+export declare function isDuplexWebStream(
+  x: unknown
+): x is {readable: ReadableStream; writable: WritableStream};
+
 // generic utilities: unpacking types
 
 /**

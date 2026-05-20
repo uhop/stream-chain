@@ -74,6 +74,23 @@ const asStream = (fn, options) => {
             return;
           }
           if (value && typeof value.next == 'function') {
+            // Per convention (see wiki/defs.md "Convention: generators yield
+            // plain values"), generator yields are plain — no special-value
+            // re-check beyond promise unwrap. Terminal position skips the
+            // recursive `apply` entirely.
+            if (i >= innerFns.length) {
+              for (;;) {
+                let data = value.next();
+                if (data && typeof data.then == 'function') data = await data;
+                if (data.done) break;
+                let yielded = data.value;
+                if (yielded && typeof yielded.then == 'function') yielded = await yielded;
+                if (yielded == null) continue;
+                const r = push(yielded);
+                if (r) await r;
+              }
+              return;
+            }
             for (;;) {
               let data = value.next();
               if (data && typeof data.then == 'function') data = await data;

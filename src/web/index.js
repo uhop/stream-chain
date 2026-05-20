@@ -8,6 +8,7 @@ import asWebStream, {
   isWritableWebStream,
   isDuplexWebStream
 } from '../asWebStream.js';
+import makeWebStreamPuller from '../webStreamPuller.js';
 
 // Group consecutive functions into arrays (mirrors /node's groupFunctions) so the
 // produceStages step can bundle each group into a single asWebStream(gen(...group))
@@ -131,8 +132,9 @@ chain.chainUnchecked = chain;
 chain.gen = gen;
 chain.fun = fun;
 chain.asWebStream = asWebStream;
+chain.makeWebStreamPuller = makeWebStreamPuller;
 
 export default chain;
-export {chain, chain as chainUnchecked, gen, fun, asWebStream};
+export {chain, chain as chainUnchecked, gen, fun, asWebStream, makeWebStreamPuller};
 export {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from '../asWebStream.js';
 export * from '../defs.js';

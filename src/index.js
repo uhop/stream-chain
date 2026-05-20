@@ -5,6 +5,8 @@ import * as defs from './defs.js';
 import gen from './gen.js';
 import asStream from './asStream.js';
 import asWebStream from './asWebStream.js';
+import makeStreamPuller from './streamPuller.js';
+import makeWebStreamPuller from './webStreamPuller.js';
 
 // is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 const isReadableNodeStream = obj =>
@@ -29,40 +31,7 @@ const isDuplexNodeStream = obj =>
   typeof obj.on === 'function' &&
   typeof obj.write === 'function';
 
-const isNodeStream = obj => {
-  return (
-    obj &&
-    (obj._readableState ||
-      obj._writableState ||
-      (typeof obj.write === 'function' && typeof obj.on === 'function') ||
-      (typeof obj.pipe === 'function' && typeof obj.on === 'function'))
-  );
-};
-
-const isReadableWebStream = obj =>
-  !!(
-    obj &&
-    !isNodeStream(obj) &&
-    typeof obj.pipeThrough === 'function' &&
-    typeof obj.getReader === 'function' &&
-    typeof obj.cancel === 'function'
-  );
-
-const isWritableWebStream = obj =>
-  !!(
-    obj &&
-    !isNodeStream(obj) &&
-    typeof obj.getWriter === 'function' &&
-    typeof obj.abort === 'function'
-  );
-
-const isDuplexWebStream = obj =>
-  !!(
-    obj &&
-    !isNodeStream(obj) &&
-    typeof obj.readable === 'object' &&
-    typeof obj.writable === 'object'
-  );
+const {isReadableWebStream, isWritableWebStream, isDuplexWebStream} = defs;
 
 const groupFunctions = (output, fn, index, fns) => {
   if (
@@ -265,9 +234,20 @@ chain.chainUnchecked = chain; // for TypeScript to bypass type checks
 chain.gen = gen;
 chain.asStream = asStream;
 chain.asWebStream = asWebStream;
+chain.makeStreamPuller = makeStreamPuller;
+chain.makeWebStreamPuller = makeWebStreamPuller;
 
 chain.dataSource = dataSource;
 
 export default chain;
-export {chain, chain as chainUnchecked, gen, asStream, asWebStream, dataSource};
+export {
+  chain,
+  chain as chainUnchecked,
+  gen,
+  asStream,
+  asWebStream,
+  makeStreamPuller,
+  makeWebStreamPuller,
+  dataSource
+};
 export * from './defs.js';

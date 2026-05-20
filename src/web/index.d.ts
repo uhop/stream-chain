@@ -61,6 +61,7 @@ export {chain, chainUnchecked};
 export {default as gen} from '../gen.js';
 export {default as fun} from '../fun.js';
 export {default as asWebStream} from '../asWebStream.js';
+export {default as makeWebStreamPuller} from '../webStreamPuller.js';
 export {
   isReadableWebStream,
   isWritableWebStream,

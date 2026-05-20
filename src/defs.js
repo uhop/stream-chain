@@ -83,6 +83,37 @@ const combineManyMut = (a, ...args) => {
   return many(values);
 };
 
+// ---------------------------------------------------------------------------
+// Web Streams type guards. Shape-based: a Web ReadableStream has `getReader`
+// (Node Readable does not), a WritableStream has `getWriter` (Node Writable
+// does not), so a method-presence test suffices to disambiguate the two
+// substrates without needing a separate "not a Node stream" check.
+// ---------------------------------------------------------------------------
+
+const isReadableWebStream = x =>
+  !!(
+    x &&
+    typeof x === 'object' &&
+    typeof x.getReader === 'function' &&
+    typeof x.pipeTo === 'function'
+  );
+
+const isWritableWebStream = x =>
+  !!(
+    x &&
+    typeof x === 'object' &&
+    typeof x.getWriter === 'function' &&
+    typeof x.abort === 'function'
+  );
+
+const isDuplexWebStream = x =>
+  !!(
+    x &&
+    typeof x === 'object' &&
+    isReadableWebStream(x.readable) &&
+    isWritableWebStream(x.writable)
+  );
+
 // old aliases
 const final = finalValue;
 
@@ -110,5 +141,8 @@ export {
   toMany,
   normalizeMany,
   combineMany,
-  combineManyMut
+  combineManyMut,
+  isReadableWebStream,
+  isWritableWebStream,
+  isDuplexWebStream
 };
