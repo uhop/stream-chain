@@ -3,10 +3,13 @@
   "version": "3.6.3",
   "description": "Chain functions, generators, and streams into a pipeline with backpressure support.",
   "type": "module",
-  "main": "./src/index.js",
-  "types": "./src/index.d.ts",
+  "main": "./src/node/index.js",
+  "types": "./src/node/index.d.ts",
   "exports": {
-    ".": "./src/index.js",
+    ".": "./src/node/index.js",
+    "./node": "./src/node/index.js",
+    "./web": "./src/web/index.js",
+    "./core": "./src/core/index.js",
     "./*": "./src/*"
   },
   "engines": {
