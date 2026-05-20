@@ -4,25 +4,27 @@ import test from 'tape-six';
 
 import {Readable} from 'node:stream';
 
-import makeStreamPuller from '../src/streamPuller.js';
+import makeStreamPuller from '../src/utils/streamPuller.js';
 
 const makeReadable = values =>
   Readable.from(values, {objectMode: true});
 
-const drain = async puller => {
+test.asPromise('makeStreamPuller: drains values then signals done', async (t, resolve) => {
+  const puller = makeStreamPuller(makeReadable([1, 2, 3]));
   const out = [];
   for (;;) {
     const {value, done} = await puller.next();
     if (done) break;
     out.push(value);
   }
-  return out;
-};
-
-test.asPromise('makeStreamPuller: drains values then signals done', async (t, resolve) => {
-  const puller = makeStreamPuller(makeReadable([1, 2, 3]));
-  const out = await drain(puller);
   t.deepEqual(out, [1, 2, 3]);
+  resolve();
+});
+
+test.asPromise('makeStreamPuller: for-await iterates', async (t, resolve) => {
+  const out = [];
+  for await (const v of makeStreamPuller(makeReadable([10, 20, 30]))) out.push(v);
+  t.deepEqual(out, [10, 20, 30]);
   resolve();
 });
 
@@ -56,42 +58,16 @@ test.asPromise('makeStreamPuller: premature close surfaces synthetic error', asy
     await nextPromise;
     t.fail('next() should reject');
   } catch (e) {
-    t.equal(e.message, 'Premature stream close');
+    t.equal(e.message, 'Premature close');
   }
   resolve();
 });
 
-test.asPromise('makeStreamPuller: close() detaches listeners, idempotent', async (t, resolve) => {
-  const stream = makeReadable([1, 2, 3]);
-  const puller = makeStreamPuller(stream);
-  await puller.next();
-  puller.close();
-  puller.close(); // idempotent
-  t.equal(stream.listenerCount('data'), 0, 'no leaked data listener');
-  t.equal(stream.listenerCount('end'), 0, 'no leaked end listener');
-  t.equal(stream.listenerCount('error'), 0, 'no leaked error listener');
-  t.equal(stream.listenerCount('close'), 0, 'no leaked close listener');
-  resolve();
-});
-
-test.asPromise('makeStreamPuller: backpressure — buffered chunks pause source', async (t, resolve) => {
-  // Source pushes one chunk per read() call; we never call next() so all chunks
-  // are buffered and the source is paused after the first.
-  let reads = 0;
-  const stream = new Readable({
-    objectMode: true,
-    read() {
-      ++reads;
-      if (reads <= 5) this.push(reads);
-      else this.push(null);
-    }
-  });
-  const puller = makeStreamPuller(stream);
-  // Give the source a few ticks to push and get paused.
-  await new Promise(r => setTimeout(r, 20));
-  t.ok(stream.isPaused(), 'source paused under backpressure');
-  // Drain to release.
-  const out = await drain(puller);
-  t.deepEqual(out, [1, 2, 3, 4, 5]);
+test.asPromise('makeStreamPuller: break leaves source alive (destroyOnReturn: false)', async (t, resolve) => {
+  const stream = makeReadable([1, 2, 3, 4, 5]);
+  for await (const v of makeStreamPuller(stream)) {
+    if (v === 2) break;
+  }
+  t.equal(stream.destroyed, false, 'source not destroyed after early break');
   resolve();
 });

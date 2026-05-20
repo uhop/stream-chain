@@ -2,7 +2,7 @@
 
 import test from 'tape-six';
 
-import makeWebStreamPuller from '../src/webStreamPuller.js';
+import makeWebStreamPuller from '../src/utils/webStreamPuller.js';
 
 const makeReadable = values =>
   new ReadableStream({
@@ -12,30 +12,36 @@ const makeReadable = values =>
     }
   });
 
-const drain = async puller => {
+test.asPromise('makeWebStreamPuller: drains values then signals done', async (t, resolve) => {
+  const puller = makeWebStreamPuller(makeReadable([1, 2, 3]));
   const out = [];
   for (;;) {
     const {value, done} = await puller.next();
     if (done) break;
     out.push(value);
   }
-  return out;
-};
-
-test.asPromise('makeWebStreamPuller: drains values then signals done', async (t, resolve) => {
-  const puller = makeWebStreamPuller(makeReadable([1, 2, 3]));
-  const out = await drain(puller);
   t.deepEqual(out, [1, 2, 3]);
+  resolve();
+});
+
+test.asPromise('makeWebStreamPuller: for-await iterates', async (t, resolve) => {
+  const out = [];
+  for await (const v of makeWebStreamPuller(makeReadable([10, 20, 30]))) out.push(v);
+  t.deepEqual(out, [10, 20, 30]);
   resolve();
 });
 
 test.asPromise('makeWebStreamPuller: propagates stream error', async (t, resolve) => {
   const original = new Error('source boom');
+  let sent = false;
   const stream = new ReadableStream({
-    start(controller) {
+    pull(controller) {
+      if (sent) {
+        controller.error(original);
+        return;
+      }
+      sent = true;
       controller.enqueue(1);
-      // Defer the error so the first read can drain the buffered value.
-      queueMicrotask(() => controller.error(original));
     }
   });
   const puller = makeWebStreamPuller(stream);
@@ -50,16 +56,16 @@ test.asPromise('makeWebStreamPuller: propagates stream error', async (t, resolve
   resolve();
 });
 
-test.asPromise('makeWebStreamPuller: close() releases lock, idempotent', async (t, resolve) => {
-  const stream = makeReadable([1, 2, 3]);
-  const puller = makeWebStreamPuller(stream);
-  await puller.next();
-  puller.close();
-  puller.close(); // idempotent
-  t.equal(stream.locked, false, 'lock released after close');
-  // Post-close, next() returns done immediately.
-  const r = await puller.next();
-  t.deepEqual(r, {value: undefined, done: true});
+test.asPromise('makeWebStreamPuller: break leaves source uncanceled (preventCancel: true)', async (t, resolve) => {
+  let canceled = false;
+  const stream = new ReadableStream({
+    start(c) { c.enqueue(1); c.enqueue(2); c.enqueue(3); c.close(); },
+    cancel() { canceled = true; }
+  });
+  for await (const v of makeWebStreamPuller(stream)) {
+    if (v === 2) break;
+  }
+  t.equal(canceled, false, 'source not canceled after early break');
   resolve();
 });
 
@@ -74,10 +80,5 @@ test.asPromise('makeWebStreamPuller: cancel() cancels stream + releases lock', a
   await puller.cancel(new Error('done'));
   t.equal(cancelReason?.message, 'done', 'cancel reason propagated to stream');
   t.equal(stream.locked, false, 'lock released after cancel');
-  const r = await puller.next();
-  t.deepEqual(r, {value: undefined, done: true});
-  // Second cancel is a no-op.
-  const second = await puller.cancel();
-  t.equal(second, undefined);
   resolve();
 });

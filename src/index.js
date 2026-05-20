@@ -5,8 +5,6 @@ import * as defs from './defs.js';
 import gen from './gen.js';
 import asStream from './asStream.js';
 import asWebStream from './asWebStream.js';
-import makeStreamPuller from './streamPuller.js';
-import makeWebStreamPuller from './webStreamPuller.js';
 
 // is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 const isReadableNodeStream = obj =>
@@ -234,20 +232,9 @@ chain.chainUnchecked = chain; // for TypeScript to bypass type checks
 chain.gen = gen;
 chain.asStream = asStream;
 chain.asWebStream = asWebStream;
-chain.makeStreamPuller = makeStreamPuller;
-chain.makeWebStreamPuller = makeWebStreamPuller;
 
 chain.dataSource = dataSource;
 
 export default chain;
-export {
-  chain,
-  chain as chainUnchecked,
-  gen,
-  asStream,
-  asWebStream,
-  makeStreamPuller,
-  makeWebStreamPuller,
-  dataSource
-};
+export {chain, chain as chainUnchecked, gen, asStream, asWebStream, dataSource};
 export * from './defs.js';
