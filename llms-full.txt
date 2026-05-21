@@ -444,10 +444,16 @@ chain([lines()]); // input: "a\nb\nc" → output: "a", "b", "c"
 ### fixUtf8Stream()
 
 Repartition byte chunks so multi-byte UTF-8 characters are not split across chunks.
+Uses `TextDecoder` by default (works in every runtime); on Node, asynchronously
+upgrades to `node:string_decoder` for ≈2–4× faster decoding. Named export
+`whenReady()` returns a `Promise` that resolves when the upgrade has landed
+(or immediately on non-Node) — optional, only needed when the Node fast path
+must be in effect on the first composition.
 
 ```js
-import fixUtf8Stream from 'stream-chain/utils/fixUtf8Stream.js';
+import fixUtf8Stream, {whenReady} from 'stream-chain/utils/fixUtf8Stream.js';
 chain([fixUtf8Stream(), lines()]);
+await whenReady(); // optional, Node fast path
 ```
 
 ### readableFrom(options)
