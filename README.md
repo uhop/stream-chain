@@ -226,6 +226,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.0.1 _Bug fix: `asWebStream()` no longer crashes on Bun ≤1.3.14 (optional-chains `WritableStreamDefaultController.signal`, see [oven-sh/bun#31157](https://github.com/oven-sh/bun/pull/31157)). Bug fix: `fixUtf8Stream()` uses `node:string_decoder` (Deno compatibility)._
 - 4.0.0 _Major: ESM-only (CJS callers must destructure); Node 22+ floor. New subpath split: `/node` (default), `/web` (native Web Streams), `/core` (substrate-free). New `asWebStream()` adapter with per-item backpressure. Per-item backpressure throughout — bounded queue under unbounded `many()` / generator expansion. New `makeStreamPuller` / `makeWebStreamPuller` utilities (`stream-chain/utils/`). Web Streams type guards in `defs.js`. Generator-yields-plain convention. See the [Migration guide](https://github.com/uhop/stream-chain/wiki/Migration-V3-to-V4)._
 - 3.6.3 _TS inference updates: improvements and found bugs. Updated deps._
 - 3.6.2 _Improved TS typings: `ChainOutput<W, R>` propagates `R` to events and methods (thx [Scover](https://github.com/5cover)). Updated deps._

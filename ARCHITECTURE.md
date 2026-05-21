@@ -58,7 +58,14 @@ src/                          # Source code
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator
     ├── webStreamPuller.js    # makeWebStreamPuller(readable) — wrap Web ReadableStream as non-destructive async iterator
     └── *.d.ts                # TypeScript declarations for each utility
-tests/                        # Test files (test-*.js for runtime, test-*.ts for typing tests, test-*.cjs for CJS); tape-six
+tests/                        # Test files organized by environment (tape-six)
+├── core/                     # Substrate-agnostic — runs in browser AND CLI (uses /web chain internally via runChain helper)
+├── web/                      # Web Streams substrate (asWebStream, /web chain, webStreamPuller) — runs in browser AND CLI
+├── node/                     # Node Streams substrate (asStream, JSONL via fs+zlib, streamPuller, etc.) — runs only in CLI
+├── helpers.js                # Node-stream test helpers (re-exports web-helpers)
+├── web-helpers.js            # Pure + Web Streams helpers (delay, webStreamToArray, writeAndCollect, runChain)
+├── data/                     # Test fixtures (used by tests/node/test-jsonl-*.js)
+└── manual/                   # Manual test scripts (not part of the automated suite)
 bench/                        # Benchmarks (chain-1-stage, chain-2-stage, raw-streams, gen-opt, fun-opt, …)
 wiki/                         # GitHub wiki documentation (git submodule)
 .github/                      # CI workflows, Dependabot config

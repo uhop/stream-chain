@@ -23,7 +23,8 @@ npm install
 - **Test (Bun):** `npm run test:bun`
 - **Test (Deno):** `npm run test:deno`
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
-- **Test (single file):** `node tests/test-<name>.js`
+- **Test (browser):** `npm run test:browser` — drives headless Chromium via `tape-six-playwright`; auto-starts `tape6-server` on port `55555` (env-overridable, avoids the default `3000` collision). Browser-safe test set is selected by `tape6.tests` (`tests/core/` + `tests/web/`); `tape6.cli` (`tests/node/`) is skipped in browser context. On Ubuntu 26.04+ (or any distro Playwright doesn't ship binaries for yet) `npm install`'s postinstall fails downloading Chromium — work around once with `npm install --ignore-scripts` then `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 npx playwright install chromium`. Override is install-time only; runtime needs no env.
+- **Test (single file):** `node tests/<bucket>/test-<name>.js` (bucket is `core`, `web`, or `node`)
 - **TypeScript check:** `npm run ts-check`
 - **JavaScript type check (dual tsconfig):** `npm run js-check`
 - **TypeScript tests:** `npm run ts-test` (also `ts-test:bun`, `ts-test:deno`)
@@ -84,7 +85,14 @@ stream-chain/
 │       ├── streamPuller.js       # Wrap Node Readable as a non-destructive async iterator
 │       ├── webStreamPuller.js    # Wrap Web ReadableStream as a non-destructive async iterator
 │       └── *.d.ts                # TypeScript definitions for each utility
-├── tests/                        # Test files (test-*.js for runtime, test-*.ts for typing tests, test-*.cjs for CJS)
+├── tests/                        # Test files organized by environment (see "Tests" below)
+│   ├── core/                     # Substrate-agnostic — runs in browser AND CLI (uses /web chain internally)
+│   ├── web/                      # Web Streams — runs in browser AND CLI
+│   ├── node/                     # Node Streams / node:* APIs — runs only in CLI
+│   ├── helpers.js                # Node-stream test helpers (Readable/Writable factories) — re-exports web-helpers
+│   ├── web-helpers.js            # Pure + Web Streams helpers (delay, webStreamToArray, writeAndCollect, runChain)
+│   ├── data/                     # Test fixtures (referenced by tests/node/test-jsonl-*.js)
+│   └── manual/                   # Manual test scripts (not part of the automated suite)
 ├── bench/                        # Benchmarks
 ├── wiki/                         # GitHub wiki documentation (git submodule)
 └── .github/                      # CI workflows, Dependabot config
@@ -156,8 +164,12 @@ test('example', async t => {
 
 - Test files use `tape-six`: `.js` for runtime tests, `.ts` for TypeScript typing tests, `.cjs` for CommonJS tests.
 - Test file naming convention: `test-*.js` and `test-*.ts`.
-- Tests are configured in `package.json` under the `"tape6"` section.
-- Test files should be directly executable: `node tests/test-foo.js`.
+- Tests are configured in `package.json` under the `"tape6"` section. Three buckets (per the user's environment-by-directory convention):
+  - `tests/core/` — substrate-agnostic. Use the `runChain(transducers, input) → Promise<output>` helper from `tests/web-helpers.js`, which internally drives a `/web` chain. Runs in browser AND CLI (Web Streams are universal in Node 22+/Deno/Bun).
+  - `tests/web/` — Web Streams substrate (`asWebStream`, `/web` chain, `webStreamPuller`). Runs in browser AND CLI.
+  - `tests/node/` — Node Streams substrate (`asStream`, JSONL via `node:fs` + `node:zlib`, `streamPuller`, etc.). Runs only in CLI. Anything that imports `node:*` or transitively pulls `tests/helpers.js`'s `Readable`/`Writable` factories belongs here.
+  - `tape6.tests` = `tests/core` + `tests/web` (both buckets — browser-runnable). `tape6.cli` = `tests/node` (added only in non-browser context per `tape-six`'s `resolveTests` rules — see `node_modules/tape-six/TESTING.md` §"Configuring test discovery").
+- Test files should be directly executable: `node tests/<bucket>/test-foo.js`.
 
 ## Key conventions
 

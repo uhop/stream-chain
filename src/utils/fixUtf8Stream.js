@@ -1,6 +1,6 @@
 // @ts-self-types="./fixUtf8Stream.d.ts"
 
-import {StringDecoder} from 'string_decoder';
+import {StringDecoder} from 'node:string_decoder';
 
 import {none, flushable} from '../defs.js';
 

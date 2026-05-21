@@ -224,9 +224,14 @@ const asWebStream = (fn, options) => {
       // abort() callback runs. The spec waits for in-flight write() to
       // settle first — so if write() is awaiting pendingDrain, we'd
       // deadlock unless the signal listener wakes it.
+      // Optional-chained because Bun ≤1.3.14 returns `undefined` for the
+      // controller's signal (spec-required per WHATWG Streams §4.5.2 but
+      // missing in Bun's builtin — see oven-sh/bun#31156 / PR #31157).
+      // Bun loses the abort-wakeup safety net until that lands, but the
+      // normal write/close/cancel paths still work.
       start(controller) {
         writableController = controller;
-        controller.signal.addEventListener('abort', () => {
+        controller.signal?.addEventListener('abort', () => {
           stopped = true;
           unblockDrain();
         });
