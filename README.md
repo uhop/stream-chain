@@ -226,6 +226,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.0.2 _`fixUtf8Stream()` now works on browsers._
 - 4.0.1 _Minor bugfixes. No API changes._
 - 4.0.0 _Major: moved to ESM. New subpath split: `/node` (default), `/web` (native Web Streams), `/core` (substrate-free). New `asWebStream()` adapter with per-item backpressure. See the [Migration guide](https://github.com/uhop/stream-chain/wiki/Migration-V3-to-V4)._
 - 3.6.3 _TS inference updates: improvements and found bugs. Updated deps._
