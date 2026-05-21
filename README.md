@@ -234,29 +234,5 @@ BSD-3-Clause
 - 3.6.0 _Performance: sync-first `fun()` (~2.5× faster for sync pipelines, now returns `Many | Promise<Many>`). Sync fast path in `gen()` (~1.6× faster). Documented `null`/`undefined` handling differences. Wiki: renamed V2 files for Windows compatibility._
 - 3.5.1 _Fixed `finish` event not firing after `stop`. Web stream detection uses duck-typing instead of `instanceof` (supports non-standard web streams) (thx [Alex Yang](https://github.com/himself65)). Performance: unified fast path in `asStream()`._
 - 3.5.0 _Variadic `combineMany()` and `combineManyMut()`. Fixed `readableFrom()` unhandled rejection bug. Improved TS typings, docs, and `package.json` metadata._
-- 3.4.1 _Improved TS typings, added TypeScript typing tests, cleaned up dead code._
-- 3.4.0 _Added `Many`-related helpers and `chainUnchecked()` for TS._
-- 3.3.2 _Technical release: updated deps, more tests._
-- 3.3.1 _Minor enhancement: more flexible split on lines._
-- 3.3.0 _Added a way to ignore JSON parsing errors silently._
-- 3.2.0 _Added TS typings and `clearFunctionList()`._
-- 3.1.0 _Added a seamless support for web streams._
-- 3.0.1 _First release of 3.0. See [wiki](https://github.com/uhop/stream-chain/wiki) for details._
-- 3.0.0 _New major version. Unreleased._
-- 2.2.5 _Relaxed the definition of a stream (thx [Rich Hodgkins](https://github.com/rhodgkins))._
-- 2.2.4 _Bugfix: wrong `const`-ness in the async generator branch (thx [Patrick Pang](https://github.com/patrickpang))._
-- 2.2.3 _Technical release. No need to upgrade._
-- 2.2.2 _Technical release. No need to upgrade._
-- 2.2.1 _Technical release: new symbols namespace, explicit license (thx [Keen Yee Liau](https://github.com/kyliau)), added Greenkeeper._
-- 2.2.0 _Added utilities: `take`, `takeWhile`, `skip`, `skipWhile`, `fold`, `scan`, `Reduce`, `comp`._
-- 2.1.0 _Added simple transducers, dropped Node 6._
-- 2.0.3 _Added TypeScript typings and the badge._
-- 2.0.2 _Workaround for Node 6: use `'finish'` event instead of `_final()`._
-- 2.0.1 _Improved documentation._
-- 2.0.0 _Upgraded to use Duplex instead of EventEmitter as the base._
-- 1.0.3 _Improved documentation._
-- 1.0.2 _Better README._
-- 1.0.1 _Fixed the README._
-- 1.0.0 _The initial release._
 
 The full release notes are in the wiki: [Release notes](https://github.com/uhop/stream-chain/wiki/Release-notes).
