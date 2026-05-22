@@ -23,6 +23,8 @@ src/                          # Source code
 ├── asStream.d.ts
 ├── asWebStream.js            # Wraps a function as a Web Streams {readable, writable} pair with per-item backpressure
 ├── asWebStream.d.ts
+├── dataSource.js             # dataSource(fn|iterable) — coerces to iterator-producing function (substrate-agnostic; on /node, /web, /core)
+├── dataSource.d.ts
 ├── typed-streams.js          # TypedReadable, TypedWritable, TypedDuplex, TypedTransform
 ├── typed-streams.d.ts
 ├── node/                     # Subpath: stream-chain/node — thin re-export of root index
@@ -53,13 +55,12 @@ src/                          # Source code
     ├── skipWhile.js          # skipWhile(fn) — skip while predicate is true
     ├── fold.js               # fold(fn, initial) — reduce stream to single value at end
     ├── reduce.js             # Alias for fold
-    ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Writable stream
     ├── scan.js               # scan(fn, initial) — running accumulator, emits each step
     ├── batch.js              # batch(size) — group items into fixed-size arrays
     ├── readableFrom.js       # readableFrom({iterable}) — iterable/iterator to Node Readable
     ├── readableWebStreamFrom.js  # readableWebStreamFrom({iterable}) — iterable/iterator to Web ReadableStream
     ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Node Writable (.accumulator)
-    ├── reduceWebStream.js    # reduceWebStream(fn, initial) — reduce as Web WritableStream ({writable, result})
+    ├── reduceWebStream.js    # reduceWebStream(fn, initial) — reduce as Web WritableStream ({writable, result, accumulator})
     ├── fixUtf8Stream.js      # fixUtf8Stream() — repartition chunks for valid UTF-8
     ├── lines.js              # lines() — split byte stream into lines
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator

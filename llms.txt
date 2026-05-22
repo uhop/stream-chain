@@ -123,21 +123,24 @@ import chain from 'stream-chain/core';  // async-iterable chain (no streams at a
 
 The `/node` chain returns a `Duplex`. The `/web` chain returns `{readable, writable}`. The `/core` chain returns a callable: `(input?) => AsyncGenerator<R>`.
 
-### Web Streams type guards
+### Stream type guards
 
 ```js
 import {
   isReadableWebStream,
   isWritableWebStream,
-  isDuplexWebStream
+  isDuplexWebStream,
+  isReadableNodeStream,
+  isWritableNodeStream,
+  isDuplexNodeStream
 } from 'stream-chain/defs.js';
 ```
 
-Also accessible as `chain.isReadableWebStream` etc.
+All shape-based — no `node:stream` import. Also accessible as `chain.isReadableWebStream` etc. on the `/node` and `/web` entries.
 
 ### dataSource(fn)
 
-Takes a function or iterable and returns the underlying iterator function.
+Takes a function or iterable and returns the underlying iterator function. Substrate-agnostic — exported from `stream-chain`, `stream-chain/web`, and `stream-chain/core` (and as `chain.dataSource` on all three).
 
 ```js
 import {dataSource} from 'stream-chain';
@@ -161,14 +164,16 @@ All utilities return functions for use in `chain()`.
 - `fold(fn, initial)` — reduce stream to single value at end.
 - `reduce(fn, initial)` — alias for fold.
 - `scan(fn, initial)` — emit running accumulator after each item.
-- `reduceStream(fn, initial)` — reduce as Writable stream with `.accumulator`.
+- `reduceStream(fn, initial)` — reduce as Node `Writable` with `.accumulator`.
+- `reduceWebStream(fn, initial)` — reduce as Web `WritableStream`; returns `{writable, result, accumulator}`.
 
 ### Stream helpers
 
 - `batch(size)` — group items into arrays of `size`.
 - `lines()` — split byte stream into lines.
 - `fixUtf8Stream()` — repartition chunks for valid UTF-8.
-- `readableFrom({iterable})` — convert iterable to Readable stream.
+- `readableFrom({iterable})` — convert iterable to Node `Readable`.
+- `readableWebStreamFrom({iterable})` — convert iterable to Web `ReadableStream`.
 
 ### Async-iterator wrappers (4.x)
 
@@ -199,9 +204,13 @@ chain([
 
 ## JSONL support
 
-- `parser(reviver?)` — JSONL parser function (returns gen() pipeline).
-- `parserStream(options?)` — JSONL parser as a stream.
-- `stringerStream(options?)` — JSONL stringer as a stream.
+- `parser(reviver?)` — JSONL parser function (returns gen() pipeline; substrate-free).
+- `parserStream(options?)` — JSONL parser as a Node `Duplex` stream.
+- `parserWebStream(options?)` — JSONL parser as a Web Streams `{readable, writable}` pair.
+- `stringerStream(options?)` — JSONL stringer as a Node Transform.
+- `stringerWebStream(options?)` — JSONL stringer as a Web Streams `TransformStream`.
+
+All variants honor `{ignoreErrors: true}` by silently dropping unparseable lines (no envelope reaches the consumer); without it, a parse error errors the readable side.
 
 ```js
 import chain from 'stream-chain';

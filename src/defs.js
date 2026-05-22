@@ -84,10 +84,17 @@ const combineManyMut = (a, ...args) => {
 };
 
 // ---------------------------------------------------------------------------
-// Web Streams type guards. Shape-based: a Web ReadableStream has `getReader`
-// (Node Readable does not), a WritableStream has `getWriter` (Node Writable
-// does not), so a method-presence test suffices to disambiguate the two
-// substrates without needing a separate "not a Node stream" check.
+// Stream type guards (shape-based). Live in defs.js so the symmetric
+// is*WebStream and is*NodeStream are co-located and reachable from any
+// subpath. Neither path imports `node:stream` — both are duck-typed:
+//
+// - Web: ReadableStream has `getReader`, WritableStream has `getWriter`
+//   (Node streams expose neither).
+// - Node: streams expose `.pipe` / `.write` / `.on` plus the private
+//   `_readableState` / `_writableState` markers (Web streams expose none).
+//
+// Node guard logic is taken from
+// https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
 // ---------------------------------------------------------------------------
 
 const isReadableWebStream = x =>
@@ -113,6 +120,28 @@ const isDuplexWebStream = x =>
     isReadableWebStream(x.readable) &&
     isWritableWebStream(x.writable)
   );
+
+const isReadableNodeStream = obj =>
+  obj &&
+  typeof obj.pipe === 'function' &&
+  typeof obj.on === 'function' &&
+  (!obj._writableState ||
+    (typeof obj._readableState === 'object' ? obj._readableState.readable : null) !== false) &&
+  (!obj._writableState || obj._readableState);
+
+const isWritableNodeStream = obj =>
+  obj &&
+  typeof obj.write === 'function' &&
+  typeof obj.on === 'function' &&
+  (!obj._readableState ||
+    (typeof obj._writableState === 'object' ? obj._writableState.writable : null) !== false);
+
+const isDuplexNodeStream = obj =>
+  obj &&
+  typeof obj.pipe === 'function' &&
+  obj._readableState &&
+  typeof obj.on === 'function' &&
+  typeof obj.write === 'function';
 
 // old aliases
 const final = finalValue;
@@ -144,5 +173,8 @@ export {
   combineManyMut,
   isReadableWebStream,
   isWritableWebStream,
-  isDuplexWebStream
+  isDuplexWebStream,
+  isReadableNodeStream,
+  isWritableNodeStream,
+  isDuplexNodeStream
 };

@@ -5,31 +5,16 @@ import * as defs from './defs.js';
 import gen from './gen.js';
 import asStream from './asStream.js';
 import asWebStream from './asWebStream.js';
+import dataSource from './dataSource.js';
 
-// is*NodeStream functions taken from https://github.com/nodejs/node/blob/master/lib/internal/streams/utils.js
-const isReadableNodeStream = obj =>
-  obj &&
-  typeof obj.pipe === 'function' &&
-  typeof obj.on === 'function' &&
-  (!obj._writableState ||
-    (typeof obj._readableState === 'object' ? obj._readableState.readable : null) !== false) && // Duplex
-  (!obj._writableState || obj._readableState); // Writable has .pipe.
-
-const isWritableNodeStream = obj =>
-  obj &&
-  typeof obj.write === 'function' &&
-  typeof obj.on === 'function' &&
-  (!obj._readableState ||
-    (typeof obj._writableState === 'object' ? obj._writableState.writable : null) !== false); // Duplex
-
-const isDuplexNodeStream = obj =>
-  obj &&
-  typeof obj.pipe === 'function' &&
-  obj._readableState &&
-  typeof obj.on === 'function' &&
-  typeof obj.write === 'function';
-
-const {isReadableWebStream, isWritableWebStream, isDuplexWebStream} = defs;
+const {
+  isReadableWebStream,
+  isWritableWebStream,
+  isDuplexWebStream,
+  isReadableNodeStream,
+  isWritableNodeStream,
+  isDuplexNodeStream
+} = defs;
 
 const groupFunctions = (output, fn, index, fns) => {
   if (
@@ -185,15 +170,6 @@ const chain = (fns, options) => {
   }
 
   return stream;
-};
-
-const dataSource = fn => {
-  if (typeof fn == 'function') return fn;
-  if (fn) {
-    if (typeof fn[Symbol.asyncIterator] == 'function') return fn[Symbol.asyncIterator].bind(fn);
-    if (typeof fn[Symbol.iterator] == 'function') return fn[Symbol.iterator].bind(fn);
-  }
-  throw new TypeError('The argument should be a function or an iterable object.');
 };
 
 // from defs.js

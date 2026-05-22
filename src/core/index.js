@@ -3,6 +3,7 @@
 import * as defs from '../defs.js';
 import gen from '../gen.js';
 import fun from '../fun.js';
+import dataSource from '../dataSource.js';
 
 const chain = (fns, _options) => {
   const flat = (Array.isArray(fns) ? fns : [])
@@ -56,7 +57,8 @@ chain.chain = chain;
 chain.chainUnchecked = chain;
 chain.gen = gen;
 chain.fun = fun;
+chain.dataSource = dataSource;
 
 export default chain;
-export {chain, chain as chainUnchecked, gen, fun};
+export {chain, chain as chainUnchecked, gen, fun, dataSource};
 export * from '../defs.js';

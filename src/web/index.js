@@ -3,6 +3,7 @@
 import * as defs from '../defs.js';
 import gen from '../gen.js';
 import fun from '../fun.js';
+import dataSource from '../dataSource.js';
 import asWebStream, {
   isReadableWebStream,
   isWritableWebStream,
@@ -131,8 +132,9 @@ chain.chainUnchecked = chain;
 chain.gen = gen;
 chain.fun = fun;
 chain.asWebStream = asWebStream;
+chain.dataSource = dataSource;
 
 export default chain;
-export {chain, chain as chainUnchecked, gen, fun, asWebStream};
+export {chain, chain as chainUnchecked, gen, fun, asWebStream, dataSource};
 export {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from '../asWebStream.js';
 export * from '../defs.js';

@@ -60,22 +60,6 @@ declare function chainUnchecked<W = any, R = any>(
   options?: chain.ChainOptions
 ): chain.ChainOutput<W, R>;
 
-/**
- * Takes a function or an iterable and returns the underlying function.
- * @param fn function or iterable
- * @returns the underlying function
- * @remarks In the case of a function, it returns the argument. For iterables it returns the function associated with `Symbol.iterator` or `Symbol.asyncIterator`.
- */
-declare function dataSource<F>(
-  fn: F
-): F extends AsyncIterable<infer T>
-  ? () => AsyncIterator<T>
-  : F extends Iterable<infer T>
-    ? () => Iterator<T>
-    : F extends Fn
-      ? F
-      : never;
-
 declare namespace chain {
   /**
    * Represents a typed duplex stream as a pair of readable and writable streams.
@@ -298,7 +282,8 @@ declare namespace chain {
 }
 
 export default chain;
-export {chain, chainUnchecked, dataSource, gen, asStream, asWebStream};
+export {chain, chainUnchecked, gen, asStream, asWebStream};
+export {dataSource} from './dataSource.js';
 export {
   none,
   stop,

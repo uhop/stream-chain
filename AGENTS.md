@@ -40,12 +40,14 @@ stream-chain/
 ├── src/                          # Source code
 │   ├── index.js                  # /node entry: chain() factory + asStream + asWebStream + gen + re-exports
 │   ├── index.d.ts                # TypeScript definitions for the /node public API
-│   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, etc.) + Web Streams type guards
+│   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, etc.) + Web/Node stream type guards
 │   ├── defs.d.ts                 # TypeScript definitions for defs
 │   ├── gen.js                    # Creates async generator pipeline from functions
 │   ├── gen.d.ts
 │   ├── fun.js                    # Creates function pipeline from functions (sync-first; exported via /web and /core)
 │   ├── fun.d.ts
+│   ├── dataSource.js             # Coerces a function or iterable to an iterator-producing function (substrate-agnostic)
+│   ├── dataSource.d.ts
 │   ├── asStream.js               # Wraps a function as a Node Duplex with per-item backpressure
 │   ├── asStream.d.ts
 │   ├── asWebStream.js            # Wraps a function as a Web Streams {readable, writable} duplex pair
@@ -80,13 +82,12 @@ stream-chain/
 │       ├── skipWhile.js          # Skip items while condition is true
 │       ├── fold.js               # Reduce/fold stream to single value
 │       ├── reduce.js             # Alias for fold
-│       ├── reduceStream.js       # Reduce as a Writable stream
 │       ├── scan.js               # Running accumulator (like fold but emits each step)
 │       ├── batch.js              # Group items into fixed-size arrays
 │       ├── readableFrom.js       # Convert iterable to Node Readable stream
 │       ├── readableWebStreamFrom.js  # Convert iterable to Web Streams ReadableStream
 │       ├── reduceStream.js       # Reduce as a Node Writable stream (.accumulator)
-│       ├── reduceWebStream.js    # Reduce as a Web WritableStream ({writable, result})
+│       ├── reduceWebStream.js    # Reduce as a Web WritableStream ({writable, result, accumulator})
 │       ├── fixUtf8Stream.js      # Fix multi-byte UTF-8 splits across chunks
 │       ├── lines.js              # Split byte stream into lines
 │       ├── streamPuller.js       # Wrap Node Readable as a non-destructive async iterator

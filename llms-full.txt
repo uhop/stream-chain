@@ -322,16 +322,35 @@ Lifecycle parity with `TransformStream`: `reader.cancel(reason)` propagates to t
 
 ## dataSource(fn)
 
-Takes a function or iterable and returns the underlying iterator function.
+Takes a function or iterable and returns the underlying iterator function. Substrate-agnostic — exported from all three subpaths (`stream-chain` / `/web` / `/core`) and attached as `chain.dataSource` on each.
 
 - Function → returns the function as-is.
 - Async iterable → returns `Symbol.asyncIterator` bound to the object.
 - Iterable → returns `Symbol.iterator` bound to the object.
 
 ```js
-import {dataSource} from 'stream-chain';
+import {dataSource} from 'stream-chain';        // /node
+import {dataSource} from 'stream-chain/web';    // /web
+import {dataSource} from 'stream-chain/core';   // /core
 const iter = dataSource([1, 2, 3]); // returns [].values bound to array
 ```
+
+## Stream type guards
+
+Shape-based predicates exported from `stream-chain/defs.js` (no `node:stream` import — browser-safe to call from any substrate):
+
+```js
+import {
+  isReadableWebStream,
+  isWritableWebStream,
+  isDuplexWebStream,
+  isReadableNodeStream,
+  isWritableNodeStream,
+  isDuplexNodeStream
+} from 'stream-chain/defs.js';
+```
+
+Web guards check for `getReader`/`pipeTo` / `getWriter`/`abort`. Node guards check for `.pipe`/`.on`/`_readableState` / `.write`/`.on`/`_writableState`. The `chain.X` static surface on `/node` and `/web` entries mirrors them.
 
 ## Utilities
 
@@ -411,16 +430,36 @@ chain([scan((acc, x) => acc + x, 0)]); // input: 1,2,3 → output: 1,3,6
 
 ### reduceStream(fn, initial) / reduceStream(options)
 
-Creates a Writable stream that reduces values. The current accumulator is available as `.accumulator`.
+Creates a Node `Writable` that reduces values. The current accumulator is available as `.accumulator`.
 
 - `reduceStream(fn, initial)` — simple form.
 - `reduceStream({reducer, initial, ...writableOptions})` — options form.
+
+Reducer is called with `this` bound to the writable (`reducer.call(this, this.accumulator, chunk)`). Explicit `null` / `false` / `0` / `''` / `undefined` for `initial` are respected (presence-check semantics).
 
 ```js
 import reduceStream from 'stream-chain/utils/reduceStream.js';
 const r = reduceStream((acc, x) => acc + x, 0);
 chain([r]);
 // After stream ends: r.accumulator === sum
+```
+
+### reduceWebStream(fn, initial) / reduceWebStream(options)
+
+Web Streams counterpart of `reduceStream()`. Returns `{writable, result, accumulator}`:
+- `writable` — `WritableStream<T>` you pipe input into.
+- `result` — `Promise<A>` that resolves to the final accumulator on clean close, rejects on `abort` or reducer error.
+- `accumulator` — live getter for the running accumulator value (mirrors Node's `stream.accumulator`).
+
+Options shape: `{reducer, initial, strategy?, writableStrategy?}`. Reducer is called with `this` bound to the return object so `this.accumulator` works inside (parity with `reduceStream`).
+
+```js
+import reduceWebStream from 'stream-chain/utils/reduceWebStream.js';
+
+const r = reduceWebStream((acc, x) => acc + x, 0);
+source.pipeTo(r.writable);
+console.log(await r.result);    // sum
+console.log(r.accumulator);     // live read during the run
 ```
 
 ### batch(size)
@@ -458,14 +497,28 @@ await whenReady(); // optional, Node fast path
 
 ### readableFrom(options)
 
-Convert an iterable/iterator to a Readable stream.
+Convert an iterable / iterator / function to a Node `Readable` stream.
 
-- `options.iterable` — iterable or iterator to read from.
+- `options.iterable` — iterable or iterator to read from (or pass an iterable/function directly without wrapping in options).
 - `options.objectMode` — default: `true`.
+
+Accepts a 0-ary function (sync or async) returning a value, generator, or async generator. Speaks the chain protocol: producer can return `none`/`null`/`undefined` (skip), `stop` (terminate), `many([...])` (fan-out), `finalValue(v)` (unwrap).
 
 ```js
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 chain([readableFrom({iterable: [1, 2, 3]}), x => x * 2]);
+```
+
+### readableWebStreamFrom(options)
+
+Web Streams counterpart of `readableFrom()` — same input shapes (iterable / iterator / function / options object), returns a `ReadableStream`. Per-item backpressure via `desiredSize`/`pull()`. For the plain iterable-to-stream case the platform's `ReadableStream.from()` suffices; reach for `readableWebStreamFrom` when you need function-source / promise-resolution / chain-protocol awareness on the producer side.
+
+```js
+import readableWebStreamFrom from 'stream-chain/utils/readableWebStreamFrom.js';
+import chain from 'stream-chain/web';
+
+const c = chain([x => x * x]);
+readableWebStreamFrom([1, 2, 3]).pipeThrough(c).pipeTo(destination);
 ```
 
 ### makeStreamPuller(readable)
@@ -523,19 +576,36 @@ chain([
 
 ### parserStream(options?)
 
-Wraps `parser()` with `asStream()`. Options extend Duplex options:
+Wraps `parser()` with `asStream()`. Returns a Node `Duplex`. Options extend Duplex options:
 - `reviver` — JSON.parse reviver function.
-- `ignoreErrors` (boolean) — silently skip parse errors.
+- `ignoreErrors` (boolean) — silently skip parse errors (bad lines are dropped; no envelope reaches the consumer).
 - Default: `{writableObjectMode: false, readableObjectMode: true}`.
+
+Emitted records are `{key, value}` where `key` is the zero-based input line index.
 
 ```js
 import parserStream from 'stream-chain/jsonl/parserStream.js';
 chain([fs.createReadStream('data.jsonl'), parserStream()]);
 ```
 
+### parserWebStream(options?)
+
+Web Streams counterpart of `parserStream()`. Wraps `parser()` with `asWebStream()`. Returns `{readable, writable}`. Options:
+- `reviver` — JSON.parse reviver function.
+- `ignoreErrors` (boolean) — silently skip parse errors.
+- `strategy` / `readableStrategy` / `writableStrategy` — Web Streams `QueuingStrategy` options.
+
+```js
+import parserWebStream from 'stream-chain/jsonl/parserWebStream.js';
+import chain from 'stream-chain/web';
+
+const c = chain([parserWebStream(), obj => console.log(obj)]);
+fetchResponse.body.pipeTo(c.writable);
+```
+
 ### stringerStream(options?)
 
-Duplex stream that serializes objects to JSONL. Options extend Duplex options:
+Node `Transform` that serializes objects to JSONL. Options extend Duplex options:
 - `replacer` — JSON.stringify replacer function.
 - `space` — JSON.stringify space argument.
 - `prefix` (string, default: '') — prepended to output.
@@ -553,6 +623,20 @@ Output as JSON array:
 ```js
 stringerStream({prefix: '[', suffix: ']', separator: ','});
 // input: 1, 2, 3 → output: [1,2,3]
+```
+
+### stringerWebStream(options?)
+
+Web Streams counterpart of `stringerStream()`. Implemented as a `TransformStream` — JSON.stringify is synchronous so the platform's transform machinery is sufficient (no need for a custom `{readable, writable}` pair like `asWebStream`). `flush()` emits the suffix (or `emptyValue` / `prefix+suffix` on an empty stream).
+
+Options: same as `stringerStream` (`prefix`, `suffix`, `separator`, `emptyValue`, `replacer`, `space`) plus `strategy` / `readableStrategy` / `writableStrategy` for Web Streams `QueuingStrategy` configuration.
+
+Returns `TransformStream<T, string>` — use via `pipeThrough()` or directly in a `/web` chain.
+
+```js
+import stringerWebStream from 'stream-chain/jsonl/stringerWebStream.js';
+
+source.pipeThrough(stringerWebStream()).pipeTo(destination);
 ```
 
 ## TypeScript

@@ -54,4 +54,5 @@ export default chain;
 export {chain, chainUnchecked};
 export {gen} from '../gen.js';
 export {fun} from '../fun.js';
+export {dataSource} from '../dataSource.js';
 export * from '../defs.js';
