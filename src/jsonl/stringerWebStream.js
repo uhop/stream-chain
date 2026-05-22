@@ -17,8 +17,9 @@ const stringerWebStream = options => {
     space = options.space;
   }
 
-  const writableStrategy = options && options.writableStrategy;
-  const readableStrategy = options && options.readableStrategy;
+  const strategy = options?.strategy;
+  const writableStrategy = options?.writableStrategy ?? strategy;
+  const readableStrategy = options?.readableStrategy ?? strategy;
 
   return new TransformStream(
     {

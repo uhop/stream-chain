@@ -21,9 +21,9 @@ const asWebStream = (fn, options) => {
 
   // Web Streams' standard `QueuingStrategy` shape ({highWaterMark, size}).
   // `strategy` is shorthand for "apply to both sides"; per-side wins.
-  const strategy = options && options.strategy;
-  const readableStrategy = (options && options.readableStrategy) || strategy;
-  const writableStrategy = (options && options.writableStrategy) || strategy;
+  const strategy = options?.strategy;
+  const readableStrategy = options?.readableStrategy ?? strategy;
+  const writableStrategy = options?.writableStrategy ?? strategy;
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 

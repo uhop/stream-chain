@@ -104,3 +104,30 @@ test.asPromise('jsonl parserStream: bad json', (t, resolve) => {
     resolve();
   });
 });
+
+test.asPromise('jsonl parserStream: ignoreErrors drops bad lines silently', (t, resolve) => {
+  const good = {a: 1};
+  const input = ['not json', JSON.stringify(good), 'also not json'].join('\n');
+  const out = [];
+
+  readString(input)
+    .pipe(parserStream({ignoreErrors: true}))
+    .pipe(
+      new Writable({
+        objectMode: true,
+        write(chunk, _, callback) {
+          out.push(chunk);
+          callback(null);
+        },
+        final(callback) {
+          // Bad lines map to `defs.none` inside the parser and are filtered out
+          // by asStream — no envelope reaches userland. `key` preserves the
+          // source line index of the surviving record.
+          t.equal(out.length, 1, 'only valid lines emit');
+          t.deepEqual(out[0], {key: 1, value: good});
+          resolve();
+          callback(null);
+        }
+      })
+    );
+});

@@ -128,7 +128,7 @@ const chain = (fns, options) => {
   fns = fns.flat(Infinity).filter(fn => fn);
 
   const streams = (
-      options && options.noGrouping
+      options?.noGrouping
         ? fns.map(wrapFunctions)
         : fns
             .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
@@ -180,7 +180,7 @@ const chain = (fns, options) => {
   }
 
   // connect events
-  if (!options || !options.skipEvents) {
+  if (!options?.skipEvents) {
     streams.forEach(item => item.on('error', error => stream.emit('error', error)));
   }
 

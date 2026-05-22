@@ -17,11 +17,15 @@ const checkedParse = reviver => string => {
 };
 
 const parser = options => {
-  const reviver = (options && options.reviver) || options,
-    ignoreErrors = options && options.ignoreErrors,
+  const reviver = options?.reviver ?? options,
+    ignoreErrors = options?.ignoreErrors,
     parseFn = ignoreErrors ? checkedParse(reviver) : parse(reviver);
   let counter = 0;
-  return gen(fixUtf8Stream(), lines(), string => ({key: counter++, value: parseFn(string)}));
+  return gen(fixUtf8Stream(), lines(), string => {
+    const value = parseFn(string);
+    const key = counter++;
+    return value === none ? none : {key, value};
+  });
 };
 
 export default parser;

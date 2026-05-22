@@ -64,8 +64,10 @@ stream-chain/
 │   ├── jsonl/                    # JSONL (line-separated JSON) support
 │   │   ├── parser.js             # JSONL parser function (returns gen() pipeline)
 │   │   ├── parser.d.ts
-│   │   ├── parserStream.js       # JSONL parser as a Duplex stream
+│   │   ├── parserStream.js       # JSONL parser as a Node Duplex
 │   │   ├── parserStream.d.ts
+│   │   ├── parserWebStream.js    # JSONL parser as a Web Streams duplex pair
+│   │   ├── parserWebStream.d.ts
 │   │   ├── stringerStream.js     # JSONL stringer as a Node Transform
 │   │   ├── stringerStream.d.ts
 │   │   ├── stringerWebStream.js  # JSONL stringer as a Web Streams TransformStream
@@ -83,6 +85,8 @@ stream-chain/
 │       ├── batch.js              # Group items into fixed-size arrays
 │       ├── readableFrom.js       # Convert iterable to Node Readable stream
 │       ├── readableWebStreamFrom.js  # Convert iterable to Web Streams ReadableStream
+│       ├── reduceStream.js       # Reduce as a Node Writable stream (.accumulator)
+│       ├── reduceWebStream.js    # Reduce as a Web WritableStream ({writable, result})
 │       ├── fixUtf8Stream.js      # Fix multi-byte UTF-8 splits across chunks
 │       ├── lines.js              # Split byte stream into lines
 │       ├── streamPuller.js       # Wrap Node Readable as a non-destructive async iterator

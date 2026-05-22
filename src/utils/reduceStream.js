@@ -6,15 +6,10 @@ const defaultInitial = 0;
 const defaultReducer = (_acc, value) => value;
 
 const reduceStream = (options, initial) => {
-  if (!options || !options.reducer) {
+  if (typeof options === 'function') {
     options = {reducer: options, initial};
   }
-  let accumulator = defaultInitial,
-    reducer = defaultReducer;
-  if (options) {
-    'initial' in options && (accumulator = options.initial);
-    'reducer' in options && (reducer = options.reducer);
-  }
+  const reducer = typeof options?.reducer === 'function' ? options.reducer : defaultReducer;
 
   const stream = /** @type {import('node:stream').Writable & {accumulator: any}} */ (
     new Writable({
@@ -38,7 +33,7 @@ const reduceStream = (options, initial) => {
       }
     })
   );
-  stream.accumulator = accumulator;
+  stream.accumulator = options && 'initial' in options ? options.initial : defaultInitial;
 
   return stream;
 };

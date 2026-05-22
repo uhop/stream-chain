@@ -37,8 +37,10 @@ src/                          # Source code
 ├── jsonl/                    # JSONL (line-separated JSON) support
 │   ├── parser.js             # JSONL parser: returns gen() pipeline (fixUtf8 → lines → JSON.parse)
 │   ├── parser.d.ts
-│   ├── parserStream.js       # JSONL parser as a Duplex (parser wrapped with asStream)
+│   ├── parserStream.js       # JSONL parser (Node Duplex): parser() wrapped with asStream
 │   ├── parserStream.d.ts
+│   ├── parserWebStream.js    # JSONL parser (Web duplex pair): parser() wrapped with asWebStream
+│   ├── parserWebStream.d.ts
 │   ├── stringerStream.js     # JSONL stringer (Node Transform): objects → newline-separated JSON strings
 │   ├── stringerStream.d.ts
 │   ├── stringerWebStream.js  # JSONL stringer (Web TransformStream): same contract, Web Streams substrate
@@ -56,6 +58,8 @@ src/                          # Source code
     ├── batch.js              # batch(size) — group items into fixed-size arrays
     ├── readableFrom.js       # readableFrom({iterable}) — iterable/iterator to Node Readable
     ├── readableWebStreamFrom.js  # readableWebStreamFrom({iterable}) — iterable/iterator to Web ReadableStream
+    ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Node Writable (.accumulator)
+    ├── reduceWebStream.js    # reduceWebStream(fn, initial) — reduce as Web WritableStream ({writable, result})
     ├── fixUtf8Stream.js      # fixUtf8Stream() — repartition chunks for valid UTF-8
     ├── lines.js              # lines() — split byte stream into lines
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator

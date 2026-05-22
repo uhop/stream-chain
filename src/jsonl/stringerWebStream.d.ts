@@ -23,9 +23,11 @@ interface StringerWebStreamOptions {
    * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify
    */
   space?: string | number;
-  /** Optional Web Streams `QueuingStrategy` for the writable side. */
+  /** Queuing strategy applied to both sides if no side-specific strategy is given. */
+  strategy?: QueuingStrategy;
+  /** Optional Web Streams `QueuingStrategy` for the writable side. Overrides `strategy`. */
   writableStrategy?: QueuingStrategy<unknown>;
-  /** Optional Web Streams `QueuingStrategy` for the readable side. */
+  /** Optional Web Streams `QueuingStrategy` for the readable side. Overrides `strategy`. */
   readableStrategy?: QueuingStrategy<string>;
 }
 

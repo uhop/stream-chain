@@ -11,7 +11,7 @@ const readableWebStreamFrom = options => {
   ) {
     options = {iterable: options};
   }
-  let fn = options && options.iterable;
+  let fn = options?.iterable;
   if (fn && typeof fn != 'function') {
     if (typeof fn[Symbol.asyncIterator] == 'function') {
       fn = fn[Symbol.asyncIterator].bind(fn);
