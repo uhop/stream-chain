@@ -66,8 +66,10 @@ stream-chain/
 │   │   ├── parser.d.ts
 │   │   ├── parserStream.js       # JSONL parser as a Duplex stream
 │   │   ├── parserStream.d.ts
-│   │   ├── stringerStream.js     # JSONL stringer as a Duplex stream
-│   │   └── stringerStream.d.ts
+│   │   ├── stringerStream.js     # JSONL stringer as a Node Transform
+│   │   ├── stringerStream.d.ts
+│   │   ├── stringerWebStream.js  # JSONL stringer as a Web Streams TransformStream
+│   │   └── stringerWebStream.d.ts
 │   └── utils/                    # Utility functions
 │       ├── take.js               # Take N items from stream
 │       ├── takeWhile.js          # Take items while condition is true
@@ -79,7 +81,8 @@ stream-chain/
 │       ├── reduceStream.js       # Reduce as a Writable stream
 │       ├── scan.js               # Running accumulator (like fold but emits each step)
 │       ├── batch.js              # Group items into fixed-size arrays
-│       ├── readableFrom.js       # Convert iterable to Readable stream
+│       ├── readableFrom.js       # Convert iterable to Node Readable stream
+│       ├── readableWebStreamFrom.js  # Convert iterable to Web Streams ReadableStream
 │       ├── fixUtf8Stream.js      # Fix multi-byte UTF-8 splits across chunks
 │       ├── lines.js              # Split byte stream into lines
 │       ├── streamPuller.js       # Wrap Node Readable as a non-destructive async iterator

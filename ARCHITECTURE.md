@@ -39,8 +39,10 @@ src/                          # Source code
 │   ├── parser.d.ts
 │   ├── parserStream.js       # JSONL parser as a Duplex (parser wrapped with asStream)
 │   ├── parserStream.d.ts
-│   ├── stringerStream.js     # JSONL stringer: objects → newline-separated JSON strings
-│   └── stringerStream.d.ts
+│   ├── stringerStream.js     # JSONL stringer (Node Transform): objects → newline-separated JSON strings
+│   ├── stringerStream.d.ts
+│   ├── stringerWebStream.js  # JSONL stringer (Web TransformStream): same contract, Web Streams substrate
+│   └── stringerWebStream.d.ts
 └── utils/                    # Utility functions (most return values for use in chain())
     ├── take.js               # take(n, finalValue) — take N items, then stop
     ├── takeWhile.js          # takeWhile(fn, finalValue) — take while predicate is true
@@ -52,7 +54,8 @@ src/                          # Source code
     ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Writable stream
     ├── scan.js               # scan(fn, initial) — running accumulator, emits each step
     ├── batch.js              # batch(size) — group items into fixed-size arrays
-    ├── readableFrom.js       # readableFrom({iterable}) — iterable/iterator to Readable
+    ├── readableFrom.js       # readableFrom({iterable}) — iterable/iterator to Node Readable
+    ├── readableWebStreamFrom.js  # readableWebStreamFrom({iterable}) — iterable/iterator to Web ReadableStream
     ├── fixUtf8Stream.js      # fixUtf8Stream() — repartition chunks for valid UTF-8
     ├── lines.js              # lines() — split byte stream into lines
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator

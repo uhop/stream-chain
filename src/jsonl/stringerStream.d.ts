@@ -30,9 +30,9 @@ interface StringerOptions {
 }
 
 /**
- * Returns a JSONL stringer as a duplex stream.
+ * Returns a JSONL stringer as a Transform stream.
  * @param options options for the stringer stream (see {@link StringerOptions})
- * @returns a duplex stream
+ * @returns a Transform stream
  */
 declare function stringer<T>(options?: StringerOptions): TypedTransform<T, string>;
 
