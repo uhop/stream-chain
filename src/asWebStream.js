@@ -27,6 +27,10 @@ const asWebStream = (fn, options) => {
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
+  // {batch: n} coalesces terminal items into one `many()` chunk per n items.
+  // n <= 1 (or unset) keeps the per-item path. See asStream.js for rationale.
+  const batchSize = options?.batch > 1 ? options.batch : 0;
+
   let stopped = false;
   let readableClosed = false;
   let writableErrored = false;
@@ -80,9 +84,9 @@ const asWebStream = (fn, options) => {
     readableStrategy
   );
 
-  // After cancel/abort, enqueue silently no-ops so producers see clean
+  // After cancel/abort, pushChunk silently no-ops so producers see clean
   // completion instead of TypeError from enqueue-on-closed-controller.
-  const enqueue = value => {
+  const pushChunk = value => {
     if (stopped) return;
     readableController.enqueue(value);
     if (readableController.desiredSize <= 0) {
@@ -90,6 +94,31 @@ const asWebStream = (fn, options) => {
         pendingDrain = resolve;
       });
     }
+  };
+
+  // Transport batching — see asStream.js for the rationale. Adding an item is
+  // synchronous until a batch fills; only the boundary-crossing enqueue can
+  // return a backpressure promise. The next stage auto-unbundles `many()`, so
+  // this is invisible to downstream functions. Default (batchSize 0) is the
+  // per-item path: enqueue === pushChunk, byte-for-byte today's behavior.
+  let buffer = batchSize ? [] : null;
+
+  const enqueue = batchSize
+    ? value => {
+        buffer.push(value);
+        if (buffer.length < batchSize) return;
+        const b = buffer;
+        buffer = [];
+        return pushChunk(defs.many(b));
+      }
+    : pushChunk;
+
+  // Terminal flush (close / Stop): emit the partial batch as one chunk without
+  // awaiting backpressure. Guarded against a closed readable.
+  const flushBatch = () => {
+    if (readableClosed || !buffer || !buffer.length) return;
+    readableController.enqueue(defs.many(buffer));
+    buffer = [];
   };
 
   // applyFns is unconditionally async: per-item backpressure between pushes
@@ -210,6 +239,25 @@ const asWebStream = (fn, options) => {
     return enqueue(value);
   };
 
+  // A `many()` input is fanned through the plain `fn`: apply it to each value,
+  // run each result through processValue. Reuses processValue for output and
+  // keeps non-many input on the sync-fast path. See asStream.js for rationale.
+  const processInput = chunk => {
+    if (!defs.isMany(chunk)) return processValue(fn(chunk));
+    const values = defs.getManyValues(chunk);
+    let promise;
+    for (let i = 0; i < values.length; ++i) {
+      const v = values[i];
+      if (promise) {
+        promise = promise.then(() => processValue(fn(v)));
+      } else {
+        const r = processValue(fn(v));
+        if (r) promise = r;
+      }
+    }
+    return promise;
+  };
+
   const absorbStop = error => {
     if (error instanceof defs.Stop) {
       stopped = true;
@@ -243,7 +291,7 @@ const asWebStream = (fn, options) => {
             await applyFns(chunk, 0, enqueue);
             return;
           }
-          const r = processValue(fn(chunk));
+          const r = processInput(chunk);
           if (r) await r;
         } catch (error) {
           if (absorbStop(error)) return;
@@ -273,6 +321,7 @@ const asWebStream = (fn, options) => {
             throw error;
           }
         }
+        flushBatch();
         closeReadable();
       },
       abort(reason) {

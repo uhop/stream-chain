@@ -7,6 +7,7 @@ const finalSymbol = Symbol.for('object-stream.final');
 const manySymbol = Symbol.for('object-stream.many');
 const flushSymbol = Symbol.for('object-stream.flush');
 const fListSymbol = Symbol.for('object-stream.fList');
+const batchedSymbol = Symbol.for('object-stream.batched');
 
 const finalValue = value => ({[finalSymbol]: 1, value});
 const many = values => ({[manySymbol]: 1, values});
@@ -37,6 +38,19 @@ const clearFunctionList = o => {
   delete o[fListSymbol];
   return o;
 };
+
+// `batched` marks a stream/sink as batch-capable: it consumes `many()`
+// envelopes as single chunks and unbundles them itself. It's a pure capability
+// flag — the batch *size* is chain()'s `{batch:N}` option, not stored here, and
+// the size of an actual batch in flight is the `many()` envelope's array
+// length. chain() reads the marker to decide whether to batch a section's drain
+// into the marked downstream stage.
+const batched = target => {
+  target[batchedSymbol] = 1;
+  return target;
+};
+
+const isBatched = o => o && o[batchedSymbol] === 1;
 
 class Stop extends Error {}
 
@@ -167,6 +181,9 @@ export {
   getFunctionList,
   setFunctionList,
   clearFunctionList,
+  batchedSymbol,
+  batched,
+  isBatched,
   toMany,
   normalizeMany,
   combineMany,

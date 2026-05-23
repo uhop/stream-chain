@@ -16,6 +16,10 @@ const {
   isDuplexNodeStream
 } = defs;
 
+// Carry a `batched()` marker across a Web→Node wrapper so chain's batching
+// policy still sees a batch-capable downstream after Duplex/Writable.fromWeb.
+const carryBatched = (src, dst) => (defs.isBatched(src) ? defs.batched(dst) : dst);
+
 const groupFunctions = (output, fn, index, fns) => {
   if (
     isDuplexNodeStream(fn) ||
@@ -26,15 +30,15 @@ const groupFunctions = (output, fn, index, fns) => {
     return output;
   }
   if (isDuplexWebStream(fn)) {
-    output.push(Duplex.fromWeb(fn, {objectMode: true}));
+    output.push(carryBatched(fn, Duplex.fromWeb(fn, {objectMode: true})));
     return output;
   }
   if (!index && isReadableWebStream(fn)) {
-    output.push(Readable.fromWeb(fn, {objectMode: true}));
+    output.push(carryBatched(fn, Readable.fromWeb(fn, {objectMode: true})));
     return output;
   }
   if (index === fns.length - 1 && isWritableWebStream(fn)) {
-    output.push(Writable.fromWeb(fn, {objectMode: true}));
+    output.push(carryBatched(fn, Writable.fromWeb(fn, {objectMode: true})));
     return output;
   }
   if (typeof fn != 'function')
@@ -49,16 +53,20 @@ const groupFunctions = (output, fn, index, fns) => {
   return output;
 };
 
-const produceStreams = item => {
-  if (Array.isArray(item)) {
-    if (!item.length) return null;
-    if (item.length == 1) return item[0] && /** @type {any} */ (chain).asStream(item[0]);
-    return /** @type {any} */ (chain).asStream(/** @type {any} */ (chain).gen(...item));
-  }
-  return item;
+// Build a grouped item into a stream. A function group batches its drain when
+// the next item consumes `many()` (a `batched()` stream — function groups are
+// never adjacent, groupFunctions merges them) or, for the last group, when
+// batchOutput is set. canBatch already folds in `batchSize > 1`.
+const produceStreams = (item, next, canBatch, batchSize, batchOutput) => {
+  if (!Array.isArray(item)) return item;
+  if (!item.length) return null;
+  const batchHere = canBatch && (next === undefined ? batchOutput : defs.isBatched(next));
+  const options = batchHere ? {batch: batchSize} : undefined;
+  if (item.length == 1) return item[0] && /** @type {any} */ (chain).asStream(item[0], options);
+  return /** @type {any} */ (chain).asStream(/** @type {any} */ (chain).gen(...item), options);
 };
 
-const wrapFunctions = (fn, index, fns) => {
+const wrapFunctions = (fn, index, fns, options) => {
   if (
     isDuplexNodeStream(fn) ||
     (!index && isReadableNodeStream(fn)) ||
@@ -67,15 +75,15 @@ const wrapFunctions = (fn, index, fns) => {
     return fn; // an acceptable stream
   }
   if (isDuplexWebStream(fn)) {
-    return Duplex.fromWeb(fn, {objectMode: true});
+    return carryBatched(fn, Duplex.fromWeb(fn, {objectMode: true}));
   }
   if (!index && isReadableWebStream(fn)) {
-    return Readable.fromWeb(fn, {objectMode: true});
+    return carryBatched(fn, Readable.fromWeb(fn, {objectMode: true}));
   }
   if (index === fns.length - 1 && isWritableWebStream(fn)) {
-    return Writable.fromWeb(fn, {objectMode: true});
+    return carryBatched(fn, Writable.fromWeb(fn, {objectMode: true}));
   }
-  if (typeof fn == 'function') return /** @type {any} */ (chain).asStream(fn); // a function
+  if (typeof fn == 'function') return /** @type {any} */ (chain).asStream(fn, options); // a function
   throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
 };
 
@@ -112,15 +120,42 @@ const chain = (fns, options) => {
 
   fns = fns.flat(Infinity).filter(fn => fn);
 
-  const streams = (
-      options?.noGrouping
-        ? fns.map(wrapFunctions)
-        : fns
-            .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
-            .flat(Infinity)
-            .reduce(groupFunctions, [])
-            .map(produceStreams)
-    ).filter(s => s),
+  // Transport batching policy. `batch` defaults to 1000; `<= 1` disables it
+  // (today's per-item behavior). batching only activates at a boundary whose
+  // downstream consumes `many()` — internal `batched()` stages, or the chain's
+  // own output when `batchOutput` is set. See produceStreams / the noGrouping map.
+  const batchSize = options?.batch ?? 1000;
+  const canBatch = batchSize > 1;
+  const batchOutput = canBatch && !!options?.batchOutput;
+
+  let rawStreams;
+  if (options?.noGrouping) {
+    // A function may batch into a following `batched()` stream (or the chain
+    // output when batchOutput is set). Function-sections now unbundle a `many()`
+    // input too (asStream's processInput), so batching section→section here
+    // would be *safe* — we don't, to preserve noGrouping's per-stage
+    // granularity and stay uniform with the grouping path (batch only into
+    // `batched()`).
+    rawStreams = fns.map((fn, index, arr) => {
+      let opts;
+      if (canBatch && typeof fn == 'function') {
+        const next = arr[index + 1];
+        const batchHere = next === undefined ? batchOutput : defs.isBatched(next);
+        if (batchHere) opts = {batch: batchSize};
+      }
+      return wrapFunctions(fn, index, arr, opts);
+    });
+  } else {
+    const grouped = fns
+      .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
+      .flat(Infinity)
+      .reduce(groupFunctions, []);
+    rawStreams = grouped.map((item, i) =>
+      produceStreams(item, grouped[i + 1], canBatch, batchSize, batchOutput)
+    );
+  }
+
+  const streams = rawStreams.filter(s => s),
     input = streams[0],
     output = streams.reduce((output, item) => (output && output.pipe(item)) || item);
 
@@ -197,6 +232,10 @@ chain.isFunctionList = defs.isFunctionList;
 chain.getFunctionList = defs.getFunctionList;
 chain.setFunctionList = defs.setFunctionList;
 chain.clearFunctionList = defs.clearFunctionList;
+
+chain.batchedSymbol = defs.batchedSymbol;
+chain.batched = defs.batched;
+chain.isBatched = defs.isBatched;
 
 chain.toMany = defs.toMany;
 chain.normalizeMany = defs.normalizeMany;

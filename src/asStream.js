@@ -15,6 +15,12 @@ const asStream = (fn, options) => {
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
+  // {batch: n} coalesces terminal items into one `many()` chunk per n items.
+  // n <= 1 (or unset) keeps the per-item path. chain() sets this; standalone
+  // callers pass an explicit size. Left in the Duplex options spread untouched —
+  // Node ignores the unknown `batch` key (no collision with documented options).
+  const batchSize = options?.batch > 1 ? options.batch : 0;
+
   let stopped = false;
   let nullPushed = false;
   let resolvePaused = null;
@@ -34,15 +40,43 @@ const asStream = (fn, options) => {
     stream.push(null);
   };
 
-  // After Stop / destroy, enqueue silently no-ops so producers see clean
+  // After Stop / destroy, pushChunk silently no-ops so producers see clean
   // completion instead of push-after-end errors.
-  const enqueue = value => {
+  const pushChunk = value => {
     if (stopped) return;
     if (!stream.push(value)) {
       return new Promise(resolve => {
         resolvePaused = resolve;
       });
     }
+  };
+
+  // Transport batching: when batchSize > 1, terminal items accumulate into a
+  // buffer and cross the boundary as one `many()` chunk per batch. Adding an
+  // item stays synchronous — no promise until a batch actually fills, at which
+  // point the single boundary-crossing push can return a backpressure promise.
+  // The next stage auto-unbundles `many()` (see applyFns isMany), so this is
+  // invisible to downstream functions. Default (batchSize 0) is the per-item
+  // path: enqueue === pushChunk, byte-for-byte today's behavior.
+  let buffer = batchSize ? [] : null;
+
+  const enqueue = batchSize
+    ? value => {
+        buffer.push(value);
+        if (buffer.length < batchSize) return;
+        const b = buffer;
+        buffer = [];
+        return pushChunk(defs.many(b));
+      }
+    : pushChunk;
+
+  // Terminal flush (final / Stop): emit the partial batch as one chunk without
+  // awaiting backpressure — it's the last chunk before end, so a single
+  // over-hwm chunk is fine and keeps the terminal paths synchronous.
+  const flushBatch = () => {
+    if (nullPushed || !buffer || !buffer.length) return;
+    stream.push(defs.many(buffer));
+    buffer = [];
   };
 
   // applyFns is unconditionally async — per-item backpressure between pushes
@@ -163,8 +197,31 @@ const asStream = (fn, options) => {
     return enqueue(value);
   };
 
+  // A `many()` *input* (a batched chunk from upstream) is fanned through the
+  // plain `fn`: apply it to each value, then run each result through
+  // processValue. Mirrors processValue's many() handling on the input side and
+  // reuses it for output, keeping non-many input on the sync-fast path. (The
+  // applyFns path already unbundles input for gen()/fun() lists; this gives a
+  // plain-fn stream the same, so a `batched()` upstream can feed it safely.)
+  const processInput = (chunk, encoding) => {
+    if (!defs.isMany(chunk)) return processValue(fn(chunk, encoding));
+    const values = defs.getManyValues(chunk);
+    let promise;
+    for (let i = 0; i < values.length; ++i) {
+      const v = values[i];
+      if (promise) {
+        promise = promise.then(() => processValue(fn(v)));
+      } else {
+        const r = processValue(fn(v));
+        if (r) promise = r;
+      }
+    }
+    return promise;
+  };
+
   const absorbStop = error => {
     if (error instanceof defs.Stop) {
+      flushBatch();
       stopped = true;
       signalEnd();
       return true;
@@ -193,7 +250,7 @@ const asStream = (fn, options) => {
       }
       let r;
       try {
-        r = processValue(fn(chunk, encoding));
+        r = processInput(chunk, encoding);
       } catch (error) {
         return finishWrite(callback, error);
       }
@@ -208,6 +265,7 @@ const asStream = (fn, options) => {
     },
     final(callback) {
       const onComplete = () => {
+        flushBatch();
         signalEnd();
         callback(null);
       };
