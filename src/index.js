@@ -66,7 +66,8 @@ const produceStreams = (item, next, canBatch, batchSize, batchOutput) => {
   return /** @type {any} */ (chain).asStream(/** @type {any} */ (chain).gen(...item), options);
 };
 
-const wrapFunctions = (fn, index, fns, options) => {
+// Used only by the noGrouping path, which is intentionally unbatched (see chain).
+const wrapFunctions = (fn, index, fns) => {
   if (
     isDuplexNodeStream(fn) ||
     (!index && isReadableNodeStream(fn)) ||
@@ -75,15 +76,15 @@ const wrapFunctions = (fn, index, fns, options) => {
     return fn; // an acceptable stream
   }
   if (isDuplexWebStream(fn)) {
-    return carryBatched(fn, Duplex.fromWeb(fn, {objectMode: true}));
+    return Duplex.fromWeb(fn, {objectMode: true});
   }
   if (!index && isReadableWebStream(fn)) {
-    return carryBatched(fn, Readable.fromWeb(fn, {objectMode: true}));
+    return Readable.fromWeb(fn, {objectMode: true});
   }
   if (index === fns.length - 1 && isWritableWebStream(fn)) {
-    return carryBatched(fn, Writable.fromWeb(fn, {objectMode: true}));
+    return Writable.fromWeb(fn, {objectMode: true});
   }
-  if (typeof fn == 'function') return /** @type {any} */ (chain).asStream(fn, options); // a function
+  if (typeof fn == 'function') return /** @type {any} */ (chain).asStream(fn); // a function
   throw TypeError('Item #' + index + ' is not a proper stream, nor a function.');
 };
 
@@ -130,21 +131,11 @@ const chain = (fns, options) => {
 
   let rawStreams;
   if (options?.noGrouping) {
-    // A function may batch into a following `batched()` stream (or the chain
-    // output when batchOutput is set). Function-sections now unbundle a `many()`
-    // input too (asStream's processInput), so batching section→section here
-    // would be *safe* — we don't, to preserve noGrouping's per-stage
-    // granularity and stay uniform with the grouping path (batch only into
-    // `batched()`).
-    rawStreams = fns.map((fn, index, arr) => {
-      let opts;
-      if (canBatch && typeof fn == 'function') {
-        const next = arr[index + 1];
-        const batchHere = next === undefined ? batchOutput : defs.isBatched(next);
-        if (batchHere) opts = {batch: batchSize};
-      }
-      return wrapFunctions(fn, index, arr, opts);
-    });
+    // noGrouping is the per-stage debug / 2.x-compat mode (every function is its
+    // own stream). Batching is intentionally NOT applied — `batch`/`batchOutput`
+    // are ignored here — since it would buffer across exactly the per-stage
+    // boundaries this mode exists to expose.
+    rawStreams = fns.map(wrapFunctions);
   } else {
     const grouped = fns
       .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
