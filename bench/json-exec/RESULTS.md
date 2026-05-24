@@ -87,6 +87,36 @@ survivor; `exec` still keeps the upstream many()-fan-out + filtered tokens
 synchronous, so it stays marginally ahead rather than paying a penalty for its
 .then-chaining.
 
+### node-src.js — same as node.js but drives the PROMOTED `src/exec.js`
+
+| case | median / record | op/s |
+| --- | --- | --- |
+| `applyFns (current)` | 10.62 µs | 94k |
+| **`exec (src/exec.js)`** | **7.86 µs** | **127k** |
+
+**35% faster** — reproduces node.js's prototype number, so the promotion from
+`bench/json-exec/exec.js` to `src/exec.js` preserved the perf (confirmed, not
+assumed). Identical output.
+
+### Cross-runtime — `exec` faster than baseline (all benches)
+
+Node v26.0.0 / Bun 1.3.x / Deno 2.x, same host. "+x%" = exec faster than
+`applyFns` (or, for `core`, than `fun`). Positive = win.
+
+| bench | Node | Bun | Deno |
+| --- | --- | --- | --- |
+| `node-src` (src/exec.js, Node Duplex) | +35% | +59.3% | +32.3% |
+| `node` (prototype, Node Duplex) | +33.4% | +57.9% | +26.7% |
+| `web` (Web Streams) | +10.7% | +16.8% | +11.6% |
+| `node-async` (a stage awaits) | +4.7% | −1.3% (wash) | +2.6% |
+| `core` (in-process, vs `fun`) | +23.6% | +14.5% | +25.4% |
+
+Trend: the sync-heavy path wins on every runtime (Bun largest at ~59%); `src` ≈
+prototype everywhere; Web is positive on all three (not Node-only); the
+async-saturated case is the only soft spot — a small win on Node/Deno and a
+~1.3% wash on Bun (CI bands overlap), i.e. "faster or even" everywhere, never a
+meaningful regression.
+
 ## Verdict
 
 A real, measured executor-layer win on **both** substrates (Node ~35%, Web ~11%
