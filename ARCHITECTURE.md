@@ -13,7 +13,7 @@ package.json                  # Package config; "tape6" section configures test 
 src/                          # Source code
 ├── index.js                  # /node entry: chain() factory + asStream + asWebStream + gen + dataSource + re-exports
 ├── index.d.ts                # TypeScript declarations for /node
-├── defs.js                   # Special values (none, stop, many, finalValue, flushable, fList) + Web Streams type guards
+├── defs.js                   # Special values (none, stop, many, finalValue, flushable, fList, batched) + Web Streams type guards
 ├── defs.d.ts
 ├── gen.js                    # Async generator pipeline from a list of functions
 ├── gen.d.ts
@@ -85,7 +85,7 @@ wiki/                         # GitHub wiki documentation (git submodule)
 
 1. User calls `chain(fns, options)` with an array of functions, streams, and/or arrays.
 2. The array is flattened (nested arrays are inlined, falsy values removed).
-3. Unless `noGrouping: true` (`/node` only), consecutive functions are grouped together using `gen()` for efficiency and wrapped into a single stream stage via `asStream()` (`/node`) or `asWebStream()` (`/web`).
+3. Unless `noGrouping: true` (`/node` only), consecutive functions are grouped together using `gen()` for efficiency and wrapped into a single stream stage via `asStream()` (`/node`) or `asWebStream()` (`/web`). When `{batch:N}` is set (default 1000; `<= 1` disables) and a section's downstream stage is `batched()`, that section's drain is coalesced into `many()` chunks — see [Transport batching](#transport-batching). `noGrouping` opts out of batching entirely.
 4. All resulting stages are piped together sequentially — `Duplex.pipe()` in `/node`, `ReadableStream.pipeTo()` in `/web`.
 5. A wrapper is created (Node `Duplex` for `/node`, plain `{readable, writable}` object for `/web`) that delegates writes to the first stage and reads from the last stage.
 6. (`/node` only) Error events from all internal stages are forwarded to the wrapper unless `skipEvents: true`. (`/web` propagates errors via `pipeTo`'s default abort-on-error semantics.)
@@ -139,6 +139,15 @@ For this reason `fun()` is intentionally NOT on the default `stream-chain` / `/n
 ### asWebStream() — function to Web Streams duplex pair
 
 `asWebStream(fn[, options])` wraps any function as a `{readable, writable}` Web Streams duplex pair. NOT a `TransformStream` — `transform()` can't suspend mid-call for per-item backpressure. Per-item backpressure: when `controller.desiredSize <= 0` after an `enqueue`, the next push returns a Promise that resolves when `pull()` fires.
+
+### Transport batching
+
+A high-cardinality pipeline pays a per-item cost at each stream boundary — one objectMode `push()` (and a backpressure check) per terminal item. Transport batching coalesces those into one `many()` chunk per N items, crossing the boundary once instead of N times (~3× on a JSONL/SAX-style drain through the real `chain()`).
+
+- `batched(stream)` (in `defs.js`) marks a stream/sink as batch-capable: it accepts `many()` envelopes as single chunks and unbundles them itself. `isBatched(o)` tests the marker. Both are re-exported and attached as `chain.batched` / `chain.isBatched`.
+- `asStream`/`asWebStream` take a `{batch:n}` option; their `enqueue` buffers terminal items and pushes `many(buffer)` per `n` items (with a partial flush at `final`/`stop`). Adding to the buffer is synchronous — only a full batch crossing the boundary can suspend for backpressure.
+- `chain()` is the policy: it passes `{batch:n}` to a section only when the next stage is `batched()` (or, with `batchOutput`, the chain's own output). The win is **transparent** — every function section unbundles a `many()` input (`applyFns` for `gen`/`fun` lists, `processInput` for a plain fn), so downstream functions keep receiving individual items.
+- Distinct from the `batch(size)` **utility**, which emits plain arrays the consumer must iterate; `batched()` is invisible transport.
 
 ### Stream-type detection (`/node` chain)
 

@@ -211,6 +211,8 @@ The factory function accepts the following arguments:
   - Additionally the following custom properties are recognized:
     - `skipEvents` is an optional boolean flag. If it is falsy (the default), `'error'` events from all streams are forwarded to the created instance. If it is truthy, no event forwarding is made. A user can always do so externally or in a constructor of derived classes.
     - `noGrouping` is an optional boolean flag. If it is falsy (the default), all subsequent functions are grouped together using the `gen()` utility for improved performance. If it is specified and truthy, all functions will be wrapped as streams individually. This mode is compatible with how the 2.x version works.
+    - `batch` is an optional number — the transport batch size. When a function section's next stage is marked [`batched()`](https://github.com/uhop/stream-chain/wiki/defs#batched), the section's output is coalesced into one `many()` chunk per `batch` items, crossing that boundary once per batch instead of once per item (~3× on high-cardinality pipelines). It defaults to `1000`; a value `<= 1` disables batching. Batching is transparent — downstream functions still receive individual items. Ignored under `noGrouping`.
+    - `batchOutput` is an optional boolean flag. If truthy, batching is also applied to the chain's own readable output (when the last stage is a function section); the consumer then iterates the `many()` chunks. Defaults to falsy.
 
 An instance can be used to attach handlers for stream events.
 

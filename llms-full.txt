@@ -103,6 +103,8 @@ Arguments:
 - `options` (object, optional) — extends `DuplexOptions` with:
   - `noGrouping` (boolean, default: false) — if true, each function becomes a separate stream. If false, consecutive functions are grouped via `gen()` for efficiency.
   - `skipEvents` (boolean, default: false) — if true, error events from internal streams are not forwarded.
+  - `batch` (number, default: 1000) — transport batch size for internal boundaries; coalesces a section's drain into one `many()` chunk per `batch` items when the next stage is `batched()`. `<= 1` disables (the per-item path). Transparent — downstream still sees individual items. Ignored under `noGrouping`. See [Transport batching](#transport-batching).
+  - `batchOutput` (boolean, default: false) — also batch the chain's own readable output (the trailing section emits `many()` chunks the consumer iterates).
   - Default: `{writableObjectMode: true, readableObjectMode: true}`.
 
 Returns: `Duplex` stream with additional properties:
@@ -218,6 +220,21 @@ chain([
 
 Helper function:
 - `isFlushable(fn)` — check if function is marked as flushable.
+
+### Transport batching
+
+`batched(stream)` marks a stream/sink as batch-capable: it consumes `many()` envelopes as single chunks and unbundles them itself. With `chain({batch:N})`, an upstream function section coalesces its drain into one `many()` chunk per N items at any boundary whose downstream is `batched()` — cutting per-item objectMode push overhead (~3× on high-cardinality pipelines such as a JSONL/SAX parser) while staying transparent: downstream functions still receive individual items (every function section unbundles a `many()` input). Default size is 1000; `batch <= 1` (or `noGrouping`) disables it. `chain({batchOutput:true})` extends batching to the chain's own readable output, where the consumer iterates the `many()` chunks.
+
+- `batched(stream)` — mark a stream/sink batch-capable; returns it. On `stream-chain/defs.js`, and as `chain.batched`.
+- `isBatched(o)` — test the marker. Also `chain.isBatched`.
+
+```js
+import {batched} from 'stream-chain/defs.js';
+// the parser section's drain is batched into the sink, which unbundles internally
+chain([source, parser(), batched(sink)], {batch: 1000});
+```
+
+Not to be confused with the `batch(size)` utility, which emits plain arrays the consumer must iterate; `batched()` is invisible transport — the consumer keeps seeing individual items.
 
 ### Function lists
 
