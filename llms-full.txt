@@ -488,6 +488,15 @@ import batch from 'stream-chain/utils/batch.js';
 chain([batch(3)]); // input: 1,2,3,4,5 → output: [1,2,3], [4,5]
 ```
 
+### unbatch()
+
+Unbundle a `many()` chunk back into individual items — a synchronous pass-through that forces a function section (the chain fans a `many()` out at every section). Drop it between a `batched()`-emitting stage and a per-item consumer that can't unbundle `many()` itself. Pairs with `batched()` / `chain({batch})`; it does NOT unbundle `batch()`'s plain arrays.
+
+```js
+import unbatch from 'stream-chain/utils/unbatch.js';
+chain([batchedSource, unbatch(), plainConsumer]); // many([1,2,3]), many([4,5]) → 1,2,3,4,5
+```
+
 ### lines()
 
 Split a byte/string stream into lines.

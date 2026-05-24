@@ -57,6 +57,7 @@ src/                          # Source code
     ├── reduce.js             # Alias for fold
     ├── scan.js               # scan(fn, initial) — running accumulator, emits each step
     ├── batch.js              # batch(size) — group items into fixed-size arrays
+    ├── unbatch.js            # unbatch() — unbundle a many() batch into individual items
     ├── readableFrom.js       # readableFrom({iterable}) — iterable/iterator to Node Readable
     ├── readableWebStreamFrom.js  # readableWebStreamFrom({iterable}) — iterable/iterator to Web ReadableStream
     ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Node Writable (.accumulator)
@@ -177,7 +178,7 @@ All utilities return functions or constructors suitable for use in `chain()`:
 
 - **Slicing**: `take`, `takeWhile`, `takeWithSkip`, `skip`, `skipWhile`
 - **Folding**: `fold` (reduce to single value at end), `scan` (emit running accumulator), `reduce` (alias for fold), `reduceStream` (Writable stream with `.accumulator`)
-- **Batching**: `batch(size)` — group items into arrays
+- **Batching**: `batch(size)` — group items into arrays; `unbatch()` — unbundle a `many()` batch back into individual items (sync pass-through; inverse of a `batched()` producer)
 - **Stream helpers**: `readableFrom` (iterable → Readable), `fixUtf8Stream` (UTF-8 repartitioning), `lines` (byte stream → line stream)
 - **Async-iterator wrappers**: `makeStreamPuller` (Node Readable), `makeWebStreamPuller` (Web ReadableStream)
 

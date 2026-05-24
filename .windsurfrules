@@ -84,6 +84,7 @@ stream-chain/
 │       ├── reduce.js             # Alias for fold
 │       ├── scan.js               # Running accumulator (like fold but emits each step)
 │       ├── batch.js              # Group items into fixed-size arrays
+│       ├── unbatch.js            # Unbundle a many() batch back into individual items
 │       ├── readableFrom.js       # Convert iterable to Node Readable stream
 │       ├── readableWebStreamFrom.js  # Convert iterable to Web Streams ReadableStream
 │       ├── reduceStream.js       # Reduce as a Node Writable stream (.accumulator)

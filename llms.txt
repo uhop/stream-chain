@@ -184,6 +184,7 @@ All utilities return functions for use in `chain()`.
 ### Stream helpers
 
 - `batch(size)` — group items into arrays of `size`.
+- `unbatch()` — unbundle a `many()` batch back into individual items (sync pass-through; pairs with `batched()` / `chain({batch})`).
 - `lines()` — split byte stream into lines.
 - `fixUtf8Stream()` — repartition chunks for valid UTF-8.
 - `readableFrom({iterable})` — convert iterable to Node `Readable`.
