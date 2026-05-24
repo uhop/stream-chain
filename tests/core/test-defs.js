@@ -9,21 +9,8 @@ import {
   toMany,
   normalizeMany,
   combineMany,
-  combineManyMut,
-  batched,
-  isBatched
+  combineManyMut
 } from '../../src/defs.js';
-
-test('defs: batched() / isBatched()', t => {
-  t.notOk(isBatched({}), 'a fresh object is not batch-capable');
-  t.notOk(isBatched(null));
-  t.notOk(isBatched(undefined));
-
-  const o = {};
-  t.equal(batched(o), o, 'batched() returns the marked target');
-  t.ok(isBatched(o), 'the target is batch-capable after marking');
-  t.notOk(isBatched({}), 'marking one object does not affect others');
-});
 
 test('defs: toMany()', t => {
   t.deepEqual(getManyValues(toMany(none)), []);

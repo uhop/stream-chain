@@ -18,8 +18,6 @@ export declare const manySymbol: unique symbol;
 export declare const flushSymbol: unique symbol;
 /** Used internally to mark a function as being derived from a function list. */
 export declare const fListSymbol: unique symbol;
-/** Used internally to mark a stream/sink as batch-capable (consumes `many()`). */
-export declare const batchedSymbol: unique symbol;
 
 /**
  * An exception that indicates that the pipeline should be stopped.
@@ -164,21 +162,6 @@ export declare function clearFunctionList<
   I = unknown,
   O = unknown
 >(o: FunctionList<T, I, O>): (value: I, ...rest: any[]) => O;
-
-/**
- * Marks a stream/sink as batch-capable: it accepts `many()` envelopes as single
- * chunks and unbundles them itself, letting an upstream section batch its drain.
- * A pure capability flag — the batch size is chain()'s `{batch}` option.
- * @param target the stream/sink to mark (mutated and returned)
- * @returns `target`
- */
-export declare function batched<T extends object>(target: T): T;
-
-/**
- * Checks whether an object was marked batch-capable by `batched()`.
- * @param o the object to test
- */
-export declare function isBatched(o: unknown): boolean;
 
 /**
  * Convert a value to `Many`.

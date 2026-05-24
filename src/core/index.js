@@ -48,10 +48,6 @@ chain.getFunctionList = defs.getFunctionList;
 chain.setFunctionList = defs.setFunctionList;
 chain.clearFunctionList = defs.clearFunctionList;
 
-chain.batchedSymbol = defs.batchedSymbol;
-chain.batched = defs.batched;
-chain.isBatched = defs.isBatched;
-
 chain.toMany = defs.toMany;
 chain.normalizeMany = defs.normalizeMany;
 chain.combineMany = defs.combineMany;

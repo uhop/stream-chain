@@ -12,19 +12,6 @@ export interface ChainWebStreamOptions {
   readableStrategy?: QueuingStrategy;
   /** Queuing strategy for the writable side of each new stage. */
   writableStrategy?: QueuingStrategy;
-  /**
-   * Transport batch size for internal boundaries. A function section coalesces
-   * its drain into one `many()` chunk per `batch` items when the next stage is
-   * a `batched()` stream. Defaults to `1000`; `<= 1` disables batching.
-   * Invisible to downstream functions — they still see items.
-   */
-  batch?: number;
-  /**
-   * If `true`, also batch the chain's own output (the trailing function section
-   * emits `many()` chunks to whoever reads `chain.readable`). The consumer must
-   * iterate `many()` arrays. No-op unless the last stage is a function section.
-   */
-  batchOutput?: boolean;
 }
 
 /**

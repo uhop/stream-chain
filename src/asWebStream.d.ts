@@ -19,13 +19,6 @@ export interface AsWebStreamOptions<W = unknown, R = unknown> {
   readableStrategy?: QueuingStrategy<R>;
   /** Queuing strategy for the writable side. Overrides `strategy`. */
   writableStrategy?: QueuingStrategy<W>;
-  /**
-   * Coalesce terminal items into one `many()` chunk per `batch` items (with a
-   * final partial flush). `<= 1` or unset keeps the per-item path. The
-   * downstream stage must consume `many()` (another section, or a `batched()`
-   * stream) — chain() sets this only at boundaries it knows are safe.
-   */
-  batch?: number;
 }
 
 /**

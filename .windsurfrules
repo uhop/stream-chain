@@ -40,7 +40,7 @@ stream-chain/
 ├── src/                          # Source code
 │   ├── index.js                  # /node entry: chain() factory + asStream + asWebStream + gen + re-exports
 │   ├── index.d.ts                # TypeScript definitions for the /node public API
-│   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, batched, etc.) + Web/Node stream type guards
+│   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, etc.) + Web/Node stream type guards
 │   ├── defs.d.ts                 # TypeScript definitions for defs
 │   ├── gen.js                    # Creates async generator pipeline from functions
 │   ├── gen.d.ts
@@ -84,7 +84,6 @@ stream-chain/
 │       ├── reduce.js             # Alias for fold
 │       ├── scan.js               # Running accumulator (like fold but emits each step)
 │       ├── batch.js              # Group items into fixed-size arrays
-│       ├── unbatch.js            # Unbundle a many() batch back into individual items
 │       ├── readableFrom.js       # Convert iterable to Node Readable stream
 │       ├── readableWebStreamFrom.js  # Convert iterable to Web Streams ReadableStream
 │       ├── reduceStream.js       # Reduce as a Node Writable stream (.accumulator)
@@ -136,7 +135,6 @@ stream-chain/
 - `stream-chain/web` exposes a parallel `chain()` that returns `{readable, writable, streams, input, output}` — a native Web Streams duplex pair.
 - `stream-chain/core` exposes a callable async-iterable factory — no Node streams, no Web Streams. Browser-safe and substrate-free.
 - Functions in a chain are grouped together via `gen()` for efficiency (unless `noGrouping: true`).
-- **Transport batching:** `chain({batch:N})` (default 1000; `<= 1` disables; `noGrouping` opts out) coalesces a section's drain into one `many()` chunk per `N` items when the next stage is `batched(stream)` — or the chain's own output with `batchOutput:true`. Transparent: every function section unbundles a `many()` input (`applyFns` for `gen`/`fun` lists, `processInput` for a plain fn), so downstream functions still receive individual items. `batched`/`isBatched` live in `defs.js` (also `chain.batched`). Distinct from the `batch(size)` utility, which emits plain arrays.
 - `gen(...fns)` creates an async generator pipeline. Handles all special return values from regular functions: `none`, `stop`, `many()`, `finalValue()`, flushable.
 - `fun(...fns)` creates a function pipeline (sync when possible). Collects all outputs into a `Many` per input, so memory scales with output size — **not safe for unbounded pipelines**. Intentionally NOT on the default `stream-chain` / `/node` export; requires an explicit import from `stream-chain/fun.js` (also re-exported via `/web` and `/core`). The friction is deliberate.
 - `asStream(fn[, options])` wraps a function as a Node `Duplex` with per-item backpressure.

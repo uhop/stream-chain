@@ -24,9 +24,6 @@ import {
   isFunctionList,
   setFunctionList,
   clearFunctionList,
-  batchedSymbol,
-  batched,
-  isBatched,
   toMany,
   normalizeMany,
   combineMany,
@@ -80,20 +77,6 @@ declare namespace chain {
     noGrouping?: boolean;
     /** If `true`, event bindings to the chain stream object will be skipped. */
     skipEvents?: boolean;
-    /**
-     * Transport batch size for internal boundaries. A function section coalesces
-     * its drain into one `many()` chunk per `batch` items when the next stage is
-     * a `batched()` stream. Defaults to `1000`; `<= 1` disables batching (the
-     * per-item path). Invisible to downstream functions — they still see items.
-     */
-    batch?: number;
-    /**
-     * If `true`, also batch the chain's own output (the trailing function
-     * section emits `many()` chunks to whoever reads the chain). The consumer
-     * must iterate `many()` arrays. No-op unless the last stage is a function
-     * section. Off by default so a per-item consumer isn't handed `many()`.
-     */
-    batchOutput?: boolean;
   }
 
   /**
@@ -322,9 +305,6 @@ export {
   isFunctionList,
   setFunctionList,
   clearFunctionList,
-  batchedSymbol,
-  batched,
-  isBatched,
   toMany,
   normalizeMany,
   combineMany,

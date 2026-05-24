@@ -40,14 +40,17 @@ const groupFunctions = (output, item, index, items) => {
   return output;
 };
 
-// A stage consumes `many()` batches (so an upstream section may batch its drain
-// into it) when it's marked `batched()`. For a trailing-writable wrapper the
-// marker lives on the inner writable. Function groups are never adjacent
-// (groupFunctions merges them), so a group's successor is always a stream item.
-const consumesBatches = item =>
-  !!item &&
-  !Array.isArray(item) &&
-  (defs.isBatched(item) || (item.writable != null && defs.isBatched(item.writable)));
+// Factory: returns a stage-producer bound to the chain's options. Options are
+// forwarded to every newly-wrapped asWebStream stage (existing stream items
+// passed in by the user keep their own settings — chain doesn't reconfigure them).
+const makeProduceStages = options => item => {
+  if (Array.isArray(item)) {
+    if (!item.length) return null;
+    if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0], options);
+    return /** @type {any} */ (chain).asWebStream(/** @type {any} */ (chain).gen(...item), options);
+  }
+  return item;
+};
 
 const chain = (fns, options) => {
   if (!Array.isArray(fns) || !fns.length) {
@@ -64,28 +67,9 @@ const chain = (fns, options) => {
     throw new TypeError("Chain's first argument is empty after flattening.");
   }
 
-  // Transport batching policy (mirrors /node). `batch` defaults to 1000; `<= 1`
-  // disables it. A section batches its drain only into a `batched()` downstream
-  // stage, or the chain's own output when batchOutput is set.
-  const batchSize = options?.batch ?? 1000;
-  const canBatch = batchSize > 1;
-  const batchOutput = canBatch && !!options?.batchOutput;
-  // Stage options minus chain-only batching keys; `batch` is re-added per stage.
-  const baseOptions = {...options};
-  delete baseOptions.batch;
-  delete baseOptions.batchOutput;
-
-  const items = fns.reduce(groupFunctions, []);
-  const stages = items
-    .map((item, i) => {
-      if (!Array.isArray(item)) return item;
-      if (!item.length) return null;
-      const next = items[i + 1];
-      const batchHere = canBatch && (next === undefined ? batchOutput : consumesBatches(next));
-      const opts = batchHere ? {...baseOptions, batch: batchSize} : baseOptions;
-      if (item.length === 1) return /** @type {any} */ (chain).asWebStream(item[0], opts);
-      return /** @type {any} */ (chain).asWebStream(/** @type {any} */ (chain).gen(...item), opts);
-    })
+  const stages = fns
+    .reduce(groupFunctions, [])
+    .map(makeProduceStages(options))
     .filter(s => s);
 
   // Pipe stages together. pipeTo handles backpressure + error propagation.
@@ -137,10 +121,6 @@ chain.isFunctionList = defs.isFunctionList;
 chain.getFunctionList = defs.getFunctionList;
 chain.setFunctionList = defs.setFunctionList;
 chain.clearFunctionList = defs.clearFunctionList;
-
-chain.batchedSymbol = defs.batchedSymbol;
-chain.batched = defs.batched;
-chain.isBatched = defs.isBatched;
 
 chain.toMany = defs.toMany;
 chain.normalizeMany = defs.normalizeMany;

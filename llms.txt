@@ -32,8 +32,6 @@ Creates a Duplex stream from an array of functions, streams, or arrays (flattene
 - `options` (object, optional) — Duplex options plus:
   - `noGrouping` (boolean) — disable function grouping optimization (default: false).
   - `skipEvents` (boolean) — disable error event forwarding (default: false).
-  - `batch` (number) — transport batch size for internal boundaries; coalesces a section's drain into one `many()` chunk per `batch` items when the next stage is `batched()`. Default 1000; `<= 1` disables. Transparent — downstream still sees individual items. Ignored under `noGrouping`.
-  - `batchOutput` (boolean) — also batch the chain's own readable output (the trailing section emits `many()` chunks the consumer iterates). Default false.
 - Default: `{writableObjectMode: true, readableObjectMode: true}`.
 - Returns: `Duplex` stream with `.streams`, `.input`, `.output` properties.
 
@@ -140,18 +138,6 @@ import {
 
 All shape-based — no `node:stream` import. Also accessible as `chain.isReadableWebStream` etc. on the `/node` and `/web` entries.
 
-### Batching (transport)
-
-`batched(stream)` marks a stream/sink as batch-capable — it accepts `many()` envelopes as single chunks and unbundles them itself. With `chain({batch:N})`, an upstream function section then coalesces its drain into one `many()` chunk per N items at that boundary, cutting per-item stream overhead (~3× on high-cardinality pipelines like a JSONL/SAX parser) while staying transparent: downstream functions still receive individual items. `isBatched(o)` tests the marker. Both are on `stream-chain/defs.js` and as `chain.batched` / `chain.isBatched`.
-
-```js
-import {batched} from 'stream-chain/defs.js';
-// the parser section's drain is batched into the sink, which unbundles internally
-chain([source, parser(), batched(sink)], {batch: 1000});
-```
-
-Distinct from the `batch(size)` utility, which emits plain arrays the consumer must handle; `batched()` is invisible transport — the consumer still sees items. `chain({batchOutput: true})` extends batching to the chain's own readable output (the consumer then iterates `many()` chunks). `batch <= 1` (or `noGrouping`) disables batching entirely.
-
 ### dataSource(fn)
 
 Takes a function or iterable and returns the underlying iterator function. Substrate-agnostic — exported from `stream-chain`, `stream-chain/web`, and `stream-chain/core` (and as `chain.dataSource` on all three).
@@ -184,7 +170,6 @@ All utilities return functions for use in `chain()`.
 ### Stream helpers
 
 - `batch(size)` — group items into arrays of `size`.
-- `unbatch()` — unbundle a `many()` batch back into individual items (sync pass-through; pairs with `batched()` / `chain({batch})`).
 - `lines()` — split byte stream into lines.
 - `fixUtf8Stream()` — repartition chunks for valid UTF-8.
 - `readableFrom({iterable})` — convert iterable to Node `Readable`.
