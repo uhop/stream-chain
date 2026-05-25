@@ -178,3 +178,21 @@ test.asPromise('gen direct: mid-stream error propagates', async (t, resolve) => 
   t.equal(msg, 'boom', 'error propagated to the consumer');
   resolve();
 });
+
+test.asPromise('gen direct: consumer .throw() propagates and cleans up', async (t, resolve) => {
+  const g = gen(x => many([x, x + 1, x + 2, x + 3]));
+  const it = g(10);
+  const first = await it.next();
+  t.equal(first.value, 10, 'got the first value');
+  let caught = null;
+  try {
+    await it.throw(new Error('injected'));
+  } catch (e) {
+    caught = e.message;
+  }
+  t.equal(caught, 'injected', '.throw() rejected with the injected error');
+  // the iterator is done; a further next() yields nothing
+  const after = await it.next();
+  t.ok(after.done, 'iterator finished after .throw()');
+  resolve();
+});

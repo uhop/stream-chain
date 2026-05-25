@@ -10,6 +10,7 @@
 
 import * as defs from './defs.js';
 import {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from './defs.js';
+import {next as execNext, flush as execFlush} from './exec.js';
 
 const asWebStream = (fn, options) => {
   if (isDuplexWebStream(fn) || isReadableWebStream(fn) || isWritableWebStream(fn)) {
@@ -92,73 +93,8 @@ const asWebStream = (fn, options) => {
     }
   };
 
-  // applyFns is unconditionally async: per-item backpressure between pushes
-  // requires awaits at every push site. Same structure as asStream's apply.
-  const applyFns = innerFns
-    ? async function apply(value, i, push) {
-        for (;;) {
-          if (value && typeof value.then == 'function') {
-            value = await value;
-            continue;
-          }
-          if (value == null || value === defs.none) return;
-          if (value === defs.stop) throw new defs.Stop();
-          if (defs.isFinalValue(value)) {
-            const r = push(defs.getFinalValue(value));
-            if (r) await r;
-            return;
-          }
-          if (defs.isMany(value)) {
-            const values = defs.getManyValues(value);
-            if (i >= innerFns.length) {
-              for (let j = 0; j < values.length; ++j) {
-                const r = push(values[j]);
-                if (r) await r;
-              }
-              return;
-            }
-            for (let j = 0; j < values.length; ++j) {
-              await apply(values[j], i, push);
-            }
-            return;
-          }
-          if (value && typeof value.next == 'function') {
-            // Per convention (see wiki/defs.md "Convention: generators yield
-            // plain values"), generator yields are plain — no special-value
-            // re-check beyond promise unwrap. Terminal position skips the
-            // recursive `apply` entirely.
-            if (i >= innerFns.length) {
-              for (;;) {
-                let data = value.next();
-                if (data && typeof data.then == 'function') data = await data;
-                if (data.done) break;
-                let yielded = data.value;
-                if (yielded && typeof yielded.then == 'function') yielded = await yielded;
-                if (yielded == null) continue;
-                const r = push(yielded);
-                if (r) await r;
-              }
-              return;
-            }
-            for (;;) {
-              let data = value.next();
-              if (data && typeof data.then == 'function') data = await data;
-              if (data.done) break;
-              await apply(data.value, i, push);
-            }
-            return;
-          }
-          if (i >= innerFns.length) {
-            const r = push(value);
-            if (r) await r;
-            return;
-          }
-          value = innerFns[i++](value);
-        }
-      }
-    : null;
-
-  // Slow-path generator queue (preserves iterator state across re-entry).
+  // Slow-path generator queue (preserves iterator state across re-entry) —
+  // used by the single-fn processValue path below.
   const queue = [];
 
   const pump = async () => {
@@ -239,8 +175,9 @@ const asWebStream = (fn, options) => {
       async write(chunk) {
         if (stopped) return;
         try {
-          if (applyFns) {
-            await applyFns(chunk, 0, enqueue);
+          if (innerFns) {
+            const r = execNext(chunk, innerFns, 0, enqueue);
+            if (r) await r;
             return;
           }
           const r = processValue(fn(chunk));
@@ -256,12 +193,9 @@ const asWebStream = (fn, options) => {
       async close() {
         try {
           if (!stopped) {
-            if (applyFns) {
-              for (let i = 0; i < innerFns.length; ++i) {
-                if (defs.isFlushable(innerFns[i])) {
-                  await applyFns(innerFns[i](defs.none), i + 1, enqueue);
-                }
-              }
+            if (innerFns) {
+              const r = execFlush(innerFns, 0, enqueue);
+              if (r) await r;
             } else if (defs.isFlushable(fn)) {
               const r = processValue(fn(defs.none));
               if (r) await r;
