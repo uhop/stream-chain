@@ -16,6 +16,14 @@ export type Push = (value: any) => void | Promise<void> | undefined;
 declare function next(value: unknown, fns: Fn[], index: number, push: Push): void | Promise<void>;
 
 /**
+ * Flushes flushable stages in `fns[index..]`, emitting their buffered output via
+ * `push`. Returns `undefined` if synchronous, or a Promise if a flush stage or a
+ * backpressuring push made it suspend. Used by the factory's `none` path and by
+ * `fun()`/`collect()`.
+ */
+declare function flush(fns: Fn[], index: number, push: Push): void | Promise<void>;
+
+/**
  * Builds a sync-when-possible, value-or-promise executor over the given
  * functions. The returned driver threads a value through the function-list and
  * emits terminal values via `push`; it stays synchronous until a real promise
@@ -37,4 +45,4 @@ declare function exec(
 ): (value: unknown, push: Push) => void | Promise<void>;
 
 export default exec;
-export {exec, next};
+export {exec, next, flush};

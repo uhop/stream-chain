@@ -1,95 +1,19 @@
 // @ts-self-types="./fun.d.ts"
 
+// fun() runs a pipeline and collects every output into a single Many. It is now
+// a thin adapter over the shared value-or-promise executor (exec.next): the
+// collect sink never backpressures, so the executor stays synchronous on sync
+// pipelines — exactly fun's old behavior, but with one dispatch engine shared
+// with asStream/gen (single implementation, single correctness gate). See
+// [[projects/stream-chain/design/sync-when-possible-executor]].
+//
+// Behavioral note vs. the previous bespoke trampoline: `stop` halts without
+// flushing buffered flushables (now consistent with gen(); only the explicit
+// `none` flush emits them), and a sync generator stage is iterated
+// synchronously rather than always-async. Output values are unchanged.
+
 import * as defs from './defs.js';
-
-const next = (value, fns, index, collect) => {
-  let cleanIndex;
-  try {
-    for (let i = index; i <= fns.length; ++i) {
-      if (value && typeof value.then == 'function') {
-        return value.then(v => next(v, fns, i, collect));
-      }
-      if (value === defs.none) return;
-      if (value === defs.stop) {
-        cleanIndex = i - 1;
-        throw new defs.Stop();
-      }
-      if (defs.isFinalValue(value)) {
-        collect(defs.getFinalValue(value));
-        return;
-      }
-      if (defs.isMany(value)) {
-        const values = defs.getManyValues(value);
-        if (i == fns.length) {
-          values.forEach(val => collect(val));
-          return;
-        }
-        let pending;
-        for (let j = 0; j < values.length; ++j) {
-          if (pending) {
-            const jj = j;
-            pending = pending.then(() => next(values[jj], fns, i, collect));
-          } else {
-            const result = next(values[j], fns, i, collect);
-            if (result && typeof result.then == 'function') pending = result;
-          }
-        }
-        return pending;
-      }
-      if (value && typeof value.next == 'function') {
-        return (async () => {
-          for (;;) {
-            let data = value.next();
-            if (data && typeof data.then == 'function') {
-              data = await data;
-            }
-            if (data.done) break;
-            if (i == fns.length) {
-              collect(data.value);
-            } else {
-              const result = next(data.value, fns, i, collect);
-              if (result && typeof result.then == 'function') await result;
-            }
-          }
-        })();
-      }
-      if (i == fns.length) {
-        collect(value);
-        return;
-      }
-      cleanIndex = i + 1;
-      const f = fns[i];
-      value = f(value);
-    }
-  } catch (error) {
-    if (error instanceof defs.Stop) {
-      const flushResult = flush(fns, cleanIndex, collect);
-      if (flushResult && typeof flushResult.then == 'function') {
-        return flushResult.then(() => {
-          throw error;
-        });
-      }
-    }
-    throw error;
-  }
-};
-
-const flush = (fns, index, collect) => {
-  let pending;
-  for (let i = index; i < fns.length; ++i) {
-    const f = fns[i];
-    if (defs.isFlushable(f)) {
-      if (pending) {
-        const ii = i;
-        pending = pending.then(() => next(f(defs.none), fns, ii + 1, collect));
-      } else {
-        const result = next(f(defs.none), fns, i + 1, collect);
-        if (result && typeof result.then == 'function') pending = result;
-      }
-    }
-  }
-  return pending;
-};
+import {next, flush} from './exec.js';
 
 const collect = (collect, fns) => {
   fns = fns
@@ -139,7 +63,7 @@ const asArray = (...fns) => {
 const fun = (...fns) => {
   const f = asArray(...fns);
   let g = value => {
-    const result = f(value);
+    const result = /** @type {any} */ (f(value));
     if (result && typeof result.then == 'function') {
       return result.then(results => defs.many(results));
     }
