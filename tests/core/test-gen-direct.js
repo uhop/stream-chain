@@ -141,3 +141,40 @@ test.asPromise('gen direct: stop halts', async (t, resolve) => {
   t.ok(threw, 'threw Stop');
   resolve();
 });
+
+// Edges a push→pull bridge must handle that native gen gets for free — the
+// promotion gate for swapping gen()'s engine.
+
+test.asPromise(
+  'gen direct: early break yields the prefix (cleanup, no hang)',
+  async (t, resolve) => {
+    const g = gen(x => many([x, x + 1, x + 2, x + 3, x + 4]));
+    const out = [];
+    for await (const v of g(10)) {
+      out.push(v);
+      if (out.length >= 2) break;
+    }
+    t.deepEqual(out, [10, 11], 'got the prefix and broke cleanly');
+    resolve();
+  }
+);
+
+test.asPromise('gen direct: mid-stream error propagates', async (t, resolve) => {
+  const g = gen(
+    () => many([1, 2, 3]),
+    v => {
+      if (v === 2) throw new Error('boom');
+      return v;
+    }
+  );
+  const out = [];
+  let msg = null;
+  try {
+    for await (const v of g(0)) out.push(v);
+  } catch (e) {
+    msg = e.message;
+  }
+  t.deepEqual(out, [1], 'yielded values before the throw');
+  t.equal(msg, 'boom', 'error propagated to the consumer');
+  resolve();
+});
