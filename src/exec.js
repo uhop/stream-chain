@@ -21,11 +21,9 @@
 
 import * as defs from './defs.js';
 
-const isThenable = v => v && typeof v.then == 'function';
-
 const next = (value, fns, index, push) => {
   for (let i = index; ; ) {
-    if (isThenable(value)) {
+    if (value && typeof value.then == 'function') {
       const ii = i;
       return value.then(v => next(v, fns, ii, push));
     }
@@ -58,7 +56,7 @@ const nextMany = (values, fns, i, push) => {
       pending = pending.then(() => next(values[jj], fns, i, push));
     } else {
       const r = next(values[j], fns, i, push);
-      if (isThenable(r)) pending = r;
+      if (r && typeof r.then == 'function') pending = r;
     }
   }
   return pending;
@@ -72,16 +70,16 @@ const nextGen = (it, fns, i, push) => {
   const step = () => {
     for (;;) {
       let data = it.next();
-      if (isThenable(data)) {
+      if (data && typeof data.then == 'function') {
         return data.then(d => {
           if (d.done) return;
           const r = next(d.value, fns, i, push);
-          return isThenable(r) ? r.then(step) : step();
+          return r && typeof r.then == 'function' ? r.then(step) : step();
         });
       }
       if (data.done) return;
       const r = next(data.value, fns, i, push);
-      if (isThenable(r)) return r.then(step);
+      if (r && typeof r.then == 'function') return r.then(step);
     }
   };
   return step();
@@ -100,7 +98,7 @@ const flush = (fns, index, push) => {
         pending = pending.then(() => next(f(defs.none), fns, ii + 1, push));
       } else {
         const r = next(f(defs.none), fns, i + 1, push);
-        if (isThenable(r)) pending = r;
+        if (r && typeof r.then == 'function') pending = r;
       }
     }
   }
