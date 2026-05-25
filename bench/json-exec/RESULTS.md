@@ -23,22 +23,24 @@ flushables — the happy path, where the async frames buy nothing.
 
 ## Files
 
-| file                          | comparison                                                   | isolates                                    |
-| ----------------------------- | ------------------------------------------------------------ | ------------------------------------------- |
-| `exec.js`                     | — (prototype executor under test)                            |                                             |
-| `asStream-exec.js`            | — (copy of `src/asStream.js`, applyFns→prototype exec)       |                                             |
-| `asStream-src.js`             | — (copy of `src/asStream.js`, applyFns→`src/exec.js` `next`) |                                             |
-| `asWebStream-exec.js`         | — (copy of `src/asWebStream.js`, applyFns→exec)              |                                             |
-| `core.js`                     | `fun` vs `gen` vs `exec`, in-process                         | executor cost, no stream machinery          |
-| `core-fun.js`                 | `fun` vs `fun-via-exec` (both collect→`many`)                | can the exec engine subsume `fun()`         |
-| `gen-via-exec.js`             | `gen` (native) vs `gen-via-exec` (push→pull bridge)          | can the exec engine subsume `gen()`         |
-| `node.js`                     | `applyFns` vs prototype exec, same Node Duplex               | **the executor swap, nothing else**         |
-| `node-src.js`                 | `applyFns` vs `src/exec.js`, same Node Duplex                | promoted module preserves perf              |
-| `web.js`                      | `applyFns` vs `exec`, same Web Streams chain                 | same swap, Web substrate                    |
-| `node-async.js`               | `applyFns` vs `exec`, async stage                            | regression check when a stage awaits        |
-| `correctness/backpressure.js` | applyFns vs exec vs naive-control                            | bounded queue under the 3 swelling vectors  |
-| `correctness/stop-flush.js`   | applyFns vs exec                                             | Stop + flush output equivalence             |
-| `correctness/async-stages.js` | applyFns vs exec                                             | async fn / async gen / thenable equivalence |
+| file                          | comparison                                                    | isolates                                    |
+| ----------------------------- | ------------------------------------------------------------- | ------------------------------------------- |
+| `exec.js`                     | — (prototype executor under test)                             |                                             |
+| `asStream-exec.js`            | — (copy of `src/asStream.js`, applyFns→prototype exec)        |                                             |
+| `asStream-src.js`             | — (copy of `src/asStream.js`, applyFns→`src/exec.js` `next`)  |                                             |
+| `asWebStream-exec.js`         | — (copy of `src/asWebStream.js`, applyFns→exec)               |                                             |
+| `core.js`                     | `fun` vs `gen` vs `exec`, in-process                          | executor cost, no stream machinery          |
+| `core-fun.js`                 | `fun` vs `fun-via-exec` (both collect→`many`)                 | can the exec engine subsume `fun()`         |
+| `gen-via-exec.js`             | `gen` (native) vs `gen-via-exec` (push→pull bridge)           | can the exec engine subsume `gen()`         |
+| `gen-bridge.js`               | `gen` native vs bridge (naive) vs bridge (clean, `.return()`) | what proper gen-bridge cleanup costs        |
+| `push-ic.js`                  | one shared `next` (5 push shapes) vs 5 separate copies        | does sharing the engine go megamorphic      |
+| `node.js`                     | `applyFns` vs prototype exec, same Node Duplex                | **the executor swap, nothing else**         |
+| `node-src.js`                 | `applyFns` vs `src/exec.js`, same Node Duplex                 | promoted module preserves perf              |
+| `web.js`                      | `applyFns` vs `exec`, same Web Streams chain                  | same swap, Web substrate                    |
+| `node-async.js`               | `applyFns` vs `exec`, async stage                             | regression check when a stage awaits        |
+| `correctness/backpressure.js` | applyFns vs exec vs naive-control                             | bounded queue under the 3 swelling vectors  |
+| `correctness/stop-flush.js`   | applyFns vs exec                                              | Stop + flush output equivalence             |
+| `correctness/async-stages.js` | applyFns vs exec                                              | async fn / async gen / thenable equivalence |
 
 `node.js` / `node-src.js` / `web.js` are the decision benchmarks: identical
 source, fn-list, and backpressure wiring — only the executor differs.
@@ -179,14 +181,47 @@ trampoline and pays a handoff promise only for the ~8 surviving outputs, trading
 the producer machinery, not push-vs-pull per se: even keeping pull /
 async-iterable _consumption_, building the producer on `exec` wins.
 
-**Caveat — the gen adapter is a feasibility/perf demo, not a drop-in.** It
-handles full consumption correctly but not **early termination**: a consumer
-`break`ing the `for await` fires the generator's `.return()`, and the parked
-producer (suspended on its push promise) is abandoned — the promise never
-settles, leaking that closure. A production `gen`-on-`exec` must hook
-`.return()` / `.throw()` to resolve the parked promise and stop the driver;
-native `gen` gets that cleanup for free. The +39% is real for throughput;
-completing the cleanup would give a little back.
+**Cleanup is nearly free — the win survives a proper bridge (`gen-bridge.js`).**
+The naive bridge above leaks on early termination: a consumer `break`ing the
+`for await` fires the generator's `.return()`, leaving the parked producer
+abandoned (its push promise never settles). The **clean** bridge fixes that —
+its `try/finally` rejects the parked push promise with a CANCEL sentinel,
+unwinding `exec`; the driver swallows it. Verified: on early `break` the naive
+producer stays parked (`settled: false`), the clean one cancels (`settled:
+true`). And it costs almost nothing:
+
+| `gen-bridge.js`            | Node               | Bun                  | Deno                 |
+| -------------------------- | ------------------ | -------------------- | -------------------- |
+| `gen (native)`             | 11.67 µs           | 13.28 µs             | 11.52 µs             |
+| `gen via exec (naive)`     | 8.13 µs (+43.5%)   | 8.69 µs (+52.8%)     | 7.83 µs (+47.1%)     |
+| **`gen via exec (clean)`** | **8.16 µs (+43%)** | **9.07 µs (+46.3%)** | **7.85 µs (+46.8%)** |
+
+So a complete `gen`-on-`exec` keeps **+43–47% over native `gen`**; cleanup costs
+~0% on Node/Deno and ~4% on Bun (JSC's try/finally tax). Remaining caveat: the
+bridge handles `.return()` / early `break` and full consumption; a production
+version should still cover `.throw()` and pipeline-error propagation through the
+bridge.
+
+## Sharing vs inlining the engine — no megamorphic penalty (`push-ic.js`)
+
+If many consumers (`fun`, `asStream`, `asWebStream`, the gen bridge) all call one
+shared `exec.next`, its `push(value)` call site sees several callee shapes —
+could go megamorphic and lose inlining, an argument for per-consumer inlined
+copies. Tested directly: one shared `next` driven by 5 distinct push functions
+(megamorphic site) vs. 5 separate copies each driven by one (monomorphic):
+
+| `push-ic.js` | Node    | Bun     | Deno    |
+| ------------ | ------- | ------- | ------- |
+| `shared`     | 4.37 µs | 4.10 µs | 4.37 µs |
+| `inlined`    | 4.35 µs | 4.11 µs | 4.34 µs |
+
+**Statistically identical (≤0.6%) on all three** — no penalty. This is the most
+sensitive possible test: trivial push bodies (`acc += v`) make the dispatch call
+site the largest-possible fraction of the work, yet no gap; heavier real pushes
+only shrink that fraction. (The test isolates the call _site_; real pushes also
+differ in their _bodies_, but that cost is paid identically whether shared or
+inlined.) So the one concrete perf argument for inlining doesn't hold: **share
+`exec.next`** — simpler, single correctness gate, and free.
 
 ## Verdict
 
