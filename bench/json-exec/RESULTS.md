@@ -31,6 +31,7 @@ flushables — the happy path, where the async frames buy nothing.
 | `asWebStream-exec.js`         | — (copy of `src/asWebStream.js`, applyFns→exec)              |                                             |
 | `core.js`                     | `fun` vs `gen` vs `exec`, in-process                         | executor cost, no stream machinery          |
 | `core-fun.js`                 | `fun` vs `fun-via-exec` (both collect→`many`)                | can the exec engine subsume `fun()`         |
+| `gen-via-exec.js`             | `gen` (native) vs `gen-via-exec` (push→pull bridge)          | can the exec engine subsume `gen()`         |
 | `node.js`                     | `applyFns` vs prototype exec, same Node Duplex               | **the executor swap, nothing else**         |
 | `node-src.js`                 | `applyFns` vs `src/exec.js`, same Node Duplex                | promoted module preserves perf              |
 | `web.js`                      | `applyFns` vs `exec`, same Web Streams chain                 | same swap, Web substrate                    |
@@ -147,6 +148,45 @@ The margin is mostly `gen`'s async-iteration cost, not a tighter loop — `gen`'
 value is laziness / composability as an async iterable, not throughput. So the
 honest reading is "synchronous push beats async-generator iteration," not "exec
 is 3× the executor `gen` is."
+
+## Adapters — exec as the engine for `fun()` and `gen()`
+
+Both `fun()` and `gen()` can be rebuilt as thin adapters over `exec`'s `next`,
+and both come out faster — `exec` is the more fundamental engine.
+
+**fun ← exec (trivial).** Drive `next` with an array-appending push that never
+backpressures, then wrap the result in `many()`. The push stays synchronous, so
+this reproduces `fun()` exactly — and runs +12–20% faster (`core-fun.js`,
+above).
+
+**gen ← exec (a push→pull bridge).** `exec` pushes; a generator pulls, so the
+adapter parks each push on a promise the consumer resolves when it pulls the
+next value — a 1-slot coroutine handoff (`gen-via-exec.js`). Output is identical
+to native `gen`, and — against the initial prediction — it is **faster**:
+
+| `gen-via-exec.js` (Node) | median      | op/s     |
+| ------------------------ | ----------- | -------- |
+| `gen (native)`           | 11.48 µs    | 87k      |
+| **`gen via exec`**       | **8.25 µs** | **121k** |
+
+**+39%.** The prediction (handshake overhead → slower) was wrong: native `gen`'s
+`next` is an `async function*` that does `yield* next(...)` per `many()` element,
+so one 32-token chunk **instantiates a nested async generator per token** —
+driven through the full async-iteration protocol — even for the ~24 that filter
+to `none`. The bridge runs the whole 32-token dispatch in the **sync**
+trampoline and pays a handoff promise only for the ~8 surviving outputs, trading
+32 async-generator instantiations for ~8 promise handshakes. So the win is in
+the producer machinery, not push-vs-pull per se: even keeping pull /
+async-iterable _consumption_, building the producer on `exec` wins.
+
+**Caveat — the gen adapter is a feasibility/perf demo, not a drop-in.** It
+handles full consumption correctly but not **early termination**: a consumer
+`break`ing the `for await` fires the generator's `.return()`, and the parked
+producer (suspended on its push promise) is abandoned — the promise never
+settles, leaking that closure. A production `gen`-on-`exec` must hook
+`.return()` / `.throw()` to resolve the parked promise and stop the driver;
+native `gen` gets that cleanup for free. The +39% is real for throughput;
+completing the cleanup would give a little back.
 
 ## Verdict
 
