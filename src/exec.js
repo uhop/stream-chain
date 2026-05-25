@@ -45,21 +45,24 @@ const next = (value, fns, index, push) => {
   }
 };
 
-// Iterate a many() array, threading each element. Stay synchronous until one
-// element returns a promise (a backpressure push, or genuine async); then chain
-// the remainder so we suspend mid-array instead of flooding push.
+// Iterate a many() array, threading each element. A resumable `step` stays
+// synchronous until one element returns a promise (a backpressure push, or
+// genuine async); then it suspends AT that element and resumes the remainder
+// via .then(step). Allocating one closure per actual suspension — not one per
+// element — keeps live allocation O(1) in the array length even when the
+// consumer backpressures from element 0 (the bug a per-element .then chain hit:
+// a chunk-sized many() exploded into O(N) live promises). Mirrors nextGen.
 const nextMany = (values, fns, i, push) => {
-  let pending;
-  for (let j = 0; j < values.length; ++j) {
-    if (pending) {
-      const jj = j;
-      pending = pending.then(() => next(values[jj], fns, i, push));
-    } else {
+  const step = j => {
+    for (; j < values.length; ++j) {
       const r = next(values[j], fns, i, push);
-      if (r && typeof r.then == 'function') pending = r;
+      if (r && typeof r.then == 'function') {
+        const jj = j;
+        return r.then(() => step(jj + 1));
+      }
     }
-  }
-  return pending;
+  };
+  return step(0);
 };
 
 // Iterate a generator, threading each yield. A resumable `step` keeps a sync
@@ -87,22 +90,21 @@ const nextGen = (it, fns, i, push) => {
 
 // Flush flushable stages (called when the factory's driver receives `none`).
 // Mirrors fun.flush: each flushable's output threads through the stages after
-// it, value-or-promise chained.
+// it, value-or-promise chained. Resumable `step` (same shape as nextMany) keeps
+// live allocation O(1) in the number of flushable stages under backpressure.
 const flush = (fns, index, push) => {
-  let pending;
-  for (let i = index; i < fns.length; ++i) {
-    const f = fns[i];
-    if (defs.isFlushable(f)) {
-      if (pending) {
+  const step = i => {
+    for (; i < fns.length; ++i) {
+      const f = fns[i];
+      if (!defs.isFlushable(f)) continue;
+      const r = next(f(defs.none), fns, i + 1, push);
+      if (r && typeof r.then == 'function') {
         const ii = i;
-        pending = pending.then(() => next(f(defs.none), fns, ii + 1, push));
-      } else {
-        const r = next(f(defs.none), fns, i + 1, push);
-        if (r && typeof r.then == 'function') pending = r;
+        return r.then(() => step(ii + 1));
       }
     }
-  }
-  return pending;
+  };
+  return step(index);
 };
 
 // Factory parallel to fun()/gen(): normalize the fn-list (flatten, unwrap nested

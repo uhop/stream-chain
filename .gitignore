@@ -2,3 +2,5 @@
 .AppleDouble
 
 /.claude/*.lock
+
+*.cpuprofile
