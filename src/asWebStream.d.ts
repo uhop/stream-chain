@@ -27,12 +27,13 @@ export interface AsWebStreamOptions<W = unknown, R = unknown> {
  *   - Pass a Web Streams object (Readable/Writable/duplex pair) → returned as-is.
  *   - Pass a function → returns a duplex pair that runs the function per chunk.
  *
- * Implementation is a structural clone of `asStream` — full-blown executor with
- * a fast path for `gen(...)` / `fun(...)` function-list compositions, and a slow
- * path with pump/queue/sanitize for promises, generators, many, finalValue, and
- * stop. Proper per-item backpressure: when `controller.desiredSize <= 0` after
- * an enqueue, the next push returns a Promise that resolves on `pull()` —
- * mirroring `asStream`'s pause/resume pattern. Queue stays at hwm.
+ * Implementation mirrors `asStream`: a fused multi-function `gen(...)` / `fun(...)`
+ * composition runs on the shared sync-when-possible value-or-promise executor
+ * (`exec.next` / `exec.flush`), suspending only at a backpressuring push; the
+ * single-function path keeps `processValue`. Proper per-item backpressure: when
+ * `controller.desiredSize <= 0` after an enqueue, the next push returns a Promise
+ * that resolves on `pull()` — mirroring `asStream`'s pause/resume pattern. Queue
+ * stays at hwm.
  *
  * Returns `{readable, writable}` (a Web Streams duplex pair), NOT a
  * `TransformStream`.

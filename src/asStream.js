@@ -133,7 +133,10 @@ const asStream = (fn, options) => {
           return finishWrite(callback, error);
         }
         if (r && typeof r.then == 'function') {
-          r.then(() => callback(null), error => finishWrite(callback, error));
+          r.then(
+            () => callback(null),
+            error => finishWrite(callback, error)
+          );
         } else {
           callback(null); // ran fully sync — no promise, no microtask
         }

@@ -118,7 +118,10 @@ const asStreamSrc = (fn, options) => {
           return finishWrite(callback, error);
         }
         if (r && typeof r.then == 'function') {
-          r.then(() => callback(null), error => finishWrite(callback, error));
+          r.then(
+            () => callback(null),
+            error => finishWrite(callback, error)
+          );
         } else {
           callback(null);
         }
@@ -151,7 +154,9 @@ const asStreamSrc = (fn, options) => {
             if (defs.isFlushable(innerFns[i])) {
               const fi = i;
               if (pending) {
-                pending = pending.then(() => next(innerFns[fi](defs.none), innerFns, fi + 1, enqueue));
+                pending = pending.then(() =>
+                  next(innerFns[fi](defs.none), innerFns, fi + 1, enqueue)
+                );
               } else {
                 const r = next(innerFns[i](defs.none), innerFns, i + 1, enqueue);
                 if (r && typeof r.then == 'function') pending = r;

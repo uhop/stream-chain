@@ -42,9 +42,11 @@ stream-chain/
 │   ├── index.d.ts                # TypeScript definitions for the /node public API
 │   ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, etc.) + Web/Node stream type guards
 │   ├── defs.d.ts                 # TypeScript definitions for defs
-│   ├── gen.js                    # Creates async generator pipeline from functions
+│   ├── exec.js                   # Shared sync-when-possible value-or-promise executor (engine behind gen/fun/asStream/asWebStream)
+│   ├── exec.d.ts
+│   ├── gen.js                    # Push→pull async-generator bridge over exec (gen.next legacy trampoline kept for compat)
 │   ├── gen.d.ts
-│   ├── fun.js                    # Creates function pipeline from functions (sync-first; exported via /web and /core)
+│   ├── fun.js                    # Creates function pipeline from functions (sync-first; collects via exec.next; exported via /web and /core)
 │   ├── fun.d.ts
 │   ├── dataSource.js             # Coerces a function or iterable to an iterator-producing function (substrate-agnostic)
 │   ├── dataSource.d.ts
@@ -125,7 +127,7 @@ stream-chain/
 - **Keep `src/index.js` and `src/index.d.ts` in sync.** All public API is exported from `index.js` and typed in `index.d.ts`.
 - **Keep `.js` and `.d.ts` files in sync** for all modules under `src/`.
 - **Object mode by default.** `chain()` (the /node variant) defaults to `{writableObjectMode: true, readableObjectMode: true}`.
-- **Per-item backpressure must be preserved.** `asStream`'s `applyFns` and `asWebStream`'s `applyFns` are async and `await` between every push. Keeps queue at hwm+1 under unbounded expansion.
+- **Per-item backpressure must be preserved.** `asStream` and `asWebStream` drive the shared executor (`exec.next` / `exec.flush`), whose `push` return is honored: when an enqueue backpressures it returns a Promise and the executor suspends _at that push_, resuming on drain. Keeps the queue at hwm+1 under unbounded `many()`/generator expansion, with O(1) live allocation (one resume closure per actual suspension, not per element). Do not change the executor to ignore the `push` return or to eagerly chain per element.
 - **Generators yield plain values.** Generators (sync `function*`, async `async function*`) must NOT yield `defs.none`, `defs.stop`, `defs.many(...)`, or `defs.finalValue(...)` — those special markers are for regular function returns only. See [wiki/defs.md](https://github.com/uhop/stream-chain/wiki/defs#convention-generators-yield-plain-values).
 - **`chain.asStream` / `chain.gen` are override hooks** — internal references go through the static-property indirection so users can monkey-patch. Don't refactor to direct imports.
 
@@ -135,7 +137,8 @@ stream-chain/
 - `stream-chain/web` exposes a parallel `chain()` that returns `{readable, writable, streams, input, output}` — a native Web Streams duplex pair.
 - `stream-chain/core` exposes a callable async-iterable factory — no Node streams, no Web Streams. Browser-safe and substrate-free.
 - Functions in a chain are grouped together via `gen()` for efficiency (unless `noGrouping: true`).
-- `gen(...fns)` creates an async generator pipeline. Handles all special return values from regular functions: `none`, `stop`, `many()`, `finalValue()`, flushable.
+- `exec(...fns)` (`src/exec.js`) is the shared **sync-when-possible, value-or-promise executor** — the single engine behind `gen`, `fun`, `asStream`, and `asWebStream` (it replaced the old per-wrapper `async applyFns`). It threads a value through the function-list, emits terminal values via a `push` callback, and stays synchronous until the first real promise (async stage, thenable, or backpressuring push) appears. Internal — not a public export.
+- `gen(...fns)` creates an async generator pipeline — a push→pull bridge over `exec.next`. Handles all special return values from regular functions: `none`, `stop`, `many()`, `finalValue()`, flushable.
 - `fun(...fns)` creates a function pipeline (sync when possible). Collects all outputs into a `Many` per input, so memory scales with output size — **not safe for unbounded pipelines**. Intentionally NOT on the default `stream-chain` / `/node` export; requires an explicit import from `stream-chain/fun.js` (also re-exported via `/web` and `/core`). The friction is deliberate.
 - `asStream(fn[, options])` wraps a function as a Node `Duplex` with per-item backpressure.
 - `asWebStream(fn[, options])` wraps a function as a Web Streams `{readable, writable}` pair with per-item backpressure.

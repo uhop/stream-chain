@@ -12,8 +12,8 @@ import asWebStream, {
 
 // Group consecutive functions into arrays (mirrors /node's groupFunctions) so the
 // produceStages step can bundle each group into a single asWebStream(gen(...group))
-// call — taking asWebStream's fast path (applyFns) instead of one TransformStream
-// per function.
+// call — taking asWebStream's fused-executor path (exec.next) instead of one
+// TransformStream per function.
 const groupFunctions = (output, item, index, items) => {
   if (isDuplexWebStream(item)) {
     output.push(item);

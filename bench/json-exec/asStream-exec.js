@@ -125,7 +125,10 @@ const asStreamExec = (fn, options) => {
           return finishWrite(callback, error);
         }
         if (r && typeof r.then == 'function') {
-          r.then(() => callback(null), error => finishWrite(callback, error));
+          r.then(
+            () => callback(null),
+            error => finishWrite(callback, error)
+          );
         } else {
           callback(null); // ran fully sync — no promise, no microtask
         }
@@ -158,7 +161,9 @@ const asStreamExec = (fn, options) => {
             if (defs.isFlushable(innerFns[i])) {
               const fi = i;
               if (pending) {
-                pending = pending.then(() => exec(innerFns[fi](defs.none), innerFns, fi + 1, enqueue));
+                pending = pending.then(() =>
+                  exec(innerFns[fi](defs.none), innerFns, fi + 1, enqueue)
+                );
               } else {
                 const r = exec(innerFns[i](defs.none), innerFns, i + 1, enqueue);
                 if (r && typeof r.then == 'function') pending = r;

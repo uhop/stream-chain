@@ -3,6 +3,13 @@
 Analysis of the uncommitted changes to `src/asStream.js` and `src/index.js`.
 
 > **Status:** Phases 1–4 completed. See "Execution log" at the end.
+>
+> **Superseded (2026-05):** the `applyFns`/`drainValue` machinery analyzed below
+> no longer exists. The "unify them into one recursive sync-when-possible
+> function" recommendation was carried to its conclusion as the shared
+> `src/exec.js` executor, now driving `gen`, `fun`, `asStream`, and `asWebStream`
+> alike. See `ARCHITECTURE.md` § "exec() — the shared executor". This document is
+> kept as the historical analysis that motivated that work.
 
 ## What the changes do
 

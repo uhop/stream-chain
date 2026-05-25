@@ -15,9 +15,11 @@ src/                          # Source code
 ├── index.d.ts                # TypeScript declarations for /node
 ├── defs.js                   # Special values (none, stop, many, finalValue, flushable, fList) + Web Streams type guards
 ├── defs.d.ts
-├── gen.js                    # Async generator pipeline from a list of functions
+├── exec.js                   # Shared sync-when-possible value-or-promise executor — the engine behind gen/fun/asStream/asWebStream
+├── exec.d.ts
+├── gen.js                    # Push→pull async-generator bridge over exec (legacy async-generator trampoline kept as gen.next for compat)
 ├── gen.d.ts
-├── fun.js                    # Function pipeline from a list of functions (sync-first); exported via /web, /core
+├── fun.js                    # Function pipeline from a list of functions (sync-first; collects via exec.next); exported via /web, /core
 ├── fun.d.ts
 ├── asStream.js               # Wraps a function as a Node Duplex with per-item backpressure
 ├── asStream.d.ts
@@ -114,9 +116,23 @@ Functions in a chain can return special values to control flow:
 
 **Convention: generators yield plain values.** Generator functions (sync `function*` and async `async function*`) must NOT yield `none`, `stop`, `many(...)`, or `finalValue(...)`. Express those semantics with the language: skip with `continue`, terminate with `return`, emit multiple via separate `yield`s. The special markers are for regular-function returns only. See [wiki/defs.md § Convention: generators yield plain values](https://github.com/uhop/stream-chain/wiki/defs#convention-generators-yield-plain-values).
 
+### exec() — the shared executor
+
+`exec.js` is the single engine that threads a value through a function-list and emits terminal values through a `push` callback. It is **not** an `async function` — it returns `undefined` when a value traversed the whole list synchronously, or a `Promise` when it had to suspend. It stays fully synchronous until the first real promise appears (an async stage, a thenable value, or a backpressuring push), then chains the remainder. This "sync-when-possible, value-or-promise" discipline is what lets purely synchronous pipelines avoid a per-item microtask.
+
+It duck-types each returned value the way 1.x `fun()` did: thenable → chain and resume; `many()` → expand; an object with `.next` → iterate as a generator (an async generator is just one whose `next()` returns a promise — no special case); `none`/`null` → drop; `stop` → throw `Stop`; `finalValue` → emit and short-circuit.
+
+Crucially, the **`push` return value is honored**: when `push` returns a Promise (a downstream backpressure signal), the executor suspends _at that push_ and chains the rest, keeping the queue bounded even when one input expands to a chunk-sized `many()`. Both the `many()` and generator paths resume via a `step` closure allocated **per actual suspension**, not per element — so live allocation stays O(1) in the array/generator length under backpressure.
+
+`exec.js` is internal (no public export); the four public compositors are thin adapters over `exec.next` / `exec.flush`:
+
+- **`gen()`** — a push→pull bridge: `exec` drives a producer whose pushes park on a promise the consumer resolves as it pulls, so production stays one item ahead.
+- **`fun()`** — collects every `push` into a `Many`.
+- **`asStream()`** / **`asWebStream()`** — drive `exec.next` on write and `exec.flush` on end, with `push` = the stream's backpressure-aware enqueue.
+
 ### gen() — async generator pipeline
 
-`gen(...fns)` takes multiple functions and returns a single async generator function that:
+`gen(...fns)` takes multiple functions and returns a single async generator function. It is a push→pull bridge over the shared executor (`exec.next`, or `exec.flush` on `none`); the legacy async-generator trampoline is retained as `gen.next` for compatibility but is no longer used by `gen()` itself. The returned generator:
 
 1. Processes each input value through the function pipeline sequentially.
 2. Handles all special return values (`none`, `stop`, `many`, `finalValue`).
@@ -180,10 +196,11 @@ src/node/index.js   ── src/index.js (thin re-export)
 src/web/index.js    ── src/defs.js, src/gen.js, src/fun.js, src/asWebStream.js
 src/core/index.js   ── src/defs.js, src/gen.js, src/fun.js
 
-src/asStream.js     ── src/defs.js
-src/asWebStream.js  ── src/defs.js
-src/gen.js          ── src/defs.js
-src/fun.js          ── src/defs.js
+src/exec.js         ── src/defs.js                 # shared sync-when-possible executor
+src/asStream.js     ── src/defs.js, src/exec.js
+src/asWebStream.js  ── src/defs.js, src/exec.js
+src/gen.js          ── src/defs.js, src/exec.js
+src/fun.js          ── src/defs.js, src/exec.js
 
 src/jsonl/parser.js        ── src/gen.js, src/utils/fixUtf8Stream.js, src/utils/lines.js
 src/jsonl/parserStream.js  ── src/jsonl/parser.js, src/asStream.js
