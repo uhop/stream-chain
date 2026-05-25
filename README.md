@@ -226,7 +226,7 @@ BSD-3-Clause
 
 ## Release History
 
-- 4.1.1 _Performance: faster synchronous pipelines via a unified sync-when-possible executor behind `gen()`/`fun()`/`asStream()`/`asWebStream()`; fixed memory growth on backpressured `many()` expansion. No API changes._
+- 4.1.1 _Performance: faster synchronous pipelines._
 - 4.1.0 _Web Streams parity: new `readableWebStreamFrom()`, `reduceWebStream()`, `parserWebStream()`, `stringerWebStream()` + `dataSource()` + minor bugfix._
 - 4.0.2 _`fixUtf8Stream()` now works on browsers._
 - 4.0.1 _Minor bugfixes. No API changes._
