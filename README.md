@@ -220,6 +220,43 @@ pipeline.on('error', error => console.error(error));
 dataSource.pipe(pipeline);
 ```
 
+## JSONL
+
+`stream-chain` ships with parsing and stringification for [JSON Lines](https://jsonlines.org/) under `stream-chain/jsonl/`:
+
+- `parser()` &mdash; substrate-free parser pipeline. Lift via `asStream()` / `asWebStream()`, or drop into a `chain([...])`.
+- `parserStream()` / `parserWebStream()` &mdash; Node `Duplex` and Web Streams `{readable, writable}` wrappers.
+- `stringer()` / `stringerStream()` / `stringerWebStream()` &mdash; the matching serializers.
+- Per-line error handling via `errorIndicator` (substitute a value or call a function for failed lines) in addition to the legacy `ignoreErrors: true`.
+
+For reading from / writing to **local files**, you can use the file-edge composites in `stream-chain/jsonl/file/`:
+
+- `parseFile()` &mdash; `(path) => AsyncGenerator<{key, value}>` &mdash; parses a JSONL file emitting one `{key, value}` record per line. `key` is the zero-based line index in the input; `value` is the parsed object from that line.
+- `stringerToFile(path)` &mdash; saves a stream of objects to a JSONL file.
+
+These fuse the file I/O and the parsing/stringification into one pipeline, skipping the per-chunk Transform/Writable boundaries of an equivalent `fs.createReadStream → parserStream → ... → stringerStream → fs.createWriteStream` arrangement. Workloads on local files are faster as a result.
+It is a performance option &mdash; benchmark in your own conditions with your own processing code before making a decision.
+
+A round-trip pipeline &mdash; read a JSONL file, process each record, write the result back out:
+
+```js
+import chain from 'stream-chain';
+import parseFile from 'stream-chain/jsonl/file/parser.js';
+import stringerToFile from 'stream-chain/jsonl/file/stringer.js';
+
+const c = chain([
+  parseFile(), // emits {key, value} per input line
+  r => ({...r.value, processed: true}), // your per-record processing
+  stringerToFile('output.jsonl') // writes back as JSONL
+]);
+c.on('finish', () => console.log('done'));
+c.end('input.jsonl');
+```
+
+The file-edge components drop straight into `chain([...])` as ordinary stages; the chain fuses them into a single internal pipeline. Writing the input path once and ending closes both ends &mdash; the input reader streams the file, and the writer's flushable runs on stream-end to close the output file handle.
+
+See the [wiki](https://github.com/uhop/stream-chain/wiki/jsonl) for full documentation.
+
 ## License
 
 BSD-3-Clause

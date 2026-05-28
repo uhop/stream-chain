@@ -80,9 +80,22 @@ import fixUtf8Stream from 'stream-chain/utils/fixUtf8Stream.js';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 // JSONL
-import parser from 'stream-chain/jsonl/parser.js';
+import parser, {jsonlParser, checkedParse} from 'stream-chain/jsonl/parser.js';
 import parserStream from 'stream-chain/jsonl/parserStream.js';
+import parserWebStream from 'stream-chain/jsonl/parserWebStream.js';
+import stringer from 'stream-chain/jsonl/stringer.js';
 import stringerStream from 'stream-chain/jsonl/stringerStream.js';
+import stringerWebStream from 'stream-chain/jsonl/stringerWebStream.js';
+
+// JSONL file-edge (Node-only)
+import parseFile from 'stream-chain/jsonl/file/parser.js';
+import stringerToFile from 'stream-chain/jsonl/file/stringer.js';
+
+// Driving gen pipelines + block I/O
+import pipe from 'stream-chain/utils/pipe.js';
+import drain from 'stream-chain/utils/drain.js';
+import asyncBlockReader from 'stream-chain/utils/asyncBlockReader.js';
+import asyncBlockWriter from 'stream-chain/utils/asyncBlockWriter.js';
 
 // TypeScript helpers
 import {TypedReadable, TypedWritable, TypedDuplex, TypedTransform} from 'stream-chain/typed-streams.js';
@@ -555,16 +568,26 @@ await puller.cancel(new Error('user aborted')); // explicit cancel-with-reason
 
 ## JSONL support
 
-### parser(reviver?)
+### parser(options?)
 
-Returns a `gen()` pipeline that parses JSONL: `fixUtf8Stream → lines → JSON.parse`.
+Returns a `gen()` pipeline that parses JSONL: `fixUtf8Stream → lines → JSON.parse`. Emitted records are `{key, value}` where `key` is the zero-based input line index. Empty lines are dropped silently.
 
-- `reviver` — optional JSON.parse reviver function, or `{reviver, ignoreErrors}` object.
-- `ignoreErrors` (boolean, default: false) — if true, silently skip lines that fail to parse.
+- `options` — object, or a reviver function as a shorthand. Recognized properties:
+  - `reviver` — JSON.parse reviver function.
+  - `ignoreErrors` (boolean, default: false) — silently drop unparseable lines. The line counter bumps on every line, so emitted keys reflect the source line index with gaps (back-compat behavior).
+  - `errorIndicator` (any, presence-checked) — alternative error handling. When the option is set (even to `undefined`), parse failures don't propagate. The indicator value — or, if it's a function, the result of calling it as `(error, input, reviver) => unknown` — replaces the failed line. A `undefined` return drops the line and doesn't bump the counter, so the keys stay sequential. `errorIndicator` wins over `ignoreErrors` when both are set.
+    - `errorIndicator: undefined` → drop bad lines (sequential keys).
+    - `errorIndicator: null` → emit `{key: N, value: null}` for bad lines.
+    - `errorIndicator: (err, input, reviver) => unknown` → result replaces the line; `undefined` drops.
+
+Raw exports for advanced composition:
+
+- `jsonlParser(options?)` — per-line factory without the `fixUtf8Stream → lines` input front. Use when chunks already arrive line-aligned.
+- `checkedParse(input, reviver?, errorIndicator?)` — standalone single-line parser. Behaves exactly like `JSON.parse(input, reviver)` unless `errorIndicator` is passed, in which case parse failures invoke the function form (or return the constant) instead of throwing.
 
 ```js
 import chain from 'stream-chain';
-import parser from 'stream-chain/jsonl/parser.js';
+import parser, {jsonlParser, checkedParse} from 'stream-chain/jsonl/parser.js';
 import fs from 'node:fs';
 
 chain([
@@ -572,13 +595,22 @@ chain([
   parser(),
   obj => console.log(obj)
 ]);
+
+// With errorIndicator: keep going through malformed lines, sequential keys
+parser({errorIndicator: (err, line) => ({_error: err.message, _line: line})});
+
+// Standalone single-line parsing
+checkedParse('{"a":1}');                      // {a: 1}
+checkedParse('{bad', undefined, null);        // null
+checkedParse('{bad');                         // throws — no errorIndicator passed
 ```
 
 ### parserStream(options?)
 
 Wraps `parser()` with `asStream()`. Returns a Node `Duplex`. Options extend Duplex options:
 - `reviver` — JSON.parse reviver function.
-- `ignoreErrors` (boolean) — silently skip parse errors (bad lines are dropped; no envelope reaches the consumer).
+- `ignoreErrors` (boolean) — silently drop unparseable lines (counter bumps; gappy keys).
+- `errorIndicator` — presence-checked; see [`parser`](#parseroptions) for semantics.
 - Default: `{writableObjectMode: false, readableObjectMode: true}`.
 
 Emitted records are `{key, value}` where `key` is the zero-based input line index.
@@ -592,7 +624,8 @@ chain([fs.createReadStream('data.jsonl'), parserStream()]);
 
 Web Streams counterpart of `parserStream()`. Wraps `parser()` with `asWebStream()`. Returns `{readable, writable}`. Options:
 - `reviver` — JSON.parse reviver function.
-- `ignoreErrors` (boolean) — silently skip parse errors.
+- `ignoreErrors` (boolean) — silently drop unparseable lines.
+- `errorIndicator` — presence-checked; see [`parser`](#parseroptions) for semantics.
 - `strategy` / `readableStrategy` / `writableStrategy` — Web Streams `QueuingStrategy` options.
 
 ```js
@@ -601,6 +634,22 @@ import chain from 'stream-chain/web';
 
 const c = chain([parserWebStream(), obj => console.log(obj)]);
 fetchResponse.body.pipeTo(c.writable);
+```
+
+### stringer(options?)
+
+Function-pipeline JSONL stringer. Returns a flushable suitable as a stage in a `gen([...])` or `chain([...])` pipeline — one input value becomes one JSON-stringified line, separated by `separator` (default `"\n"`), with optional `prefix` / `suffix` / `emptyValue` framing.
+
+This is the canonical building block. `stringerStream` (Node Transform) and `stringerWebStream` (Web TransformStream) keep their stream-shaped contracts for stream consumers; the function form is what the file-edge `stringerToFile` composes with.
+
+Options: same as `stringerStream` (`prefix`, `suffix`, `separator`, `emptyValue`, `replacer`, `space`).
+
+```js
+import stringer from 'stream-chain/jsonl/stringer.js';
+import {gen} from 'stream-chain/core';
+
+const g = gen(stringer(), s => process.stdout.write(s));
+for (const x of [1, 2, 3]) await g(x).next();
 ```
 
 ### stringerStream(options?)
@@ -638,6 +687,73 @@ import stringerWebStream from 'stream-chain/jsonl/stringerWebStream.js';
 
 source.pipeThrough(stringerWebStream()).pipeTo(destination);
 ```
+
+### JSONL file-edge composites (Node-only)
+
+For local-file workloads, `stream-chain/jsonl/file/parser.js` and `stream-chain/jsonl/file/stringer.js` compose the JSONL parser / stringer with `node:fs/promises`-backed block I/O into a single fused `gen([...])` pipeline. Skipping the per-chunk Transform/Writable boundaries that an `fs.createReadStream → parserStream → ... → stringerStream → fs.createWriteStream` arrangement crosses makes round-trip workloads substantially faster — `bench/jsonl-file.js` measures roughly 40% on 50k-row fixtures.
+
+#### parseFile(options?)
+
+Returns a `gen()` pipeline shaped as `(path) => AsyncGenerator<{key, value}>`. Internally `gen(asyncBlockReader(options), parser(options))`.
+
+Options:
+- `readBlockSize` (number, default: 65536) — block size in bytes for `fileHandle.read()`.
+- All `parser` options (`reviver`, `ignoreErrors`, `errorIndicator`) — forwarded.
+
+Drive with `pipe(...)` so the parser's flushable runs its end-of-input flush (otherwise the last line of a file without trailing newline stays in the line buffer):
+
+```js
+import pipe from 'stream-chain/utils/pipe.js';
+import drain from 'stream-chain/utils/drain.js';
+import parseFile from 'stream-chain/jsonl/file/parser.js';
+
+for await (const {key, value} of pipe(parseFile())('input.jsonl')) {
+  console.log(key, value);
+}
+```
+
+#### stringerToFile(path, options?)
+
+Returns a `gen()` pipeline shaped as `(value) => AsyncGenerator<never>` — the terminal sink for a chain. Internally `gen(stringer(options), asyncBlockWriter(path, options))`.
+
+Options:
+- `writeBlockSize` (number, default: 1 MB) — buffered block size before issuing a `fileHandle.write()`.
+- All `stringer` options (`prefix`, `suffix`, `separator`, `emptyValue`, `replacer`, `space`) — forwarded.
+
+The writer's `final()` runs on flush (when `none` propagates through the pipe) and is what closes the file handle, so the chain MUST be driven through `pipe(...)`:
+
+```js
+const c = pipe(parseFile(), r => r.value, stringerToFile('out.jsonl'));
+await drain(c('in.jsonl'));
+```
+
+### Driving gen pipelines
+
+#### pipe(...stages)
+
+One-shot single-value driver for a `gen` pipeline. Returns an async generator function that drives the supplied value through the composed stages AND THEN flushes with `none`. Without this flush, flushable sink stages (e.g. `asyncBlockWriter` which must close its `FileHandle`) never run their `final()`.
+
+Single-shot per call: each invocation builds a fresh `gen` internally. Stateful stages (parsers, stringers, writers) should be rebuilt per `pipe(...)` invocation.
+
+#### drain(asyncIter)
+
+Awaits an async iterable, returns its last yielded value (or `undefined` if it yielded nothing). The standard way to await a sink-terminated chain.
+
+### Block I/O (Node-only)
+
+`asyncBlockReader` and `asyncBlockWriter` are the file-edge primitives behind `jsonl/file/parser.js` and `jsonl/file/stringer.js`. Usable on their own to plug Node-only file I/O into any `gen` pipeline.
+
+#### asyncBlockReader(options?)
+
+Returns `(path) => AsyncGenerator<string>` — open the file, read fixed-size blocks via `fileHandle.read()`, decode through `StringDecoder('utf8')` (which buffers multi-byte sequences split across blocks), and yield each decoded block. Closes the handle in `finally`.
+
+- `readBlockSize` (number, default: 65536) — block size in bytes.
+
+#### asyncBlockWriter(path, options?)
+
+Flushable that accepts string fragments from upstream stages, buffers them, writes whole blocks to `path` via `fileHandle.write()`. The flushable's `final()` writes the tail and closes the handle on flush.
+
+- `writeBlockSize` (number, default: 1 MB) — buffered block size in characters before issuing a write.
 
 ## TypeScript
 
