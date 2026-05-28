@@ -135,7 +135,7 @@ stream-chain/
 
 - `chain(fns, options)` is the main entry point (default = /node). Returns a Node `Duplex` with `.streams`, `.input`, `.output` properties.
 - `stream-chain/web` exposes a parallel `chain()` that returns `{readable, writable, streams, input, output}` — a native Web Streams duplex pair.
-- `stream-chain/core` exposes a callable async-iterable factory — no Node streams, no Web Streams. Browser-safe and substrate-free.
+- `stream-chain/core` exposes a callable async-iterable factory — no Node streams, no Web Streams. Browser-safe and substrate-free. Input handling: `null`/`undefined` → empty; strings and other non-iterables (numbers, booleans, plain objects, …) → passed through as a single value; arrays / generators / async iterables / Maps / Sets → iterated.
 - Functions in a chain are grouped together via `gen()` for efficiency (unless `noGrouping: true`).
 - `exec(...fns)` (`src/exec.js`) is the shared **sync-when-possible, value-or-promise executor** — the single engine behind `gen`, `fun`, `asStream`, and `asWebStream` (it replaced the old per-wrapper `async applyFns`). It threads a value through the function-list, emits terminal values via a `push` callback, and stays synchronous until the first real promise (async stage, thenable, or backpressuring push) appears. Internal — not a public export.
 - `gen(...fns)` creates an async generator pipeline — a push→pull bridge over `exec.next`. Handles all special return values from regular functions: `none`, `stop`, `many()`, `finalValue()`, flushable.

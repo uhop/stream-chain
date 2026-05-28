@@ -96,7 +96,11 @@ wiki/                         # GitHub wiki documentation (git submodule)
 ### How chain() works (`/core`)
 
 1. Same flattening + function-list inlining (via `gen()`) as `/node`.
-2. Returns a callable: `(input?) => AsyncGenerator<R>`. Calling it with an async-iterable input runs each value through the composed pipeline.
+2. Returns a callable: `(input?) => AsyncGenerator<R>`. Input handling:
+   - `null` / `undefined` → empty output.
+   - String → passed through as a single value (strings are technically iterable, but treating them as a stream-of-characters is almost always the wrong intent).
+   - Anything without `Symbol.iterator` / `Symbol.asyncIterator` (numbers, booleans, plain objects, …) → passed through as a single value.
+   - Otherwise → iterated, with each yielded value driven through the composed pipeline.
 3. No streams; `.streams` / `.input` / `.output` are `null` for parity with the substrate variants.
 
 ### Special return values (defs.js)

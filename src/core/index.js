@@ -14,6 +14,13 @@ const chain = (fns, _options) => {
   const g = gen(...flat);
   const c = async function* (input) {
     if (input == null) return;
+    if (
+      typeof input === 'string' ||
+      (input[Symbol.asyncIterator] === undefined && input[Symbol.iterator] === undefined)
+    ) {
+      yield* g(input);
+      return;
+    }
     for await (const value of input) yield* g(value);
   };
   c.streams = null;
