@@ -153,24 +153,30 @@ test.asPromise('roundtrip: parseFile → identity → stringerToFile', async (t,
   resolve();
 });
 
-test.asPromise('stringerToFile: small writeBlockSize flushes multiple times', async (t, resolve) => {
-  const dir = await mkTmp();
-  try {
-    const objects = makeObjects(50);
-    const path = join(dir, 'out.jsonl');
+test.asPromise(
+  'stringerToFile: small writeBlockSize flushes multiple times',
+  async (t, resolve) => {
+    const dir = await mkTmp();
+    try {
+      const objects = makeObjects(50);
+      const path = join(dir, 'out.jsonl');
 
-    const c = pipe(async function* (src) {
-      for (const o of src) yield o;
-    }, stringerToFile(path, {writeBlockSize: 128}));
-    await drain(c(objects));
+      const c = pipe(
+        async function* (src) {
+          for (const o of src) yield o;
+        },
+        stringerToFile(path, {writeBlockSize: 128})
+      );
+      await drain(c(objects));
 
-    const text = await readFile(path, 'utf8');
-    t.equal(text, toJsonl(objects));
-  } finally {
-    await rm(dir, {recursive: true, force: true});
+      const text = await readFile(path, 'utf8');
+      t.equal(text, toJsonl(objects));
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+    resolve();
   }
-  resolve();
-});
+);
 
 test.asPromise('stringerToFile: empty input produces empty file', async (t, resolve) => {
   const dir = await mkTmp();

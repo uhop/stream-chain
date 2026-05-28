@@ -114,7 +114,8 @@ export default {
 
   async ['parse-work: fs.createReadStream + parserStream + sum-and-count']() {
     return new Promise((resolve, reject) => {
-      let count = 0, sum = 0;
+      let count = 0,
+        sum = 0;
       const c = chain([
         createReadStream(inPath),
         parserStream(),
@@ -125,7 +126,10 @@ export default {
             sum += r.value.i;
             cb();
           },
-          final(cb) { resolve({count, sum}); cb(); }
+          final(cb) {
+            resolve({count, sum});
+            cb();
+          }
         })
       ]);
       c.on('error', reject);
@@ -133,11 +137,12 @@ export default {
   },
 
   async ['parse-work: parseFile + sum-and-count (in-pipeline sink)']() {
-    let count = 0, sum = 0;
-    const c = pipe(
-      parseFile({readBlockSize: 262144}),
-      r => { ++count; sum += r.value.i; }
-    );
+    let count = 0,
+      sum = 0;
+    const c = pipe(parseFile({readBlockSize: 262144}), r => {
+      ++count;
+      sum += r.value.i;
+    });
     await drain(c(inPath));
     return {count, sum};
   },

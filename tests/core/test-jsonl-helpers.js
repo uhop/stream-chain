@@ -55,7 +55,11 @@ test('jsonl jsonlParser: function errorIndicator threads through reviver', t => 
   const reviver = (_k, v) => (typeof v == 'number' ? v + 1 : v);
   const p = jsonlParser({
     reviver,
-    errorIndicator: (err, input, rev) => ({err: err.name, input, hasReviver: typeof rev == 'function'})
+    errorIndicator: (err, input, rev) => ({
+      err: err.name,
+      input,
+      hasReviver: typeof rev == 'function'
+    })
   });
   t.deepEqual(p('{'), {
     key: 0,

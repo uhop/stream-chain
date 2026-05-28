@@ -174,20 +174,17 @@ test.asPromise('jsonl parser: errorIndicator function transforms bad lines', asy
   resolve();
 });
 
-test.asPromise(
-  'jsonl parser: errorIndicator function receives raw input',
-  async (t, resolve) => {
-    const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: (_, input) => input});
-    t.deepEqual(out, [
-      {key: 0, value: '{'},
-      {key: 1, value: 1},
-      {key: 2, value: ']'},
-      {key: 3, value: 2},
-      {key: 4, value: 3}
-    ]);
-    resolve();
-  }
-);
+test.asPromise('jsonl parser: errorIndicator function receives raw input', async (t, resolve) => {
+  const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: (_, input) => input});
+  t.deepEqual(out, [
+    {key: 0, value: '{'},
+    {key: 1, value: 1},
+    {key: 2, value: ']'},
+    {key: 3, value: 2},
+    {key: 4, value: 3}
+  ]);
+  resolve();
+});
 
 test.asPromise(
   'jsonl parser: errorIndicator function returning undefined drops bad lines',

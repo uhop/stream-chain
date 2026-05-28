@@ -28,11 +28,14 @@ test.asPromise('chain /core: boolean input passes through as one value', async (
   resolve();
 });
 
-test.asPromise('chain /core: plain-object input passes through as one value', async (t, resolve) => {
-  const c = chain([o => o.foo]);
-  t.deepEqual(await collect(c({foo: 'bar'})), ['bar']);
-  resolve();
-});
+test.asPromise(
+  'chain /core: plain-object input passes through as one value',
+  async (t, resolve) => {
+    const c = chain([o => o.foo]);
+    t.deepEqual(await collect(c({foo: 'bar'})), ['bar']);
+    resolve();
+  }
+);
 
 test.asPromise('chain /core: null input yields nothing', async (t, resolve) => {
   const c = chain([x => x * 2]);
