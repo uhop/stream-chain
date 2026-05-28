@@ -178,8 +178,10 @@ Both intended for downstream consumers (stream-join, stream-sorting) that need o
 
 ### JSONL support
 
-- `parser(reviver?)` — returns a `gen()` pipeline: `fixUtf8Stream → lines → JSON.parse`.
-- `parserStream(options?)` — wraps `parser()` with `asStream()`.
+- `parser(reviver?)` — returns a `gen()` pipeline: `fixUtf8Stream → lines → JSON.parse`. Each emitted record is `{key, value}` where `key` is the zero-based line index. Empty lines are dropped. Error handling: `ignoreErrors: true` drops failed lines but the counter still bumps (gappy keys; back-compat); `errorIndicator` (presence-checked) replaces failed lines with the value or with a function-form `(error, input, reviver) => unknown` result — `undefined` return drops without bumping the counter, so keys stay sequential. `errorIndicator` wins when both are set.
+- `parserStream(options?)` — wraps `parser()` with `asStream()`; threads `errorIndicator` through.
+- `parserWebStream(options?)` — wraps `parser()` with `asWebStream()`; threads `errorIndicator` through.
+- Raw exports: `jsonlParser(options?)` (the per-line factory without the `fixUtf8Stream → lines` front, for callers whose chunks already arrive line-aligned) and `checkedParse(input, reviver?, errorIndicator?)` (standalone single-line parser; behaves as `JSON.parse` unless `errorIndicator` is passed, then catches and substitutes).
 - `stringerStream(options?)` — Duplex stream that serializes objects to JSONL format.
 
 ### Utility functions

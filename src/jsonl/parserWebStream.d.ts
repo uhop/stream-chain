@@ -9,6 +9,19 @@ interface ParserWebStreamOptions {
   reviver?: (this: unknown, key: string, value: unknown) => unknown;
   /** Whether to ignore parse errors silently. Defaults to `false`. */
   ignoreErrors?: boolean;
+  /**
+   * Replace a failed-parse line with this value, or with the result of calling
+   * it as `(error, input, reviver) => unknown`. Presence-checked: setting
+   * `errorIndicator: undefined` is meaningful (drop bad lines). When both
+   * `errorIndicator` and `ignoreErrors` are set, `errorIndicator` wins.
+   */
+  errorIndicator?:
+    | unknown
+    | ((
+        error: Error,
+        input: string,
+        reviver?: (this: unknown, key: string, value: unknown) => unknown
+      ) => unknown);
   /** Queuing strategy applied to both sides if no side-specific strategy is given. */
   strategy?: QueuingStrategy;
   /** Queuing strategy for the readable side. Overrides `strategy`. */

@@ -145,7 +145,7 @@ stream-chain/
 - Special return values are defined in `defs.js`: `none` (skip), `stop` (terminate), `many(values)` (emit multiple), `finalValue(value)` (skip rest of chain), `flushable(fn)` (called at stream end).
 - Web Streams type guards (`isReadableWebStream`, `isWritableWebStream`, `isDuplexWebStream`) live in `defs.js` and are re-exported from `index.js` and `web/index.js`.
 - The `/node` chain adapts Web Stream objects to Node streams via `Readable.fromWeb()` / `Writable.fromWeb()` / `Duplex.fromWeb()` with `{objectMode: true}`. The `/web` chain handles them natively.
-- JSONL support is in `src/jsonl/` — parser and stringer for line-separated JSON.
+- JSONL support is in `src/jsonl/` — parser and stringer for line-separated JSON. Parser emits `{key, value}` per line; empty lines are dropped. Error handling: `ignoreErrors: true` drops failed lines but the counter still bumps (gappy keys; back-compat); `errorIndicator` (presence-checked option — `errorIndicator: undefined` is meaningful) substitutes a value or calls a function `(error, input, reviver) => unknown` whose `undefined` return drops without bumping the counter. Stream wrappers (`parserStream`, `parserWebStream`) forward both. Raw exports: `jsonlParser` (per-line factory, no `fixUtf8Stream`/`lines` front) and `checkedParse(input, reviver?, errorIndicator?)` (standalone single-line parser).
 - Utility functions in `src/utils/` provide common stream operations: slicing (`take`, `skip`), folding (`fold`, `scan`), batching, line splitting, UTF-8 fixing, and async-iterator wrappers (`makeStreamPuller`, `makeWebStreamPuller`).
 
 ## Writing tests

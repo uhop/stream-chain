@@ -102,3 +102,130 @@ test.asPromise('jsonl parser: bad json', (t, resolve) => {
     resolve();
   });
 });
+
+const collectPipeline = (input, options) =>
+  new Promise((resolve, reject) => {
+    const out = [];
+    const pipeline = chain([
+      readString(input),
+      parser(options),
+      new Writable({
+        objectMode: true,
+        write(chunk, _, cb) {
+          out.push(chunk);
+          cb(null);
+        },
+        final(cb) {
+          resolve(out);
+          cb(null);
+        }
+      })
+    ]);
+    pipeline.on('error', reject);
+  });
+
+test.asPromise(
+  'jsonl parser: ignoreErrors drops bad lines (counter bumps regardless)',
+  async (t, resolve) => {
+    // Back-compat: `ignoreErrors` bumps the counter on every line including the
+    // dropped ones, so keys reflect the source line index with gaps for failures.
+    // `errorIndicator: undefined` is the sequential-on-emit alternative.
+    const out = await collectPipeline('{\n1\n]\n2\n3', {ignoreErrors: true});
+    t.deepEqual(out, [
+      {key: 1, value: 1},
+      {key: 3, value: 2},
+      {key: 4, value: 3}
+    ]);
+    resolve();
+  }
+);
+
+test.asPromise('jsonl parser: errorIndicator undefined drops bad lines', async (t, resolve) => {
+  const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: undefined});
+  t.deepEqual(out, [
+    {key: 0, value: 1},
+    {key: 1, value: 2},
+    {key: 2, value: 3}
+  ]);
+  resolve();
+});
+
+test.asPromise('jsonl parser: errorIndicator null replaces bad lines', async (t, resolve) => {
+  const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: null});
+  t.deepEqual(out, [
+    {key: 0, value: null},
+    {key: 1, value: 1},
+    {key: 2, value: null},
+    {key: 3, value: 2},
+    {key: 4, value: 3}
+  ]);
+  resolve();
+});
+
+test.asPromise('jsonl parser: errorIndicator function transforms bad lines', async (t, resolve) => {
+  const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: error => error.name});
+  t.deepEqual(out, [
+    {key: 0, value: 'SyntaxError'},
+    {key: 1, value: 1},
+    {key: 2, value: 'SyntaxError'},
+    {key: 3, value: 2},
+    {key: 4, value: 3}
+  ]);
+  resolve();
+});
+
+test.asPromise(
+  'jsonl parser: errorIndicator function receives raw input',
+  async (t, resolve) => {
+    const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: (_, input) => input});
+    t.deepEqual(out, [
+      {key: 0, value: '{'},
+      {key: 1, value: 1},
+      {key: 2, value: ']'},
+      {key: 3, value: 2},
+      {key: 4, value: 3}
+    ]);
+    resolve();
+  }
+);
+
+test.asPromise(
+  'jsonl parser: errorIndicator function returning undefined drops bad lines',
+  async (t, resolve) => {
+    const out = await collectPipeline('{\n1\n]\n2\n3', {errorIndicator: () => undefined});
+    t.deepEqual(out, [
+      {key: 0, value: 1},
+      {key: 1, value: 2},
+      {key: 2, value: 3}
+    ]);
+    resolve();
+  }
+);
+
+test.asPromise(
+  'jsonl parser: errorIndicator wins over ignoreErrors when both set',
+  async (t, resolve) => {
+    const out = await collectPipeline('{\n1\n]\n2\n3', {
+      ignoreErrors: true,
+      errorIndicator: null
+    });
+    t.deepEqual(out, [
+      {key: 0, value: null},
+      {key: 1, value: 1},
+      {key: 2, value: null},
+      {key: 3, value: 2},
+      {key: 4, value: 3}
+    ]);
+    resolve();
+  }
+);
+
+test.asPromise('jsonl parser: empty lines dropped by default', async (t, resolve) => {
+  const out = await collectPipeline('\n1\n\n2\n\n\n3\n');
+  t.deepEqual(out, [
+    {key: 0, value: 1},
+    {key: 1, value: 2},
+    {key: 2, value: 3}
+  ]);
+  resolve();
+});
