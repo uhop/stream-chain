@@ -45,10 +45,17 @@ src/                          # Source code
 │   ├── parserStream.d.ts
 │   ├── parserWebStream.js    # JSONL parser (Web duplex pair): parser() wrapped with asWebStream
 │   ├── parserWebStream.d.ts
+│   ├── stringer.js           # JSONL stringer (function-pipeline flushable): values → newline-separated JSON
+│   ├── stringer.d.ts
 │   ├── stringerStream.js     # JSONL stringer (Node Transform): objects → newline-separated JSON strings
 │   ├── stringerStream.d.ts
 │   ├── stringerWebStream.js  # JSONL stringer (Web TransformStream): same contract, Web Streams substrate
-│   └── stringerWebStream.d.ts
+│   ├── stringerWebStream.d.ts
+│   └── file/                 # File-edge composites for JSONL (Node-only)
+│       ├── parser.js         # parseFile(options) → gen(asyncBlockReader, parser)
+│       ├── parser.d.ts
+│       ├── stringer.js       # stringerToFile(path, options) → gen(stringer, asyncBlockWriter)
+│       └── stringer.d.ts
 └── utils/                    # Utility functions (most return values for use in chain())
     ├── take.js               # take(n, finalValue) — take N items, then stop
     ├── takeWhile.js          # takeWhile(fn, finalValue) — take while predicate is true
@@ -67,6 +74,10 @@ src/                          # Source code
     ├── lines.js              # lines() — split byte stream into lines
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator
     ├── webStreamPuller.js    # makeWebStreamPuller(readable) — wrap Web ReadableStream as non-destructive async iterator
+    ├── drain.js              # drain(asyncIter) — await an async iterable, return its last value
+    ├── pipe.js               # pipe(...stages) — one-shot single-value gen driver with end-of-input flush
+    ├── asyncBlockReader.js   # asyncBlockReader({readBlockSize?}) → (path) async-yields UTF-8 blocks (Node-only)
+    ├── asyncBlockWriter.js   # asyncBlockWriter(path, {writeBlockSize?}) — flushable file-block sink (Node-only)
     └── *.d.ts                # TypeScript declarations for each utility
 tests/                        # Test files organized by environment (tape-six)
 ├── core/                     # Substrate-agnostic — runs in browser AND CLI (uses /web chain internally via runChain helper)
@@ -182,7 +193,9 @@ Both intended for downstream consumers (stream-join, stream-sorting) that need o
 - `parserStream(options?)` — wraps `parser()` with `asStream()`; threads `errorIndicator` through.
 - `parserWebStream(options?)` — wraps `parser()` with `asWebStream()`; threads `errorIndicator` through.
 - Raw exports: `jsonlParser(options?)` (the per-line factory without the `fixUtf8Stream → lines` front, for callers whose chunks already arrive line-aligned) and `checkedParse(input, reviver?, errorIndicator?)` (standalone single-line parser; behaves as `JSON.parse` unless `errorIndicator` is passed, then catches and substitutes).
+- `stringer(options?)` (`src/jsonl/stringer.js`) — function-pipeline flushable that serializes values to JSONL fragments. Used as the canonical building block; `stringerStream` (Node Transform) and `stringerWebStream` (Web TransformStream) keep their existing Transform-shape contracts for stream consumers.
 - `stringerStream(options?)` — Duplex stream that serializes objects to JSONL format.
+- File-edge composites (Node-only, in `src/jsonl/file/`): `parseFile(options)` returns `gen(asyncBlockReader, parser)` — drive with `pipe(...)` and a path; `stringerToFile(path, options)` returns `gen(stringer, asyncBlockWriter)` — drive with `pipe(...)` so the writer's flushable closes the file. Round-trip via `pipe(parseFile(), r => r.value, stringerToFile(out))` is ~40% faster than the equivalent `fs streams + parserStream + stringerStream` pipeline on 50k-row fixtures (see `bench/jsonl-file.js`). The gain comes from collapsing the per-chunk Transform/Writable boundaries into one fused executor.
 
 ### Utility functions
 
