@@ -263,6 +263,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.2.0 _JSONL file-edge components (perf): `parseFile()`, `stringerToFile()` + `errorIndicator` option. Bugfix: now `/core` chain passes strings as a single value._
 - 4.1.1 _Performance: faster synchronous pipelines._
 - 4.1.0 _Web Streams parity: new `readableWebStreamFrom()`, `reduceWebStream()`, `parserWebStream()`, `stringerWebStream()` + `dataSource()` + minor bugfix._
 - 4.0.2 _`fixUtf8Stream()` now works on browsers._
