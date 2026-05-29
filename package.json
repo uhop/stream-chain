@@ -1,7 +1,7 @@
 {
   "name": "stream-chain",
-  "version": "4.2.1",
-  "description": "Chain functions, generators, and streams into a pipeline with backpressure support.",
+  "version": "4.2.2",
+  "description": "Chain functions, generators, Node streams, and Web streams into a pipeline with backpressure support.",
   "type": "module",
   "main": "./src/node/index.js",
   "types": "./src/node/index.d.ts",
@@ -53,7 +53,10 @@
     "object-mode",
     "functional",
     "jsonl",
-    "json-lines"
+    "json-lines",
+    "ndjson",
+    "web-streams",
+    "esm"
   ],
   "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "funding": "https://github.com/sponsors/uhop",
