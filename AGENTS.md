@@ -44,7 +44,7 @@ stream-chain/
 │   ├── defs.d.ts                 # TypeScript definitions for defs
 │   ├── exec.js                   # Shared sync-when-possible value-or-promise executor (engine behind gen/fun/asStream/asWebStream)
 │   ├── exec.d.ts
-│   ├── gen.js                    # Push→pull async-generator bridge over exec (gen.next legacy trampoline kept for compat)
+│   ├── gen.js                    # Push→pull async-generator bridge over exec
 │   ├── gen.d.ts
 │   ├── fun.js                    # Creates function pipeline from functions (sync-first; collects via exec.next; exported via /web and /core)
 │   ├── fun.d.ts

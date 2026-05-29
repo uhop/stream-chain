@@ -2,7 +2,7 @@
 
 // Sync-when-possible, value-or-promise executor. Threads a value through a
 // function-list, emitting terminal values via a `push` callback. Unlike
-// `fun.next` (whose collect return is ignored) the push return is HONORED: when
+// `fun()`'s collect sink (whose return is ignored) the push return is HONORED: when
 // push returns a Promise — a downstream backpressure signal — the executor
 // suspends AT that push and chains the remainder, preserving a bounded queue.
 // Returns undefined when the whole traversal ran synchronously, or a Promise
@@ -85,7 +85,37 @@ const nextGen = (it, fns, i, push) => {
       if (r && typeof r.then == 'function') return r.then(step);
     }
   };
-  return step();
+  // Abnormal termination — a downstream stage threw (sync or rejected promise),
+  // or a push rejected (the gen bridge's consumer CANCEL) — leaves the source
+  // generator suspended at a yield, so its `finally {}` never runs and a
+  // resource-owning source (e.g. asyncBlockReader's FileHandle) leaks. Run
+  // `it.return()` to fire that finally, awaiting it for an async generator, then
+  // re-throw the ORIGINAL error. Normal completion (`data.done`) already ran the
+  // generator's own finally — don't touch it. The sync fast path stays
+  // overhead-free: a plain `try` plus one `.then(undefined, abort)` only when
+  // iteration actually suspended.
+  const abort = err => {
+    let ret;
+    try {
+      ret = it.return ? it.return() : undefined;
+    } catch {
+      throw err;
+    }
+    if (ret && typeof ret.then == 'function') {
+      const rethrow = () => {
+        throw err;
+      };
+      return ret.then(rethrow, rethrow);
+    }
+    throw err;
+  };
+  let r;
+  try {
+    r = step();
+  } catch (err) {
+    return abort(err);
+  }
+  return r && typeof r.then == 'function' ? r.then(undefined, abort) : r;
 };
 
 // Flush flushable stages (called when the factory's driver receives `none`).
@@ -134,9 +164,6 @@ const exec = (...fns) => {
   if (needToFlush) g = defs.flushable(g);
   return defs.setFunctionList(g, fns);
 };
-
-exec.next = next;
-exec.flush = flush;
 
 export default exec;
 export {exec, next, flush};

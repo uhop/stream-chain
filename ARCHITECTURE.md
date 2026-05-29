@@ -17,7 +17,7 @@ src/                          # Source code
 ├── defs.d.ts
 ├── exec.js                   # Shared sync-when-possible value-or-promise executor — the engine behind gen/fun/asStream/asWebStream
 ├── exec.d.ts
-├── gen.js                    # Push→pull async-generator bridge over exec (legacy async-generator trampoline kept as gen.next for compat)
+├── gen.js                    # Push→pull async-generator bridge over exec
 ├── gen.d.ts
 ├── fun.js                    # Function pipeline from a list of functions (sync-first; collects via exec.next); exported via /web, /core
 ├── fun.d.ts
@@ -155,7 +155,7 @@ Crucially, the **`push` return value is honored**: when `push` returns a Promise
 
 ### gen() — async generator pipeline
 
-`gen(...fns)` takes multiple functions and returns a single async generator function. It is a push→pull bridge over the shared executor (`exec.next`, or `exec.flush` on `none`); the legacy async-generator trampoline is retained as `gen.next` for compatibility but is no longer used by `gen()` itself. The returned generator:
+`gen(...fns)` takes multiple functions and returns a single async generator function. It is a push→pull bridge over the shared executor (`exec.next`, or `exec.flush` on `none`). The returned generator:
 
 1. Processes each input value through the function pipeline sequentially.
 2. Handles all special return values (`none`, `stop`, `many`, `finalValue`).

@@ -63,6 +63,36 @@ test.asPromise('exec: generator', async (t, resolve) => {
   resolve();
 });
 
+test.asPromise(
+  'exec: a generator source is returned (its finally runs) when a downstream stage throws',
+  async (t, resolve) => {
+    let cleaned = false;
+    const source = async function* () {
+      try {
+        yield 1;
+        yield 2;
+        yield 3;
+      } finally {
+        cleaned = true;
+      }
+    };
+    const boom = new Error('boom');
+    const thrower = x => {
+      if (x === 2) throw boom;
+      return x;
+    };
+    let caught;
+    try {
+      await run([source, thrower], [0]);
+    } catch (e) {
+      caught = e;
+    }
+    t.equal(caught, boom, 'the original downstream error propagates');
+    t.ok(cleaned, 'the source generator was returned so its finally ran (no leaked resource)');
+    resolve();
+  }
+);
+
 test.asPromise('exec: many', async (t, resolve) => {
   const out = await run([x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1], [1, 2, 3]);
   t.deepEqual(out, [3, 5, 7, 9, 11, 13, 19, 21, 23]);

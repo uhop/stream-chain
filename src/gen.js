@@ -3,59 +3,10 @@
 import * as defs from './defs.js';
 import {next as execNext, flush as execFlush} from './exec.js';
 
-// Legacy async-generator trampoline, retained as `gen.next` for compatibility.
-// gen() itself no longer uses it — its async generator is now a push→pull bridge
-// over the shared executor (exec.next), which is ~45% faster because native
-// async-generator delegation (`yield*`) instantiates a nested generator per
+// gen() builds a push→pull async-generator bridge over the shared executor
+// (exec.next / exec.flush) — ~45% faster than the recursive `async function*` it
+// replaced, whose native `yield*` delegation instantiated a nested generator per
 // many() element. See [[projects/stream-chain/design/sync-when-possible-executor]].
-const next = async function* (value, fns, index) {
-  for (let i = index; i <= fns.length; ++i) {
-    if (value && typeof value.then == 'function') {
-      // thenable
-      value = await value;
-    }
-    if (value === defs.none) break;
-    if (value === defs.stop) throw new defs.Stop();
-    if (defs.isFinalValue(value)) {
-      yield defs.getFinalValue(value);
-      break;
-    }
-    if (defs.isMany(value)) {
-      const values = defs.getManyValues(value);
-      if (i == fns.length) {
-        yield* values;
-      } else {
-        for (let j = 0; j < values.length; ++j) {
-          yield* next(values[j], fns, i);
-        }
-      }
-      break;
-    }
-    if (value && typeof value.next == 'function') {
-      // generator
-      for (;;) {
-        let data = value.next();
-        if (data && typeof data.then == 'function') {
-          data = await data;
-        }
-        if (data.done) break;
-        if (i == fns.length) {
-          yield data.value;
-        } else {
-          yield* next(data.value, fns, i);
-        }
-      }
-      break;
-    }
-    if (i == fns.length) {
-      yield value;
-      break;
-    }
-    const f = fns[i];
-    value = f(value);
-  }
-};
-
 const gen = (...fns) => {
   fns = fns
     .filter(fn => fn)
@@ -150,7 +101,5 @@ const gen = (...fns) => {
   return defs.setFunctionList(g, fns);
 };
 
-gen.next = next;
-
 export default gen;
-export {gen, next};
+export {gen};

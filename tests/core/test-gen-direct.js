@@ -32,6 +32,28 @@ test.asPromise('gen direct: smoke', async (t, resolve) => {
   resolve();
 });
 
+test.asPromise(
+  'gen direct: a generator source is returned (its finally runs) when the consumer cancels',
+  async (t, resolve) => {
+    let cleaned = false;
+    const source = async function* () {
+      try {
+        for (let n = 0; ; ++n) yield n; // infinite — only stops when returned
+      } finally {
+        cleaned = true;
+      }
+    };
+    const g = gen(source);
+    for await (const v of g(0)) {
+      void v;
+      break; // consume one item, then cancel — must propagate to the source's .return()
+    }
+    await delay(() => null, 10)(); // let the producer's CANCEL unwind reach the source's it.return()
+    t.ok(cleaned, 'the source generator was returned so its finally ran on consumer cancel');
+    resolve();
+  }
+);
+
 test.asPromise('gen direct: final short-circuits', async (t, resolve) => {
   t.deepEqual(
     await drain(

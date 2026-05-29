@@ -73,9 +73,5 @@ const fun = (...fns) => {
   return defs.setFunctionList(g, defs.getFunctionList(f));
 };
 
-fun.next = next;
-fun.collect = collect;
-fun.asArray = asArray;
-
 export default fun;
-export {fun, next, collect, asArray};
+export {fun};

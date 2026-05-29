@@ -195,3 +195,29 @@ test.asPromise('stringerToFile: empty input produces empty file', async (t, reso
   }
   resolve();
 });
+
+test.asPromise(
+  'parseFile: closes the file handle when a line fails to parse (no FileHandle GC leak)',
+  async (t, resolve) => {
+    const dir = await mkTmp();
+    try {
+      const path = join(dir, 'bad.jsonl');
+      await writeFile(path, '{"ok":1}\n{bad json}\n{"ok":2}');
+
+      let caught;
+      try {
+        // No errorIndicator → JSON.parse throws on the invalid line. The source
+        // generator (asyncBlockReader) must be returned so its FileHandle closes;
+        // otherwise the handle leaks and Node's GC finalizer raises
+        // ERR_INVALID_STATE (reliably under `npm run test:seq`).
+        for await (const v of pipe(parseFile())(path)) void v;
+      } catch (e) {
+        caught = e;
+      }
+      t.ok(caught, 'parseFile rejects on the invalid line');
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+    resolve();
+  }
+);
