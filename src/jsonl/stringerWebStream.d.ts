@@ -51,3 +51,4 @@ declare function stringerWebStream<T>(
 
 export default stringerWebStream;
 export {stringerWebStream};
+export type {StringerWebStreamOptions};

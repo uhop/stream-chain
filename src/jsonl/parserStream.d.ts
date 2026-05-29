@@ -40,3 +40,4 @@ declare function parserStream<T = unknown>(
 
 export default parserStream;
 export {parserStream};
+export type {ParserOptions};

@@ -38,3 +38,4 @@ declare function stringer<T>(options?: StringerOptions): TypedTransform<T, strin
 
 export default stringer;
 export {stringer as stringerStream};
+export type {StringerOptions};

@@ -37,6 +37,12 @@ type ParserOptions = {
    * `errorIndicator` and `ignoreErrors` are set, `errorIndicator` wins.
    */
   errorIndicator?: unknown | ErrorIndicatorFn;
+  /**
+   * Accepted for stream-json compatibility; **no-op**. The default parse path
+   * already surfaces errors by throwing — use `errorIndicator` / `ignoreErrors`
+   * to change that. Present so code migrated from stream-json type-checks.
+   */
+  checkErrors?: boolean;
 };
 
 /**
@@ -60,3 +66,6 @@ declare function jsonlParser(
 
 export default parser;
 export {parser, jsonlParser};
+export type {ParserOptions, OutputItem, Reviver, ErrorIndicatorFn};
+// stream-json-compatible names for code migrating off `stream-json/core/jsonl/parser.js`.
+export type {ParserOptions as JsonlParserOptions, OutputItem as JsonlItem};

@@ -630,6 +630,32 @@ const c = chain([parserWebStream(), obj => console.log(obj)]);
 fetchResponse.body.pipeTo(c.writable);
 ```
 
+### Factory-bundled entries (`stream-chain/{node,web}/jsonl/`)
+
+One factory carrying the adapters as methods, for code that prefers `jsonlParser.asStream()` over importing the suffixed module:
+
+- `stream-chain/node/jsonl/parser.js` — default factory returns the gen chain; `.asStream(options)` (Node `Duplex`), `.asWebStream(options)` (Web pair). Re-exports raw `jsonlParser`.
+- `stream-chain/web/jsonl/parser.js` — browser-safe; `.asWebStream(options)` only (no `.asStream`, never imports `node:stream`).
+- `stream-chain/node/jsonl/stringer.js` — default factory returns a Node `Transform`; `.asStream` is the factory itself, `.asWebStream(options)` returns a Web `TransformStream`.
+- `stream-chain/web/jsonl/stringer.js` — browser-safe; factory returns the Web `TransformStream`, `.asWebStream` is itself.
+- Barrels `stream-chain/node/jsonl` and `stream-chain/web/jsonl` export `{jsonlParser, jsonlStringer}`.
+
+Types: `JsonlParserOptions`, `JsonlItem`, `JsonlStringerOptions`. `checkErrors?: boolean` is accepted on the parser as a no-op (the default path already throws on bad lines). These exist primarily so stream-json's deprecated JSONL can migrate to stream-chain by changing only the import specifier:
+
+| stream-json | stream-chain |
+| --- | --- |
+| `stream-json/core/jsonl/parser.js` | `stream-chain/jsonl/parser.js` |
+| `stream-json/jsonl/parser.js` | `stream-chain/node/jsonl/parser.js` |
+| `stream-json/web/jsonl/parser.js` | `stream-chain/web/jsonl/parser.js` |
+| `stream-json/jsonl/stringer.js` | `stream-chain/node/jsonl/stringer.js` |
+| `stream-json/web/jsonl/stringer.js` | `stream-chain/web/jsonl/stringer.js` |
+
+```js
+import jsonlParser from 'stream-chain/node/jsonl/parser.js';
+const dup = jsonlParser.asStream(); // Node Duplex
+import {jsonlParser, jsonlStringer} from 'stream-chain/node/jsonl'; // barrel
+```
+
 ### stringer(options?)
 
 Function-pipeline JSONL stringer. Returns a flushable suitable as a stage in a `gen([...])` or `chain([...])` pipeline — one input value becomes one JSON-stringified line, separated by `separator` (default `"\n"`), with optional `prefix` / `suffix` / `emptyValue` framing.

@@ -31,10 +31,18 @@ src/                          # Source code
 ├── typed-streams.d.ts
 ├── node/                     # Subpath: stream-chain/node — thin re-export of root index
 │   ├── index.js
-│   └── index.d.ts
+│   ├── index.d.ts
+│   └── jsonl/                # Node-flavored bundled JSONL entries (+ .d.ts)
+│       ├── index.js          # barrel: stream-chain/node/jsonl → {jsonlParser, jsonlStringer}
+│       ├── parser.js         # jsonlParser() chain + .asStream (Duplex) + .asWebStream (Web pair)
+│       └── stringer.js       # jsonlStringer() Transform + .asStream (self) + .asWebStream (Web)
 ├── web/                      # Subpath: stream-chain/web — native Web Streams chain
 │   ├── index.js              # chain() over duplex pairs; pipeTo wires stages together
-│   └── index.d.ts
+│   ├── index.d.ts
+│   └── jsonl/                # Web-flavored bundled JSONL entries — browser-safe, .asWebStream only (+ .d.ts)
+│       ├── index.js          # barrel: stream-chain/web/jsonl → {jsonlParser, jsonlStringer}
+│       ├── parser.js         # jsonlParser() chain + .asWebStream (Web pair)
+│       └── stringer.js       # jsonlStringer() Web TransformStream + .asWebStream (self)
 ├── core/                     # Subpath: stream-chain/core — async-iterable chain
 │   ├── index.js              # chain() returns a callable async-generator factory
 │   └── index.d.ts
@@ -195,6 +203,7 @@ Both intended for downstream consumers (stream-join, stream-sorting) that need o
 - Raw export: `jsonlParser(options?)` (the per-line factory without the `fixUtf8Stream → lines` front, for callers whose chunks already arrive line-aligned).
 - `stringer(options?)` (`src/jsonl/stringer.js`) — function-pipeline flushable that serializes values to JSONL fragments. Used as the canonical building block; `stringerStream` (Node Transform) and `stringerWebStream` (Web TransformStream) keep their existing Transform-shape contracts for stream consumers.
 - `stringerStream(options?)` — Duplex stream that serializes objects to JSONL format.
+- Factory-bundled entries (in `src/node/jsonl/` and `src/web/jsonl/`): one factory carrying `.asStream` (Node `Duplex`, node entry only) and `.asWebStream` (Web pair) as methods — `jsonlParser.asStream()`, `jsonlStringer.asWebStream()`, etc. The node parser/stringer attach both adapters; the web entries omit `.asStream` and never import `node:stream` (browser-safe). The two `index.js` barrels export `{jsonlParser, jsonlStringer}` and are exposed as the `stream-chain/node/jsonl` and `stream-chain/web/jsonl` subpaths. These delegate to the suffixed adapters above; they exist so stream-json's deprecated JSONL can be migrated to stream-chain by changing only the import specifier.
 - File-edge composites (Node-only, in `src/jsonl/file/`): `parseFile(options)` returns `gen(asyncBlockReader, parser)` — drive with `pipe(...)` and a path; `stringerToFile(path, options)` returns `gen(stringer, asyncBlockWriter)` — drive with `pipe(...)` so the writer's flushable closes the file. Round-trip via `pipe(parseFile(), r => r.value, stringerToFile(out))` is ~40% faster than the equivalent `fs streams + parserStream + stringerStream` pipeline on 50k-row fixtures (see `bench/jsonl-file.js`). The gain comes from collapsing the per-chunk Transform/Writable boundaries into one fused executor.
 
 ### Utility functions

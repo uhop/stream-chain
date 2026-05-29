@@ -10,6 +10,8 @@
     "./node": "./src/node/index.js",
     "./web": "./src/web/index.js",
     "./core": "./src/core/index.js",
+    "./node/jsonl": "./src/node/jsonl/index.js",
+    "./web/jsonl": "./src/web/jsonl/index.js",
     "./*": "./src/*"
   },
   "engines": {

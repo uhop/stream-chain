@@ -229,6 +229,8 @@ dataSource.pipe(pipeline);
 - `stringer()` / `stringerStream()` / `stringerWebStream()` &mdash; the matching serializers.
 - Per-line error handling via `errorIndicator` (substitute a value or call a function for failed lines) in addition to the legacy `ignoreErrors: true`.
 
+Prefer one factory carrying the adapters as methods (`jsonlParser.asStream()` / `.asWebStream()`)? Import a substrate-flavored entry &mdash; `stream-chain/node/jsonl/parser.js` (Node, both adapters) or `stream-chain/web/jsonl/parser.js` (Web, browser-safe), and likewise for the stringer. The `stream-chain/node/jsonl` and `stream-chain/web/jsonl` barrels bundle each substrate's `{jsonlParser, jsonlStringer}`. See the [wiki](https://github.com/uhop/stream-chain/wiki/jsonl#factory-bundled-entries) for the surface and a stream-json migration table.
+
 For reading from / writing to **local files**, you can use the file-edge composites in `stream-chain/jsonl/file/`:
 
 - `parseFile()` &mdash; `(path) => AsyncGenerator<{key, value}>` &mdash; parses a JSONL file emitting one `{key, value}` record per line. `key` is the zero-based line index in the input; `value` is the parsed object from that line.

@@ -107,3 +107,17 @@ test('browser-safety: /web has no node:* or Node-builtin imports in its transiti
   if (violations.length) console.error('Violations:', JSON.stringify(violations, null, 2));
   t.equal(violations.length, 0, 'no node:* or Node-builtin imports reachable from /web');
 });
+
+// The web-flavored JSONL entries are not reachable from src/web/index.js, so walk
+// them explicitly — they must stay browser-safe (no `.asStream` / `node:stream`).
+for (const entry of ['parser.js', 'stringer.js', 'index.js']) {
+  test(`browser-safety: /web/jsonl/${entry} has no node:* or Node-builtin imports`, t => {
+    const violations = walkImports(resolve(__dirname, `../../src/web/jsonl/${entry}`));
+    if (violations.length) console.error('Violations:', JSON.stringify(violations, null, 2));
+    t.equal(
+      violations.length,
+      0,
+      `no node:* or Node-builtin imports reachable from /web/jsonl/${entry}`
+    );
+  });
+}

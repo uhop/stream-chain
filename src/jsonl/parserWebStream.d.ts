@@ -51,3 +51,4 @@ declare function parserWebStream<T = unknown>(
 
 export default parserWebStream;
 export {parserWebStream};
+export type {ParserWebStreamOptions};
