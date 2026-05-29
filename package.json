@@ -1,6 +1,6 @@
 {
   "name": "stream-chain",
-  "version": "4.2.0",
+  "version": "4.2.1",
   "description": "Chain functions, generators, and streams into a pipeline with backpressure support.",
   "type": "module",
   "main": "./src/node/index.js",
