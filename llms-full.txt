@@ -80,7 +80,7 @@ import fixUtf8Stream from 'stream-chain/utils/fixUtf8Stream.js';
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 
 // JSONL
-import parser, {jsonlParser, checkedParse} from 'stream-chain/jsonl/parser.js';
+import parser, {jsonlParser} from 'stream-chain/jsonl/parser.js';
 import parserStream from 'stream-chain/jsonl/parserStream.js';
 import parserWebStream from 'stream-chain/jsonl/parserWebStream.js';
 import stringer from 'stream-chain/jsonl/stringer.js';
@@ -580,14 +580,13 @@ Returns a `gen()` pipeline that parses JSONL: `fixUtf8Stream → lines → JSON.
     - `errorIndicator: null` → emit `{key: N, value: null}` for bad lines.
     - `errorIndicator: (err, input, reviver) => unknown` → result replaces the line; `undefined` drops.
 
-Raw exports for advanced composition:
+Raw export for advanced composition:
 
 - `jsonlParser(options?)` — per-line factory without the `fixUtf8Stream → lines` input front. Use when chunks already arrive line-aligned.
-- `checkedParse(input, reviver?, errorIndicator?)` — standalone single-line parser. Behaves exactly like `JSON.parse(input, reviver)` unless `errorIndicator` is passed, in which case parse failures invoke the function form (or return the constant) instead of throwing.
 
 ```js
 import chain from 'stream-chain';
-import parser, {jsonlParser, checkedParse} from 'stream-chain/jsonl/parser.js';
+import parser, {jsonlParser} from 'stream-chain/jsonl/parser.js';
 import fs from 'node:fs';
 
 chain([
@@ -598,11 +597,6 @@ chain([
 
 // With errorIndicator: keep going through malformed lines, sequential keys
 parser({errorIndicator: (err, line) => ({_error: err.message, _line: line})});
-
-// Standalone single-line parsing
-checkedParse('{"a":1}');                      // {a: 1}
-checkedParse('{bad', undefined, null);        // null
-checkedParse('{bad');                         // throws — no errorIndicator passed
 ```
 
 ### parserStream(options?)

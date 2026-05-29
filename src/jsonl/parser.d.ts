@@ -58,17 +58,5 @@ declare function jsonlParser(
   options?: Reviver | ParserOptions
 ): (line: string) => OutputItem | typeof import('../defs.js').none;
 
-/**
- * Parses a single JSON line. On `JSON.parse` failure, calls a function-form
- * `errorIndicator(error, input, reviver)` and returns its result, or returns
- * the constant `errorIndicator` directly. Throws if no `errorIndicator` is
- * provided.
- */
-declare function checkedParse(
-  input: string,
-  reviver?: Reviver,
-  errorIndicator?: unknown | ErrorIndicatorFn
-): unknown;
-
 export default parser;
-export {parser, jsonlParser, checkedParse};
+export {parser, jsonlParser};

@@ -3,31 +3,7 @@
 import test from 'tape-six';
 
 import {none} from '../../src/defs.js';
-import parser, {jsonlParser, checkedParse} from '../../src/jsonl/parser.js';
-
-test('jsonl checkedParse: parses valid input', t => {
-  t.equal(checkedParse('42'), 42);
-  t.deepEqual(checkedParse('{"a":1}'), {a: 1});
-});
-
-test('jsonl checkedParse: throws without errorIndicator on bad input', t => {
-  t.throws(() => checkedParse('{not json'));
-});
-
-test('jsonl checkedParse: returns constant errorIndicator on bad input', t => {
-  t.equal(checkedParse('{not json', undefined, null), null);
-  t.equal(checkedParse('{not json', undefined, 'BAD'), 'BAD');
-});
-
-test('jsonl checkedParse: calls function errorIndicator on bad input', t => {
-  const fn = (err, input) => `${err.name}:${input}`;
-  t.equal(checkedParse('{', undefined, fn), 'SyntaxError:{');
-});
-
-test('jsonl checkedParse: reviver forwarded to JSON.parse', t => {
-  const reviver = (_k, v) => (typeof v == 'number' ? v * 2 : v);
-  t.deepEqual(checkedParse('{"a":3}', reviver), {a: 6});
-});
+import parser, {jsonlParser} from '../../src/jsonl/parser.js';
 
 test('jsonl jsonlParser: raw factory parses one line at a time', t => {
   const p = jsonlParser();
@@ -39,6 +15,11 @@ test('jsonl jsonlParser: raw factory parses one line at a time', t => {
 test('jsonl jsonlParser: empty line returns none', t => {
   const p = jsonlParser();
   t.equal(p(''), none);
+});
+
+test('jsonl jsonlParser: throws on bad input without errorIndicator', t => {
+  const p = jsonlParser();
+  t.throws(() => p('{not json'));
 });
 
 test('jsonl jsonlParser: errorIndicator undefined drops, errorIndicator null replaces', t => {
@@ -74,8 +55,7 @@ test('jsonl jsonlParser: reviver shorthand (function as options)', t => {
   t.deepEqual(p('{"a":1}'), {key: 0, value: {a: 10}});
 });
 
-test('jsonl parser statics: parser.jsonlParser and parser.checkedParse', t => {
+test('jsonl parser statics: parser.jsonlParser and parser.parser', t => {
   t.equal(parser.jsonlParser, jsonlParser);
-  t.equal(parser.checkedParse, checkedParse);
   t.equal(parser.parser, parser);
 });
