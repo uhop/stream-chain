@@ -23,7 +23,7 @@ npm install
 - **Test (Bun):** `npm run test:bun`
 - **Test (Deno):** `npm run test:deno`
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
-- **Test (browser):** `npm run test:browser` — drives headless Chromium via `tape-six-playwright`; auto-starts `tape6-server` on port `55555` (env-overridable, avoids the default `3000` collision). Browser-safe test set is selected by `tape6.tests` (`tests/core/` + `tests/web/`); `tape6.cli` (`tests/node/`) is skipped in browser context. On Ubuntu 26.04+ (or any distro Playwright doesn't ship binaries for yet) `npm install`'s postinstall fails downloading Chromium — work around once with `npm install --ignore-scripts` then `PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64 npx playwright install chromium`. Override is install-time only; runtime needs no env.
+- **Test (browser):** `npm run test:browser` — drives headless Chromium via `tape-six-puppeteer`; auto-starts `tape6-server` on port `55555` (env-overridable, avoids the default `3000` collision). Browser-safe test set is selected by `tape6.tests` (`tests/core/` + `tests/web/`); `tape6.cli` (`tests/node/`) is skipped in browser context. Puppeteer fetches its own Chrome-for-Testing build during `npm install`, which installs cleanly across distros (including Ubuntu 26.04) — no platform override needed.
 - **Test (single file):** `node tests/<bucket>/test-<name>.js` (bucket is `core`, `web`, or `node`)
 - **TypeScript check:** `npm run ts-check`
 - **JavaScript type check (dual tsconfig):** `npm run js-check`

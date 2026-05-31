@@ -1,7 +1,7 @@
 'use strict';
 
 // Pure + Web-Streams test helpers. Importing this file must not pull `node:*`
-// — these helpers are reused by browser tests via `tape-six-playwright`.
+// — these helpers are reused by browser tests via `tape-six-puppeteer`.
 
 import chain from '../src/web/index.js';
 
