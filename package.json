@@ -27,7 +27,6 @@
     "test:seq": "tape6-seq --flags FO",
     "test:seq:bun": "bun run `tape6-seq --self` --flags FO",
     "test:seq:deno": "deno run -A `tape6-seq --self` --flags FO",
-    "test:browser": "tape6-puppeteer --server-url http://localhost:55555 --start-server --flags FO",
     "ts-check": "tsc --noEmit",
     "js-check": "tsc --project tsconfig.check.json",
     "ts-test": "tape6 --flags FO 'tests/**/test-*.*ts'",
@@ -94,7 +93,6 @@
     "nano-benchmark": "^1.0.16",
     "prettier": "^3.8.3",
     "tape-six": "^1.10.0",
-    "tape-six-puppeteer": "^1.1.0",
     "tape-six-proc": "^1.3.0",
     "typescript": "^6.0.3"
   }
