@@ -116,14 +116,8 @@ test.asPromise(
     }
     t.ok(caught instanceof AggregateError, 'threw an AggregateError');
     t.equal(caught.errors.length, 2, 'carries both errors');
-    t.ok(
-      caught.errors.some(e => e instanceof Stop),
-      'one of them is the Stop'
-    );
-    t.ok(
-      caught.errors.some(e => e && e.message === 'flush boom'),
-      'one of them is the flush error'
-    );
+    t.ok(caught.errors[0] instanceof Stop, 'first error is the Stop (data pass, occurred first)');
+    t.equal(caught.errors[1].message, 'flush boom', 'second error is the flush error');
     resolve();
   }
 );

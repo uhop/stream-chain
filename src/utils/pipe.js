@@ -38,10 +38,11 @@ const pipe = (...stages) =>
       } catch (flushError) {
         // If the flush throws too, keep both. AggregateError (ES2021 —
         // available on every target, including `/core` in browsers) carries
-        // them in `.errors`, the flush (last) error first.
+        // them in `.errors` in the order they occurred: the data-pass error
+        // first, then the flush error.
         if (raised) {
           throw new AggregateError(
-            [flushError, dataError],
+            [dataError, flushError],
             'pipe(): flush failed after a pipeline error'
           );
         }

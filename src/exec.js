@@ -95,17 +95,30 @@ const nextGen = (it, fns, i, push) => {
   // overhead-free: a plain `try` plus one `.then(undefined, abort)` only when
   // iteration actually suspended.
   const abort = err => {
+    // If the source generator's own cleanup (its `finally`, fired by
+    // `it.return()`) ALSO fails, keep both errors instead of dropping the
+    // cleanup one. Combine only when `err` is a real Error — a non-Error
+    // control sentinel (e.g. gen()'s CANCEL on consumer break) must keep its
+    // identity so callers comparing against it still work.
+    const onCleanupError = cleanupErr =>
+      err instanceof Error
+        ? new AggregateError([err, cleanupErr], 'pipeline error; generator cleanup also failed')
+        : err;
     let ret;
     try {
       ret = it.return ? it.return() : undefined;
-    } catch {
-      throw err;
+    } catch (cleanupErr) {
+      throw onCleanupError(cleanupErr);
     }
     if (ret && typeof ret.then == 'function') {
-      const rethrow = () => {
-        throw err;
-      };
-      return ret.then(rethrow, rethrow);
+      return ret.then(
+        () => {
+          throw err;
+        },
+        cleanupErr => {
+          throw onCleanupError(cleanupErr);
+        }
+      );
     }
     throw err;
   };

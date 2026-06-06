@@ -93,6 +93,103 @@ test.asPromise(
   }
 );
 
+test.asPromise(
+  'exec: AggregateError when a downstream throw AND the (async) generator cleanup throw',
+  async (t, resolve) => {
+    const cleanupErr = new Error('cleanup boom');
+    const source = async function* () {
+      try {
+        yield 1;
+        yield 2;
+      } finally {
+        throw cleanupErr;
+      }
+    };
+    const downstreamErr = new Error('downstream boom');
+    const thrower = x => {
+      if (x === 2) throw downstreamErr;
+      return x;
+    };
+    let caught;
+    try {
+      await run([source, thrower], [0]);
+    } catch (e) {
+      caught = e;
+    }
+    t.ok(caught instanceof AggregateError, 'threw an AggregateError');
+    t.equal(
+      caught.errors[0],
+      downstreamErr,
+      'first error is the downstream error (occurred first)'
+    );
+    t.equal(caught.errors[1], cleanupErr, 'second error is the generator cleanup error');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'exec: AggregateError also when a sync generator finally throws',
+  async (t, resolve) => {
+    const cleanupErr = new Error('sync cleanup boom');
+    const source = function* () {
+      try {
+        yield 1;
+        yield 2;
+      } finally {
+        throw cleanupErr;
+      }
+    };
+    const downstreamErr = new Error('downstream boom');
+    const thrower = x => {
+      if (x === 2) throw downstreamErr;
+      return x;
+    };
+    let caught;
+    try {
+      await run([source, thrower], [0]);
+    } catch (e) {
+      caught = e;
+    }
+    t.ok(caught instanceof AggregateError, 'threw an AggregateError');
+    t.equal(caught.errors[0], downstreamErr, 'first error is the downstream error');
+    t.equal(caught.errors[1], cleanupErr, 'second error is the generator cleanup error');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'exec: a non-Error abort signal keeps its identity even if cleanup throws',
+  async (t, resolve) => {
+    // Mirrors gen()'s CANCEL sentinel: a non-Error must NOT be wrapped, or the
+    // `e !== CANCEL` swallow on consumer-break would stop working.
+    const sentinel = Symbol('sentinel');
+    const source = async function* () {
+      try {
+        yield 1;
+        yield 2;
+      } finally {
+        throw new Error('cleanup boom');
+      }
+    };
+    const thrower = x => {
+      if (x === 2) throw sentinel;
+      return x;
+    };
+    let caught;
+    try {
+      await run([source, thrower], [0]);
+    } catch (e) {
+      caught = e;
+    }
+    t.equal(
+      caught,
+      sentinel,
+      'the non-Error signal is thrown as-is (not wrapped in AggregateError)'
+    );
+    resolve();
+  }
+);
+
 test.asPromise('exec: many', async (t, resolve) => {
   const out = await run([x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1], [1, 2, 3]);
   t.deepEqual(out, [3, 5, 7, 9, 11, 13, 19, 21, 23]);

@@ -19,6 +19,8 @@ const asyncBlockReader = options => {
   const blockSize = options?.readBlockSize ?? DEFAULT_READ_BLOCK;
   return async function* (path) {
     const fh = await open(path);
+    let pending,
+      failed = false;
     try {
       const sd = new StringDecoder('utf8');
       const buf = Buffer.allocUnsafe(blockSize);
@@ -30,9 +32,21 @@ const asyncBlockReader = options => {
       }
       const tail = sd.end();
       if (tail) yield tail;
+    } catch (e) {
+      pending = e;
+      failed = true;
     } finally {
-      await fh.close();
+      // Always close the handle; if the close fails too, keep both errors in
+      // order (read, close) instead of letting the close mask the original.
+      try {
+        await fh.close();
+      } catch (closeErr) {
+        throw failed
+          ? new AggregateError([pending, closeErr], 'asyncBlockReader: read and close both failed')
+          : closeErr;
+      }
     }
+    if (failed) throw pending;
   };
 };
 

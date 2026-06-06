@@ -39,16 +39,35 @@ const asyncBlockWriter = (path, options) => {
       })();
     },
     async () => {
-      if (buf.length) {
-        await ensureOpen();
-        await fh.write(buf);
-        buf = '';
-      } else {
-        await ensureOpen(); // ensure an empty file is created
+      let pending,
+        failed = false;
+      try {
+        await ensureOpen(); // also creates an empty file when there is no tail
+        if (buf.length) {
+          await fh.write(buf);
+          buf = '';
+        }
+      } catch (e) {
+        pending = e;
+        failed = true;
       }
+      // Always release the handle, even if the final write failed — never leak
+      // it. If the close fails too, keep both errors in order (write, close).
       const f = fh;
       fh = null;
-      await f.close();
+      if (f) {
+        try {
+          await f.close();
+        } catch (closeErr) {
+          throw failed
+            ? new AggregateError(
+                [pending, closeErr],
+                'asyncBlockWriter: final write and close both failed'
+              )
+            : closeErr;
+        }
+      }
+      if (failed) throw pending;
       return none;
     }
   );
