@@ -137,7 +137,7 @@ Functions in a chain can return special values to control flow:
 
 **Note on `null`/`undefined`:** `gen()` and `fun()` are general-purpose compositors that pass any value through the pipeline, including `null` and `undefined`. `asStream()`, `asWebStream()`, and `chain()` treat `null` and `undefined` as `none` (skip) because streams reserve these values for end-of-stream signaling.
 
-**Convention: generators yield plain values.** Generator functions (sync `function*` and async `async function*`) must NOT yield `none`, `stop`, `many(...)`, or `finalValue(...)`. Express those semantics with the language: skip with `continue`, terminate with `return`, emit multiple via separate `yield`s. The special markers are for regular-function returns only. See [wiki/defs.md § Convention: generators yield plain values](https://github.com/uhop/stream-chain/wiki/defs#convention-generators-yield-plain-values).
+**Special values in generators.** From a generator, don't yield `none` or `many(...)` — express them natively (skip with `continue`, emit multiple via separate `yield`s or `yield* anIterable`). But `stop` and `finalValue(...)` ARE supported from generators, because a plain generator cannot express them: `stop` terminates the whole pipeline (a generator's `return` ends only that generator), and `finalValue(x)` emits `x` while skipping the segment's remaining functions. After issuing either, `return`. In regular functions, all four markers are return values. See [wiki/defs.md § Special values in generators](https://github.com/uhop/stream-chain/wiki/defs#special-values-in-generators).
 
 ### exec() — the shared executor
 

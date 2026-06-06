@@ -149,7 +149,7 @@ const pipeline = chainUnchecked<number, string>([x => String(x * x)]);
 
 All special values can be imported from `'stream-chain'` or `'stream-chain/defs.js'`.
 
-**Convention:** the special markers below (`none`/`stop`/`many`/`finalValue`) are for **regular function returns only**. Generators (sync `function*` and async `async function*`) must yield plain values — express skip via `continue`, stop via `return`, emit multiple via separate `yield`s. Yielding a marker from a generator is unsupported and may pass through as opaque data.
+**Convention:** In regular functions, all four markers below (`none`/`stop`/`many`/`finalValue`) are valid return values. From a generator, don't yield `none` or `many(...)` — a generator expresses both natively (skip via `continue`, emit multiple via separate `yield`s or `yield* anIterable`). But `stop` and `finalValue(...)` ARE supported from generators, because a plain generator cannot express them: `stop` terminates the whole pipeline (a generator's `return` ends only that generator), and `finalValue(x)` emits `x` while skipping the segment's remaining functions. After issuing either, `return` — yield nothing more in that invocation.
 
 ### none
 

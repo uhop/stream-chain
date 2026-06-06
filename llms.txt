@@ -54,7 +54,7 @@ const pipeline = chainUnchecked([x => x * x]);
 - `finalValue(value)` — skip remaining chain steps, emit value directly (gen/fun only).
 - `flushable(fn, final?)` — mark function to be called at stream end.
 
-**Convention:** Generators (sync `function*` and async `async function*`) must yield plain values only — not `none`/`stop`/`many(...)`/`finalValue(...)`. Use language constructs instead: skip with `continue`, stop with `return`, emit multiple via separate `yield`s. The markers are for regular-function returns only.
+**Convention:** In regular functions, all four markers (`none`/`stop`/`many`/`finalValue`) are return values. From a generator, don't yield `none`/`many(...)` — express them natively (skip with `continue`, emit multiple via separate `yield`s or `yield* anIterable`). But `stop` and `finalValue(...)` ARE supported from generators (they do what a plain generator can't): `stop` terminates the whole pipeline, `finalValue(x)` emits `x` and skips the segment's remaining functions. After issuing either, `return` — don't yield more in that invocation.
 
 ```js
 import chain from 'stream-chain';

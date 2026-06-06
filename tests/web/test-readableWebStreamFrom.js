@@ -86,8 +86,8 @@ test.asPromise('readableWebStreamFrom: skips none / null / undefined', async (t,
 });
 
 test.asPromise('readableWebStreamFrom: stop sentinel terminates cleanly', async (t, resolve) => {
-  // Generators yield plain values by convention — `stop` must be returned by a
-  // function source. Express terminate-on-condition in a generator with `return`.
+  // A function source returning `stop` terminates the pipeline cleanly. (A
+  // generator may also `yield stop`; a plain `return` ends only the generator.)
   const out = await drain(readableWebStreamFrom(() => stop));
   t.deepEqual(out, []);
   resolve();
