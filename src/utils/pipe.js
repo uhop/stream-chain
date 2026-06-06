@@ -21,8 +21,34 @@ import {none} from '../defs.js';
 const pipe = (...stages) =>
   async function* (value) {
     const g = gen(...stages);
-    yield* g(value);
-    yield* g(none);
+    // Flush even when the data pass short-circuits — a stage issues `stop`,
+    // a stage throws, or the consumer breaks the `for await` early — so a
+    // flushable sink's `final()` (e.g. `asyncBlockWriter` / `stringerToFile`
+    // closing its FileHandle) always runs instead of leaking the handle.
+    let dataError,
+      raised = false;
+    try {
+      yield* g(value);
+    } catch (e) {
+      dataError = e;
+      raised = true;
+    } finally {
+      try {
+        yield* g(none);
+      } catch (flushError) {
+        // If the flush throws too, keep both. AggregateError (ES2021 —
+        // available on every target, including `/core` in browsers) carries
+        // them in `.errors`, the flush (last) error first.
+        if (raised) {
+          throw new AggregateError(
+            [flushError, dataError],
+            'pipe(): flush failed after a pipeline error'
+          );
+        }
+        throw flushError;
+      }
+    }
+    if (raised) throw dataError;
   };
 
 export default pipe;
