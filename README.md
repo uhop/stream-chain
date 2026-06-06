@@ -48,7 +48,7 @@ npm i --save stream-chain
 
 - **[chain()](<https://github.com/uhop/stream-chain/wiki/chain()>)** &mdash; the factory: turns an array of functions, arrays, and streams into one `Duplex` pipeline.
 - **Transducers:**
-  - [gen()](https://github.com/uhop/stream-chain/wiki/gen) &mdash; an async generator from a list of functions; the safe default for unbounded pipelines.
+  - [gen()](https://github.com/uhop/stream-chain/wiki/gen) &mdash; an async generator built from a list of functions: each stage can emit zero-to-many values per input, yielded lazily so memory stays flat no matter how much a stage fans out. It is the substrate-free core under `chain()`, and the safe default for unbounded pipelines.
   - [fun()](https://github.com/uhop/stream-chain/wiki/fun) &mdash; an async function from a list of functions; collects outputs per input (explicit import).
 - **Adapters:**
   - [asStream()](https://github.com/uhop/stream-chain/wiki/asStream) &mdash; wraps a function as a Node `Duplex`.
