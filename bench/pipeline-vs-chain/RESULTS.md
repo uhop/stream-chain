@@ -59,6 +59,36 @@ a reusable `Duplex` (what `chain()` exists to produce). Sorted fastest → slowe
 6. **Bun taxes Node-Duplex paths** (every `Duplex` case 1.1–3.6 µs); there the stream-free
    async-gen path dominates.
 
+## Async transforms
+
+Making all five fns `async` (one `await` per fn per item) removes chain's
+sync-when-possible advantage. Source: `chain-vs-builtins-async.js`; same checksum.
+Median per item:
+
+| case                        | Node    | Bun     | Deno    |
+| --------------------------- | ------- | ------- | ------- |
+| plain async loop            | 440 ns  | 247 ns  | 345 ns  |
+| raw async generator         | 841 ns  | 571 ns  | 795 ns  |
+| chain — terminal fn         | 986 ns  | 2.18 µs | 951 ns  |
+| gen() — stream-free         | 1.31 µs | 2.67 µs | 1.24 µs |
+| pipeline — async-gen per fn | 1.34 µs | 1.18 µs | 1.23 µs |
+| chain — plain fns (merged)  | 1.34 µs | 2.38 µs | 1.27 µs |
+| chain — Transform per fn    | 1.50 µs | 1.89 µs | 1.42 µs |
+| compose — Transform per fn  | 1.76 µs | 1.90 µs | 1.82 µs |
+| pipeline — Transform per fn | 1.78 µs | 1.95 µs | 1.85 µs |
+| chain — stage per fn        | 1.89 µs | 4.53 µs | 1.87 µs |
+
+**vs the sync table:** the sync-fast paths pay the most (plain loop ×15, chain
+terminal ×5.9, chain merged ×2.6, raw async gen ×2.6); the already-async paths barely
+move (×1.2–1.3). The spread compresses from ~57× to ~4×. Two reversals: (1) **chain —
+merged loses its ~2× lead over `pipeline` async-gen** — 1.34 vs 1.34 µs, dead even (it
+still beats the Transform-based builtins, 1.34 vs ~1.77 µs); (2) **chain — terminal fn
+is no longer fastest** — `raw async generator` edges it (841 vs 986 ns). Bun tilts
+hardest to the builtins (chain merged 2.38 µs vs `pipeline` async-gen 1.18 µs).
+**Lesson: chain's biggest lever is keeping sync functions sync — `none`/`many()` let a
+_plain_ function emit 0..N without going async; once every item awaits, chain converges
+with the builtins (Node/Deno) or trails them (Bun).**
+
 ## Verdict
 
 For a real, composable stream, `chain()` with **functions** is ~2–2.7× faster than
