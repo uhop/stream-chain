@@ -37,7 +37,13 @@ test.asPromise('pipe: flushes a flushable sink on normal completion', async (t, 
   resolve();
 });
 
-test.asPromise('pipe: flushes the sink even when a stage issues stop', async (t, resolve) => {
+// The flush finalizes only a pipeline that COMPLETED. An abort — a stage throws,
+// a stage issues `stop`, or the consumer breaks — leaves the generator before
+// `g(none)`, so the sink's `final()` does not run. An exception is not
+// recoverable: a failed pipeline must not be finalized. (Resource-owning SOURCE
+// stages still release inline via the executor's abort path — see
+// test-resource-cleanup.js.)
+test.asPromise('pipe: does NOT flush when a stage issues stop', async (t, resolve) => {
   const s = recordingSink();
   let caught = null;
   try {
@@ -51,11 +57,12 @@ test.asPromise('pipe: flushes the sink even when a stage issues stop', async (t,
     caught = e;
   }
   t.ok(caught instanceof Stop, 'Stop propagated to the consumer');
-  t.ok(s.log.finalRan, 'final() still ran on stop (the resource is released, not leaked)');
+  t.deepEqual(s.log.seen, [7], 'data up to the stop reached the sink');
+  t.notOk(s.log.finalRan, 'final() did not run — a stopped pipeline is not finalized');
   resolve();
 });
 
-test.asPromise('pipe: flushes the sink when a stage throws', async (t, resolve) => {
+test.asPromise('pipe: does NOT flush when a stage throws', async (t, resolve) => {
   const s = recordingSink();
   const boom = new Error('boom');
   let caught = null;
@@ -68,12 +75,12 @@ test.asPromise('pipe: flushes the sink when a stage throws', async (t, resolve) 
   } catch (e) {
     caught = e;
   }
-  t.equal(caught, boom, 'the original error propagates');
-  t.ok(s.log.finalRan, 'final() still ran after the throw');
+  t.equal(caught, boom, 'the original error propagates intact');
+  t.notOk(s.log.finalRan, 'final() did not run — a failed pipeline is not finalized');
   resolve();
 });
 
-test.asPromise('pipe: flushes when the consumer breaks early', async (t, resolve) => {
+test.asPromise('pipe: does NOT flush when the consumer breaks early', async (t, resolve) => {
   const log = {finalRan: false};
   // pass-through flushable so the pipe yields values for the consumer to break on
   const passthrough = flushable(
@@ -90,34 +97,47 @@ test.asPromise('pipe: flushes when the consumer breaks early', async (t, resolve
   }, passthrough)(1)) {
     break; // take the first, then bail
   }
-  t.ok(log.finalRan, 'final() ran after an early break');
+  t.notOk(log.finalRan, 'final() did not run — an abandoned pipeline is not finalized');
   resolve();
 });
 
 test.asPromise(
-  'pipe: AggregateError when both the data pass and the flush throw',
+  'pipe: a throwing stateful flushable surfaces its single error, not an AggregateError',
   async (t, resolve) => {
-    const sink = flushable(
-      () => none,
-      () => {
-        throw new Error('flush boom');
-      }
-    );
+    // Regression guard for the 4.2.3 bug. pipe ran the flush in a `finally`,
+    // re-driving a flushable that had already thrown. A stateful stage (like
+    // stream-json's jsonVerifier) throws BEFORE consuming its buffer, so the
+    // flush re-ran the SAME work over the SAME dirty buffer and threw a second,
+    // logically-identical error — surfacing AggregateError([E, E]). With the
+    // flush gated on a clean data pass, the failed work runs once and the one
+    // real error propagates.
+    let runs = 0;
+    const verifierLike = () => {
+      let buffer = '';
+      const processBuffer = () => {
+        ++runs;
+        if (buffer.includes(' ')) throw new Error('bad token'); // throws; buffer NOT consumed
+        buffer = '';
+      };
+      return flushable(value => {
+        if (value === none) {
+          processBuffer();
+          return none;
+        }
+        buffer += value;
+        processBuffer();
+        return none;
+      });
+    };
     let caught = null;
     try {
-      await drive(
-        pipe(function* (x) {
-          yield x;
-          yield stop;
-        }, sink)(1)
-      );
+      await drive(pipe(verifierLike())('a b'));
     } catch (e) {
       caught = e;
     }
-    t.ok(caught instanceof AggregateError, 'threw an AggregateError');
-    t.equal(caught.errors.length, 2, 'carries both errors');
-    t.ok(caught.errors[0] instanceof Stop, 'first error is the Stop (data pass, occurred first)');
-    t.equal(caught.errors[1].message, 'flush boom', 'second error is the flush error');
+    t.notOk(caught instanceof AggregateError, 'not wrapped in an AggregateError');
+    t.equal(caught?.message, 'bad token', 'the one real error propagates');
+    t.equal(runs, 1, 'the failed work ran exactly once — the flush did not re-run it');
     resolve();
   }
 );
