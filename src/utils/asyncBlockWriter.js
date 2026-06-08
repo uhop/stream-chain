@@ -5,9 +5,15 @@
 // accumulates it into an in-memory buffer, and writes whole `blockSize`-sized
 // blocks to the target path via a `FileHandle`. The flushable's `final()`
 // (signaled by passing `none` through the pipe) writes any remaining buffer
-// tail and closes the handle — so the file is closed only via the explicit
-// flush. Use `pipe(...)` to drive a chain so the flush runs after the data
-// pass and the file terminates cleanly without user ceremony.
+// tail and closes the handle — so on a clean pass the file is closed via the
+// explicit flush. Use `pipe(...)` to drive a chain so the flush runs after the
+// data pass and the file terminates cleanly without user ceremony.
+//
+// Both I/O branches guard their OWN operations: if a block write (data pass) or
+// the tail write (final) fails, the handle is released on the way out before
+// the error propagates, so this stage never leaks its own fd. (It cannot,
+// however, observe an UNRELATED stage throwing elsewhere in the pipe — the
+// stage simply stops being called; that is the caller's to handle.)
 //
 // Node-only (uses `node:fs/promises`).
 
@@ -33,8 +39,28 @@ const asyncBlockWriter = (path, options) => {
       const data = buf;
       buf = '';
       return (async () => {
-        await ensureOpen();
-        await fh.write(data);
+        try {
+          await ensureOpen();
+          await fh.write(data);
+        } catch (e) {
+          // Our own block write (or open) failed mid-pass — release the handle
+          // on the way out so a failed write never leaks the fd, then surface
+          // the original error. If the close fails too, keep both errors in
+          // order (write, close). Mirrors final()'s cleanup below.
+          const f = fh;
+          fh = null;
+          if (f) {
+            try {
+              await f.close();
+            } catch (closeErr) {
+              throw new AggregateError(
+                [e, closeErr],
+                'asyncBlockWriter: block write and close both failed'
+              );
+            }
+          }
+          throw e;
+        }
         return none;
       })();
     },

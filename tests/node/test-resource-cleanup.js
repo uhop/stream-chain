@@ -83,6 +83,46 @@ test.asPromise(
 );
 
 test.asPromise(
+  'asyncBlockWriter: a failed block write (data pass) still releases the FileHandle',
+  async (t, resolve) => {
+    await ensure();
+    if (!hasFd) {
+      t.skipTest('fd-leak check requires /proc (Linux)');
+      return resolve();
+    }
+    // Small block so the first value fills a block and triggers a real
+    // data-pass write (open + write) — the fd is opened DURING the data pass,
+    // before any `none`. With write patched to fail, the stage must release the
+    // handle on its way out instead of leaking it (final() never runs here).
+    const sink = asyncBlockWriter(join(tmp, 'w-fail-datapass'), {writeBlockSize: 4});
+    const writeErr = new Error('block write boom');
+    let caught;
+    const before = fdCount();
+    await withPatched(
+      {
+        write() {
+          throw writeErr;
+        }
+      },
+      async () => {
+        try {
+          await settle(sink('hello')); // fills block -> open + write (fails) -> release
+        } catch (e) {
+          caught = e;
+        }
+      }
+    );
+    const after = fdCount();
+    t.equal(caught, writeErr, 'the block write error propagates');
+    t.ok(
+      after <= before,
+      `the handle was released despite the data-pass write failure (fds ${before} -> ${after})`
+    );
+    resolve();
+  }
+);
+
+test.asPromise(
   'asyncBlockReader: a failed read still releases the FileHandle',
   async (t, resolve) => {
     await ensure();
