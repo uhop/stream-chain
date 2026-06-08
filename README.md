@@ -65,6 +65,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.2.4 _Bugfix: a failed `pipe()` propagates the original error intact._
 - 4.2.3 _Bugfix: cleanup hook for user resources; cleanup double-faults now surface as an `AggregateError`._
 - 4.2.2 _Bugfix: eliminated file handle leak, cleaned up exports._
 - 4.2.1 _Factory-bundled JSONL entries &mdash; `stream-chain/node/jsonl` & `stream-chain/web/jsonl` carry `.asStream` / `.asWebStream`. Bugfix: removed `checkedParse()`, mistakenly exposed in 4.2.0._
