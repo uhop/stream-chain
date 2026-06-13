@@ -1,9 +1,7 @@
-# stream-chain [![NPM version][npm-img]][npm-url] [![Node.js CI][ci-img]][ci-url]
+# stream-chain [![NPM version][npm-img]][npm-url]
 
 [npm-img]: https://img.shields.io/npm/v/stream-chain.svg
 [npm-url]: https://npmjs.org/package/stream-chain
-[ci-img]: https://github.com/uhop/stream-chain/actions/workflows/tests.yml/badge.svg
-[ci-url]: https://github.com/uhop/stream-chain/actions/workflows/tests.yml
 
 `stream-chain` processes streams of **objects** &mdash; records, not raw text or bytes. It is especially designed for huge streams: multi-gigabyte database dumps, append-only logs, message-queue and other live feeds generated continuously and far too large to hold in memory. You handle one record at a time while the library keeps memory flat, propagating [backpressure](https://nodejs.org/en/learn/modules/backpressuring-in-streams) from end to end.
 
