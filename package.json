@@ -14,9 +14,6 @@
     "./web/jsonl": "./src/web/jsonl/index.js",
     "./*": "./src/*"
   },
-  "engines": {
-    "node": ">=22"
-  },
   "scripts": {
     "test": "tape6 --flags FO",
     "test:bun": "tape6-bun --flags FO",
@@ -59,8 +56,6 @@
   ],
   "author": "Eugene Lazutkin <eugene.lazutkin@gmail.com> (https://www.lazutkin.com/)",
   "funding": "https://github.com/sponsors/uhop",
-  "llms": "https://raw.githubusercontent.com/uhop/stream-chain/master/llms.txt",
-  "llmsFull": "https://raw.githubusercontent.com/uhop/stream-chain/master/llms-full.txt",
   "license": "BSD-3-Clause",
   "bugs": {
     "url": "https://github.com/uhop/stream-chain/issues"

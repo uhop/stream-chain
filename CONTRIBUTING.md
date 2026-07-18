@@ -7,7 +7,7 @@ Thank you for your interest in contributing!
 This project uses a git submodule for the wiki. Clone recursively:
 
 ```bash
-git clone --recursive git@github.com:uhop/stream-chain.git
+git clone --recursive https://github.com/uhop/stream-chain.git
 cd stream-chain
 npm install
 ```
@@ -23,7 +23,7 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for the module map and dependency graph
 
 ## Code style
 
-- CommonJS (`require()`/`module.exports`) in source, ESM (`import`) in tests (`.mjs`).
+- ESM (`import`) throughout — source and tests (`"type": "module"`).
 - Formatted with Prettier — see `.prettierrc` for settings.
 - No unnecessary dependencies — the library has zero runtime dependencies.
 - Keep `src/index.js` and `src/index.d.ts` in sync.

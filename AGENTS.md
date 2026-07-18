@@ -122,7 +122,7 @@ stream-chain/
 
 - **Zero runtime dependencies.** Never add packages to `dependencies`. Only `devDependencies` are allowed.
 - **Do not modify or delete test expectations** without understanding why they changed.
-- **Do not add comments or remove comments** unless explicitly asked.
+- **Comments are short _why_-markers only** — a non-trivial decision or constraint, or an algorithm reference; never narrate _what_ the code does. See [fleet slice 20](https://github.com/uhop/claude-config/blob/master/topics/no-narrating-comments.md).
 - **Keep `src/index.js` and `src/index.d.ts` in sync.** All public API is exported from `index.js` and typed in `index.d.ts`.
 - **Keep `.js` and `.d.ts` files in sync** for all modules under `src/`.
 - **Object mode by default.** `chain()` (the /node variant) defaults to `{writableObjectMode: true, readableObjectMode: true}`.
