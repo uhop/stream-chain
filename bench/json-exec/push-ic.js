@@ -28,7 +28,7 @@ const fns = [tokenize, pick, assemble, keep, emit];
 // fresh dispatch cluster per call → independent inline caches at `push(...)`
 const makeDispatch = () => {
   const next = (value, fns, index, push) => {
-    for (let i = index; ; ) {
+    for (let i = index; ;) {
       if (value && typeof value.then == 'function') {
         const ii = i;
         return value.then(v => next(v, fns, ii, push));

@@ -22,7 +22,7 @@
 import * as defs from './defs.js';
 
 const next = (value, fns, index, push) => {
-  for (let i = index; ; ) {
+  for (let i = index; ;) {
     if (value && typeof value.then == 'function') {
       const ii = i;
       return value.then(v => next(v, fns, ii, push));

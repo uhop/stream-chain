@@ -23,6 +23,7 @@ npm install
 - **Test (Bun):** `npm run test:bun`
 - **Test (Deno):** `npm run test:deno`
 - **Test (sequential):** `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
+- **Test (browser):** `npm run test:browser` — drives headless Chromium via `tape-six-puppeteer`; auto-starts `tape6-server` on port `55555` (env-overridable, avoids the default `3000` collision). Browser-safe test set is selected by `tape6.tests` (`tests/core/` + `tests/web/`); `tape6.cli` (`tests/node/`) is skipped in browser context. Nothing downloads at install time: `allowScripts` explicitly denies the `tape-six-puppeteer` / `puppeteer` postinstalls (npm's unreviewed-script warning is advisory — only explicit `false` blocks; denial also unlinks those packages' bins, hence the script's direct-path invocation) and `.puppeteerrc.cjs` sets `skipDownload`. The browser resolves from puppeteer's cache (one-time `npx puppeteer browsers install chrome`) or `PUPPETEER_EXECUTABLE_PATH`.
 - **Test (single file):** `node tests/<bucket>/test-<name>.js` (bucket is `core`, `web`, or `node`)
 - **TypeScript check:** `npm run ts-check`
 - **JavaScript type check (dual tsconfig):** `npm run js-check`
