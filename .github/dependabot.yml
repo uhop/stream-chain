@@ -10,6 +10,8 @@ updates:
     schedule:
       interval: 'weekly'
     versioning-strategy: 'increase-if-necessary'
+    cooldown:
+      default-days: 7
     groups:
       npm-deps:
         patterns:
@@ -18,6 +20,8 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
+    cooldown:
+      default-days: 7
     groups:
       gh-actions:
         patterns:
