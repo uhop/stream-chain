@@ -3,7 +3,6 @@
 import test from 'tape-six';
 
 import {open, mkdtemp, writeFile} from 'node:fs/promises';
-import {existsSync, readdirSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 
@@ -13,12 +12,11 @@ import {none} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
 // per-instance property (not patchable). So we inject a write/read failure via
-// the prototype and prove the handle is still released afterward by counting
-// open fds — the leak the fix closes. The AggregateError "close also failed"
-// branch shares its combine-logic with exec()/pipe(), covered by their tests.
-const FD_DIR = '/proc/self/fd';
-const hasFd = existsSync(FD_DIR);
-const fdCount = () => readdirSync(FD_DIR).length;
+// the prototype, capture the handle (`this`) at the failure site, and prove it
+// was released before the error propagated: fd === -1 after close (Node, Bun,
+// Deno alike). Counting /proc/self/fd was racy under the parallel runner.
+// The AggregateError "close also failed" branch shares its combine-logic with
+// exec()/pipe(), covered by their tests.
 
 let tmp = null;
 let FH = null;
@@ -49,18 +47,14 @@ test.asPromise(
   'asyncBlockWriter: a failed final write still releases the FileHandle',
   async (t, resolve) => {
     await ensure();
-    if (!hasFd) {
-      t.skipTest('fd-leak check requires /proc (Linux)');
-      return resolve();
-    }
     const sink = asyncBlockWriter(join(tmp, 'w-fail'), {writeBlockSize: 1 << 20});
     await settle(sink('hello')); // buffered; no fd opened yet
     const writeErr = new Error('write boom');
-    let caught;
-    const before = fdCount();
+    let caught, handle;
     await withPatched(
       {
         write() {
+          handle = this;
           throw writeErr;
         }
       },
@@ -72,12 +66,9 @@ test.asPromise(
         }
       }
     );
-    const after = fdCount();
     t.equal(caught, writeErr, 'the write error propagates');
-    t.ok(
-      after <= before,
-      `the handle was released despite the write failure (fds ${before} -> ${after})`
-    );
+    t.ok(handle, 'the failing write saw the opened FileHandle');
+    t.equal(handle?.fd, -1, 'the handle was released despite the write failure');
     resolve();
   }
 );
@@ -86,21 +77,17 @@ test.asPromise(
   'asyncBlockWriter: a failed block write (data pass) still releases the FileHandle',
   async (t, resolve) => {
     await ensure();
-    if (!hasFd) {
-      t.skipTest('fd-leak check requires /proc (Linux)');
-      return resolve();
-    }
     // Small block so the first value fills a block and triggers a real
     // data-pass write (open + write) — the fd is opened DURING the data pass,
     // before any `none`. With write patched to fail, the stage must release the
     // handle on its way out instead of leaking it (final() never runs here).
     const sink = asyncBlockWriter(join(tmp, 'w-fail-datapass'), {writeBlockSize: 4});
     const writeErr = new Error('block write boom');
-    let caught;
-    const before = fdCount();
+    let caught, handle;
     await withPatched(
       {
         write() {
+          handle = this;
           throw writeErr;
         }
       },
@@ -112,12 +99,9 @@ test.asPromise(
         }
       }
     );
-    const after = fdCount();
     t.equal(caught, writeErr, 'the block write error propagates');
-    t.ok(
-      after <= before,
-      `the handle was released despite the data-pass write failure (fds ${before} -> ${after})`
-    );
+    t.ok(handle, 'the failing write saw the opened FileHandle');
+    t.equal(handle?.fd, -1, 'the handle was released despite the data-pass write failure');
     resolve();
   }
 );
@@ -126,18 +110,14 @@ test.asPromise(
   'asyncBlockReader: a failed read still releases the FileHandle',
   async (t, resolve) => {
     await ensure();
-    if (!hasFd) {
-      t.skipTest('fd-leak check requires /proc (Linux)');
-      return resolve();
-    }
     const path = join(tmp, 'r-fail');
     await writeFile(path, 'some content\n');
     const readErr = new Error('read boom');
-    let caught;
-    const before = fdCount();
+    let caught, handle;
     await withPatched(
       {
         read() {
+          handle = this;
           throw readErr;
         }
       },
@@ -150,12 +130,9 @@ test.asPromise(
         }
       }
     );
-    const after = fdCount();
     t.equal(caught, readErr, 'the read error propagates');
-    t.ok(
-      after <= before,
-      `the handle was released despite the read failure (fds ${before} -> ${after})`
-    );
+    t.ok(handle, 'the failing read saw the opened FileHandle');
+    t.equal(handle?.fd, -1, 'the handle was released despite the read failure');
     resolve();
   }
 );
