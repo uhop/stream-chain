@@ -95,17 +95,6 @@ test.asPromise(
     const puller = makeWebStreamPuller(stream);
     await puller.next();
     await puller.cancel(new Error('done'));
-    if (!(cancelReason instanceof Error) || cancelReason.message !== 'done') {
-      // Bun ≤1.3.14 doesn't propagate cancel(reason) to source.cancel(reason)
-      // — the source's cancel callback either fires with no reason or doesn't
-      // see the Error instance. Skip the propagation assert here; the lock
-      // assert below still verifies cancel actually closed the stream.
-      t.skipTest(
-        'runtime does not propagate cancel(reason) to source.cancel(reason) (Bun ≤1.3.14)'
-      );
-      resolve();
-      return;
-    }
     t.equal(cancelReason.message, 'done', 'cancel reason propagated to stream');
     t.equal(stream.locked, false, 'lock released after cancel');
     resolve();

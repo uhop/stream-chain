@@ -8,21 +8,6 @@ import asWebStream from '../../src/asWebStream.js';
 // and user-function errors — all should match TransformStream-shape behavior.
 
 test.asPromise('asWebStream: writer.abort() unblocks pending drain', async (t, resolve) => {
-  // Feature-probe Bun's WritableStreamDefaultController.signal gap
-  // (oven-sh/bun#31156 / PR #31157). Without the signal, the asWebStream
-  // abort-wakeup is a no-op and a backpressured write would hang forever.
-  let probedSignal;
-  new WritableStream({
-    start(c) {
-      probedSignal = c.signal;
-    }
-  });
-  if (!probedSignal) {
-    t.skipTest('WritableStreamDefaultController.signal missing on this runtime (Bun ≤1.3.14)');
-    resolve();
-    return;
-  }
-
   // hwm=1; first write enqueues, hits desiredSize=0, returns Promise (pendingDrain).
   // Nothing reads → pendingDrain only resolves if abort signals it.
   const ws = asWebStream(x => x);

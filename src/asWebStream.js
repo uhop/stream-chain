@@ -163,8 +163,8 @@ const asWebStream = (fn, options) => {
       // Optional-chained because Bun ≤1.3.14 returns `undefined` for the
       // controller's signal (spec-required per WHATWG Streams §4.5.2 but
       // missing in Bun's builtin — see oven-sh/bun#31156 / PR #31157).
-      // Bun loses the abort-wakeup safety net until that lands, but the
-      // normal write/close/cancel paths still work.
+      // Fixed upstream (present in Bun 1.4.0); the chaining stays for older
+      // Bun, which only loses the abort wakeup.
       start(controller) {
         writableController = controller;
         controller.signal?.addEventListener('abort', () => {
