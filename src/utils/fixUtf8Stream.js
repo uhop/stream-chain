@@ -4,48 +4,20 @@ import {none, flushable} from '../defs.js';
 
 const makeTextDecoderImpl = () => {
   const textDecoder = new TextDecoder();
-  let input = '';
   return flushable(chunk => {
-    if (chunk === none) {
-      const result = input + textDecoder.decode();
-      input = '';
-      return result;
-    }
-    if (typeof chunk == 'string') {
-      if (!input) return chunk;
-      const result = input + chunk;
-      input = '';
-      return result;
-    }
-    if (chunk instanceof Uint8Array) {
-      const result = input + textDecoder.decode(chunk, {stream: true});
-      input = '';
-      return result;
-    }
+    if (chunk === none) return textDecoder.decode();
+    if (typeof chunk == 'string') return chunk;
+    if (chunk instanceof Uint8Array) return textDecoder.decode(chunk, {stream: true});
     throw new TypeError('Expected a string or a Uint8Array');
   });
 };
 
 const makeStringDecoderImpl = StringDecoder => () => {
   const stringDecoder = new StringDecoder();
-  let input = '';
   return flushable(chunk => {
-    if (chunk === none) {
-      const result = input + stringDecoder.end();
-      input = '';
-      return result;
-    }
-    if (typeof chunk == 'string') {
-      if (!input) return chunk;
-      const result = input + chunk;
-      input = '';
-      return result;
-    }
-    if (chunk instanceof Uint8Array) {
-      const result = input + stringDecoder.write(chunk);
-      input = '';
-      return result;
-    }
+    if (chunk === none) return stringDecoder.end();
+    if (typeof chunk == 'string') return chunk;
+    if (chunk instanceof Uint8Array) return stringDecoder.write(chunk);
     throw new TypeError('Expected a string or a Uint8Array');
   });
 };
