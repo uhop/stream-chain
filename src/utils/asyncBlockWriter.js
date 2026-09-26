@@ -25,12 +25,19 @@ const DEFAULT_WRITE_BLOCK = 1 << 20; // 1 MB
 const asyncBlockWriter = (path, options) => {
   const blockSize = options?.writeBlockSize ?? DEFAULT_WRITE_BLOCK;
   let fh = null;
-  let opening = null;
   let buf = '';
+  let queue = Promise.resolve();
 
-  // overlapping callers share one open: a second open(path, 'w') truncates the file
   const ensureOpen = async () => {
-    if (!fh) fh = await (opening ??= open(path, 'w'));
+    if (!fh) fh = await open(path, 'w');
+  };
+
+  // overlapping calls run one at a time in call order: a second open(path, 'w')
+  // truncates the file, and concurrent writes on one FileHandle are unsafe
+  const serialize = op => {
+    const result = queue.then(op);
+    queue = result.catch(() => {});
+    return result;
   };
 
   return flushable(
@@ -40,7 +47,7 @@ const asyncBlockWriter = (path, options) => {
       if (buf.length < blockSize) return none;
       const data = buf;
       buf = '';
-      return (async () => {
+      return serialize(async () => {
         try {
           await ensureOpen();
           await fh.write(data);
@@ -50,7 +57,7 @@ const asyncBlockWriter = (path, options) => {
           // the original error. If the close fails too, keep both errors in
           // order (write, close). Mirrors final()'s cleanup below.
           const f = fh;
-          fh = opening = null;
+          fh = null;
           if (f) {
             try {
               await f.close();
@@ -64,41 +71,42 @@ const asyncBlockWriter = (path, options) => {
           throw e;
         }
         return none;
-      })();
+      });
     },
-    async () => {
-      let pending,
-        failed = false;
-      try {
-        await ensureOpen(); // also creates an empty file when there is no tail
-        if (buf.length) {
-          const data = buf;
-          buf = '';
-          await fh.write(data);
-        }
-      } catch (e) {
-        pending = e;
-        failed = true;
-      }
-      // Always release the handle, even if the final write failed — never leak
-      // it. If the close fails too, keep both errors in order (write, close).
-      const f = fh;
-      fh = opening = null;
-      if (f) {
+    () =>
+      serialize(async () => {
+        let pending,
+          failed = false;
         try {
-          await f.close();
-        } catch (closeErr) {
-          throw failed
-            ? new AggregateError(
-                [pending, closeErr],
-                'asyncBlockWriter: final write and close both failed'
-              )
-            : closeErr;
+          await ensureOpen(); // also creates an empty file when there is no tail
+          if (buf.length) {
+            const data = buf;
+            buf = '';
+            await fh.write(data);
+          }
+        } catch (e) {
+          pending = e;
+          failed = true;
         }
-      }
-      if (failed) throw pending;
-      return none;
-    }
+        // Always release the handle, even if the final write failed — never leak
+        // it. If the close fails too, keep both errors in order (write, close).
+        const f = fh;
+        fh = null;
+        if (f) {
+          try {
+            await f.close();
+          } catch (closeErr) {
+            throw failed
+              ? new AggregateError(
+                  [pending, closeErr],
+                  'asyncBlockWriter: final write and close both failed'
+                )
+              : closeErr;
+          }
+        }
+        if (failed) throw pending;
+        return none;
+      })
   );
 };
 
