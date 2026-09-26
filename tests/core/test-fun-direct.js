@@ -134,6 +134,37 @@ test.asPromise('fun direct: flush emits buffered remainder', async (t, resolve) 
   resolve();
 });
 
+test.asPromise('fun direct: overlapping async calls keep their own outputs', async (t, resolve) => {
+  const f = fun(async function* (label) {
+    yield label + ':1';
+    await new Promise(resolve => setTimeout(resolve, label === 'a' ? 10 : 50));
+    yield label + ':2';
+  });
+  const [a, b] = await Promise.all([drain(f, 'a'), drain(f, 'b')]);
+  t.deepEqual(a, ['a:1', 'a:2']);
+  t.deepEqual(b, ['b:1', 'b:2']);
+  resolve();
+});
+
+test.asPromise(
+  'fun direct: overlapping call finishing without output gets an empty result',
+  async (t, resolve) => {
+    const f = fun(async function* (label) {
+      if (label === 'b') {
+        await new Promise(resolve => setTimeout(resolve, 50));
+        return;
+      }
+      yield label + ':1';
+      await new Promise(resolve => setTimeout(resolve, 10));
+      yield label + ':2';
+    });
+    const [a, b] = await Promise.all([drain(f, 'a'), drain(f, 'b')]);
+    t.deepEqual(a, ['a:1', 'a:2']);
+    t.deepEqual(b, []);
+    resolve();
+  }
+);
+
 test.asPromise('fun direct: stop halts (no flush — aligned with gen)', async (t, resolve) => {
   const f = fun(x => (x === 2 ? stop : x));
   t.deepEqual(await drain(f, 1), [1]);

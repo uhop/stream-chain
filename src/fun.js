@@ -15,7 +15,7 @@
 import * as defs from './defs.js';
 import {next, flush} from './exec.js';
 
-const collect = (collect, fns) => {
+const asArray = (...fns) => {
   fns = fns
     .filter(fn => fn)
     .flat(Infinity)
@@ -25,39 +25,25 @@ const collect = (collect, fns) => {
     fns = [x => x];
   }
   let flushed = false;
+  // results are per call: overlapping async calls must not share them (as in gen())
   let g = value => {
     if (flushed) throw Error('Call to a flushed pipe.');
+    const results = [],
+      push = v => {
+        results.push(v);
+      };
+    let pending;
     if (value !== defs.none) {
-      return next(value, fns, 0, collect);
+      pending = next(value, fns, 0, push);
     } else {
       flushed = true;
-      return flush(fns, 0, collect);
+      pending = flush(fns, 0, push);
     }
+    return pending && typeof pending.then == 'function' ? pending.then(() => results) : results;
   };
   const needToFlush = fns.some(fn => defs.isFlushable(fn));
   if (needToFlush) g = defs.flushable(g);
   return defs.setFunctionList(g, fns);
-};
-
-const asArray = (...fns) => {
-  let results = null;
-  const f = collect(value => results.push(value), fns);
-  let g = value => {
-    results = [];
-    const pending = f(value);
-    if (pending && typeof pending.then == 'function') {
-      return pending.then(() => {
-        const r = results;
-        results = null;
-        return r;
-      });
-    }
-    const r = results;
-    results = null;
-    return r;
-  };
-  if (defs.isFlushable(f)) g = defs.flushable(g);
-  return defs.setFunctionList(g, defs.getFunctionList(f));
 };
 
 const fun = (...fns) => {
