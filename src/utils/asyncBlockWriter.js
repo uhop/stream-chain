@@ -25,10 +25,12 @@ const DEFAULT_WRITE_BLOCK = 1 << 20; // 1 MB
 const asyncBlockWriter = (path, options) => {
   const blockSize = options?.writeBlockSize ?? DEFAULT_WRITE_BLOCK;
   let fh = null;
+  let opening = null;
   let buf = '';
 
+  // overlapping callers share one open: a second open(path, 'w') truncates the file
   const ensureOpen = async () => {
-    if (!fh) fh = await open(path, 'w');
+    if (!fh) fh = await (opening ??= open(path, 'w'));
   };
 
   return flushable(
@@ -48,7 +50,7 @@ const asyncBlockWriter = (path, options) => {
           // the original error. If the close fails too, keep both errors in
           // order (write, close). Mirrors final()'s cleanup below.
           const f = fh;
-          fh = null;
+          fh = opening = null;
           if (f) {
             try {
               await f.close();
@@ -70,8 +72,9 @@ const asyncBlockWriter = (path, options) => {
       try {
         await ensureOpen(); // also creates an empty file when there is no tail
         if (buf.length) {
-          await fh.write(buf);
+          const data = buf;
           buf = '';
+          await fh.write(data);
         }
       } catch (e) {
         pending = e;
@@ -80,7 +83,7 @@ const asyncBlockWriter = (path, options) => {
       // Always release the handle, even if the final write failed — never leak
       // it. If the close fails too, keep both errors in order (write, close).
       const f = fh;
-      fh = null;
+      fh = opening = null;
       if (f) {
         try {
           await f.close();
