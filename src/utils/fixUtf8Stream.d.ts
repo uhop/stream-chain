@@ -8,6 +8,8 @@ type FixOutput = (chunk: string | Uint8Array | typeof none) => string;
 /**
  * Creates a function that converts buffers to UTF-8 strings and outputs them on the correct character boundaries.
  * @returns a converter function
+ * @remarks A stream should carry either bytes or strings, not both: string chunks pass through
+ *   unchanged, ahead of any partial character the decoder still holds from an earlier byte chunk.
  */
 declare function fixUtf8Stream(): FixOutput;
 

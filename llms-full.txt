@@ -500,7 +500,9 @@ Uses `TextDecoder` by default (works in every runtime); on Node, asynchronously
 upgrades to `node:string_decoder` for ≈2–4× faster decoding. Named export
 `whenReady()` returns a `Promise` that resolves when the upgrade has landed
 (or immediately on non-Node) — optional, only needed when the Node fast path
-must be in effect on the first composition.
+must be in effect on the first composition. A stream should carry either bytes or
+strings, not both: string chunks pass through unchanged, ahead of any partial character
+the decoder still holds from an earlier byte chunk. Other chunk types throw `TypeError`.
 
 ```js
 import fixUtf8Stream, {whenReady} from 'stream-chain/utils/fixUtf8Stream.js';
