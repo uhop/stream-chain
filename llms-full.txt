@@ -773,7 +773,7 @@ Returns `(path) => AsyncGenerator<string>` — open the file, read fixed-size bl
 
 #### asyncBlockWriter(path, options?)
 
-Flushable that accepts string fragments from upstream stages, buffers them, writes whole blocks to `path` via `fileHandle.write()`. The flushable's `final()` writes the tail and closes the handle on flush.
+Flushable that accepts string fragments from upstream stages, buffers them, writes whole blocks to `path` via `fileHandle.write()`. The flushable's `final()` writes the tail and closes the handle on flush. After a failed write (or close) every later call, the flush included, throws an `Error` whose `cause` is the original failure; the file is never reopened, so it is not truncated.
 
 - `writeBlockSize` (number, default: 1 MB) — buffered block size in characters before issuing a write.
 

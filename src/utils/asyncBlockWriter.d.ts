@@ -10,6 +10,8 @@ interface AsyncBlockWriterOptions {
  * handle on flush (`none` signal). Returns a flushable function-list element
  * suitable for use as the terminal stage of a `gen([…])` pipeline driven
  * with `pipe(...)`.
+ * @remarks After a failed write (or close) every later call, the flush included,
+ *   throws an `Error` whose `cause` is the original failure; the file is never reopened.
  */
 declare function asyncBlockWriter(
   path: string,

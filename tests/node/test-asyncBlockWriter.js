@@ -60,32 +60,71 @@ test.asPromise(
   }
 );
 
+const withFailingWrite = async (failOn, fn) => {
+  const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+  const probe = await open(join(dir, 'probe'), 'w');
+  const FH = Object.getPrototypeOf(probe),
+    write = FH.write;
+  await probe.close();
+  const boom = new Error('write boom');
+  FH.write = function (...args) {
+    if (args[0] === failOn) throw boom;
+    return write.apply(this, args);
+  };
+  try {
+    await fn(join(dir, 'out.txt'), boom);
+  } finally {
+    FH.write = write;
+    await rm(dir, {recursive: true, force: true});
+  }
+};
+
+const isRefusal = (error, cause) =>
+  error instanceof Error && /an earlier write failed/.test(error.message) && error.cause === cause;
+
 test.asPromise(
-  'asyncBlockWriter: a failed write does not stall the calls behind it',
+  'asyncBlockWriter: a failed write fails the calls queued behind it',
   async (t, resolve) => {
-    const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
-    const probe = await open(join(dir, 'probe'), 'w');
-    const FH = Object.getPrototypeOf(probe),
-      write = FH.write;
-    await probe.close();
-    try {
-      const path = join(dir, 'out.txt');
+    await withFailingWrite('aaaa', async (path, boom) => {
       const sink = asyncBlockWriter(path, {writeBlockSize: 4});
-      const boom = new Error('write boom');
-      FH.write = function (...args) {
-        if (args[0] === 'aaaa') throw boom;
-        return write.apply(this, args);
-      };
       const [first, second] = await Promise.allSettled([sink('aaaa'), sink('bbbb')]);
       t.equal(first.status, 'rejected');
       t.equal(first.reason, boom);
-      t.equal(second.status, 'fulfilled');
-      await sink(none);
-      t.equal(await readFile(path, 'utf8'), 'bbbb');
-    } finally {
-      FH.write = write;
-      await rm(dir, {recursive: true, force: true});
-    }
+      t.equal(second.status, 'rejected');
+      t.ok(isRefusal(second.reason, boom), 'refused with the original error as cause');
+    });
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asyncBlockWriter: after a failure, later calls are refused and the file is kept',
+  async (t, resolve) => {
+    await withFailingWrite('bbbb', async (path, boom) => {
+      const sink = asyncBlockWriter(path, {writeBlockSize: 4});
+      await sink('aaaa');
+      let error = null;
+      try {
+        await sink('bbbb');
+      } catch (e) {
+        error = e;
+      }
+      t.equal(error, boom, 'the failed write rejects with its own error');
+      t.throws(() => sink('cc'), 'a buffered value is refused');
+      try {
+        await sink('cccc');
+        t.fail('a block write after a failure must be refused');
+      } catch (e) {
+        t.ok(isRefusal(e, boom), 'block write refused');
+      }
+      try {
+        await sink(none);
+        t.fail('the flush after a failure must be refused');
+      } catch (e) {
+        t.ok(isRefusal(e, boom), 'flush refused');
+      }
+      t.equal(await readFile(path, 'utf8'), 'aaaa', 'not reopened, not truncated');
+    });
     resolve();
   }
 );

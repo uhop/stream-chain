@@ -13,7 +13,9 @@
 // the tail write (final) fails, the handle is released on the way out before
 // the error propagates, so this stage never leaks its own fd. (It cannot,
 // however, observe an UNRELATED stage throwing elsewhere in the pipe — the
-// stage simply stops being called; that is the caller's to handle.)
+// stage simply stops being called; that is the caller's to handle.) After a
+// failure every later call fails too, with the original error as its `cause`:
+// reopening would truncate what was written.
 //
 // Node-only (uses `node:fs/promises`).
 
@@ -27,9 +29,19 @@ const asyncBlockWriter = (path, options) => {
   let fh = null;
   let buf = '';
   let queue = Promise.resolve();
+  let failure = null;
 
   const ensureOpen = async () => {
     if (!fh) fh = await open(path, 'w');
+  };
+
+  const checkFailure = () => {
+    if (failure) throw new Error('asyncBlockWriter: an earlier write failed', {cause: failure});
+  };
+
+  const fail = error => {
+    failure = error;
+    throw error;
   };
 
   // overlapping calls run one at a time in call order: a second open(path, 'w')
@@ -42,12 +54,14 @@ const asyncBlockWriter = (path, options) => {
 
   return flushable(
     value => {
+      checkFailure();
       if (typeof value !== 'string' || !value) return none;
       buf += value;
       if (buf.length < blockSize) return none;
       const data = buf;
       buf = '';
       return serialize(async () => {
+        checkFailure();
         try {
           await ensureOpen();
           await fh.write(data);
@@ -62,19 +76,22 @@ const asyncBlockWriter = (path, options) => {
             try {
               await f.close();
             } catch (closeErr) {
-              throw new AggregateError(
-                [e, closeErr],
-                'asyncBlockWriter: block write and close both failed'
+              fail(
+                new AggregateError(
+                  [e, closeErr],
+                  'asyncBlockWriter: block write and close both failed'
+                )
               );
             }
           }
-          throw e;
+          fail(e);
         }
         return none;
       });
     },
     () =>
       serialize(async () => {
+        checkFailure();
         let pending,
           failed = false;
         try {
@@ -96,15 +113,17 @@ const asyncBlockWriter = (path, options) => {
           try {
             await f.close();
           } catch (closeErr) {
-            throw failed
-              ? new AggregateError(
-                  [pending, closeErr],
-                  'asyncBlockWriter: final write and close both failed'
-                )
-              : closeErr;
+            fail(
+              failed
+                ? new AggregateError(
+                    [pending, closeErr],
+                    'asyncBlockWriter: final write and close both failed'
+                  )
+                : closeErr
+            );
           }
         }
-        if (failed) throw pending;
+        if (failed) fail(pending);
         return none;
       })
   );
