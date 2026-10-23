@@ -12,6 +12,10 @@ import * as defs from './defs.js';
 import {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from './defs.js';
 import {next as execNext, flush as execFlush} from './exec.js';
 
+// Unwinds the producer after cancel/abort: a generator stage would otherwise run
+// to its natural end (forever, if endless) into a dead stream.
+const CANCEL = Symbol('cancel');
+
 const asWebStream = (fn, options) => {
   if (isDuplexWebStream(fn) || isReadableWebStream(fn) || isWritableWebStream(fn)) {
     return fn;
@@ -29,17 +33,28 @@ const asWebStream = (fn, options) => {
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
   let stopped = false;
+  let cancelled = false;
   let readableClosed = false;
   let writableErrored = false;
   let readableController;
   let writableController;
   let pendingDrain = null;
+  let rejectDrain = null;
 
   const unblockDrain = () => {
     if (!pendingDrain) return;
     const resolve = pendingDrain;
-    pendingDrain = null;
+    pendingDrain = rejectDrain = null;
     resolve();
+  };
+
+  // Rejecting the parked push unwinds the producer even when later stages drop
+  // every remaining value, so enqueue would never see `cancelled`.
+  const cancelDrain = () => {
+    if (!rejectDrain) return;
+    const reject = rejectDrain;
+    pendingDrain = rejectDrain = null;
+    reject(CANCEL);
   };
 
   // Idempotent: cancel() marks `readableClosed` because the consumer side
@@ -72,23 +87,25 @@ const asWebStream = (fn, options) => {
         unblockDrain();
       },
       cancel(reason) {
-        stopped = true;
+        stopped = cancelled = true;
         readableClosed = true;
-        unblockDrain();
+        cancelDrain();
         errorWritable(reason);
       }
     },
     readableStrategy
   );
 
-  // After cancel/abort, enqueue silently no-ops so producers see clean
-  // completion instead of TypeError from enqueue-on-closed-controller.
+  // After Stop, enqueue silently no-ops so producers see clean completion
+  // instead of TypeError from enqueue-on-closed-controller.
   const enqueue = value => {
+    if (cancelled) throw CANCEL;
     if (stopped) return;
     readableController.enqueue(value);
     if (readableController.desiredSize <= 0) {
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         pendingDrain = resolve;
+        rejectDrain = reject;
       });
     }
   };
@@ -111,6 +128,25 @@ const asWebStream = (fn, options) => {
       const r = processValue(value);
       if (r) await r;
     }
+  };
+
+  // An abnormal exit leaves queued generators suspended at a yield; return()
+  // them so their `finally` runs, then re-throw – mirrors exec's nextGen abort.
+  const release = async error => {
+    while (queue.length) {
+      const g = queue.pop();
+      try {
+        if (g.return) await g.return();
+      } catch (cleanupErr) {
+        if (error instanceof Error) {
+          error = new AggregateError(
+            [error, cleanupErr],
+            'pipeline error; generator cleanup also failed'
+          );
+        }
+      }
+    }
+    throw error;
   };
 
   // Sync-when-possible: returns undefined for plain non-backpressured paths,
@@ -141,7 +177,7 @@ const asWebStream = (fn, options) => {
     }
     if (value && typeof value.next == 'function') {
       queue.push(value);
-      return pump();
+      return pump().catch(release);
     }
     return enqueue(value);
   };
@@ -168,8 +204,8 @@ const asWebStream = (fn, options) => {
       start(controller) {
         writableController = controller;
         controller.signal?.addEventListener('abort', () => {
-          stopped = true;
-          unblockDrain();
+          stopped = cancelled = true;
+          cancelDrain();
         });
       },
       async write(chunk) {
@@ -183,7 +219,7 @@ const asWebStream = (fn, options) => {
           const r = processValue(fn(chunk));
           if (r) await r;
         } catch (error) {
-          if (absorbStop(error)) return;
+          if (error === CANCEL || absorbStop(error)) return;
           // Propagate user-function errors to the readable side so downstream
           // consumers (and pipeTo'd stages) learn — matches TransformStream.
           errorReadable(error);
@@ -202,7 +238,7 @@ const asWebStream = (fn, options) => {
             }
           }
         } catch (error) {
-          if (!absorbStop(error)) {
+          if (error !== CANCEL && !absorbStop(error)) {
             errorReadable(error);
             throw error;
           }
@@ -210,8 +246,8 @@ const asWebStream = (fn, options) => {
         closeReadable();
       },
       abort(reason) {
-        stopped = true;
-        unblockDrain();
+        stopped = cancelled = true;
+        cancelDrain();
         errorReadable(reason);
       }
     },
