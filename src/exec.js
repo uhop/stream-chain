@@ -21,6 +21,21 @@
 
 import * as defs from './defs.js';
 
+// On a push function: the value to throw once its owner is torn down.
+const cancelSymbol = Symbol('cancel');
+
+// The error an abnormal exit surfaces when a generator's own cleanup (its `finally`,
+// fired by `it.return()`) also fails: the cleanup error alone after a `stop`, a clean
+// end; both, when the original is a real Error; a non-Error control sentinel (gen()'s
+// CANCEL) keeps its identity, since callers compare against it. One home for
+// nextGen's abort and the adapters' release.
+const withCleanupError = (err, cleanupErr) => {
+  if (err instanceof defs.Stop) return cleanupErr;
+  return err instanceof Error
+    ? new AggregateError([err, cleanupErr], 'pipeline error; generator cleanup also failed')
+    : err;
+};
+
 const next = (value, fns, index, push) => {
   for (let i = index; ;) {
     if (value && typeof value.then == 'function') {
@@ -72,6 +87,9 @@ const nextMany = (values, fns, i, push) => {
 const nextGen = (it, fns, i, push) => {
   const step = () => {
     for (;;) {
+      // a torn-down owner marks its push: a generator whose values all get dropped
+      // never reaches the push, so it is stopped here, before its next yield
+      if (push[cancelSymbol]) throw push[cancelSymbol];
       let data = it.next();
       if (data && typeof data.then == 'function') {
         return data.then(d => {
@@ -95,15 +113,7 @@ const nextGen = (it, fns, i, push) => {
   // overhead-free: a plain `try` plus one `.then(undefined, abort)` only when
   // iteration actually suspended.
   const abort = err => {
-    // If the source generator's own cleanup (its `finally`, fired by
-    // `it.return()`) ALSO fails, keep both errors instead of dropping the
-    // cleanup one. Combine only when `err` is a real Error — a non-Error
-    // control sentinel (e.g. gen()'s CANCEL on consumer break) must keep its
-    // identity so callers comparing against it still work.
-    const onCleanupError = cleanupErr =>
-      err instanceof Error
-        ? new AggregateError([err, cleanupErr], 'pipeline error; generator cleanup also failed')
-        : err;
+    const onCleanupError = cleanupErr => withCleanupError(err, cleanupErr);
     let ret;
     try {
       ret = it.return ? it.return() : undefined;
@@ -179,4 +189,4 @@ const exec = (...fns) => {
 };
 
 export default exec;
-export {exec, next, flush};
+export {exec, next, flush, withCleanupError, cancelSymbol};

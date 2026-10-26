@@ -218,3 +218,27 @@ test.asPromise('gen direct: consumer .throw() propagates and cleans up', async (
   t.ok(after.done, 'iterator finished after .throw()');
   resolve();
 });
+
+test.asPromise(
+  'gen: breaking out stops a generator whose later values are dropped',
+  async (t, resolve) => {
+    let produced = 0,
+      released = false;
+    const source = async function* () {
+      try {
+        for (let i = 0; i < 10000; ++i) {
+          ++produced;
+          yield i;
+        }
+      } finally {
+        released = true;
+      }
+    };
+    const g = gen(source, x => (x === 0 ? x : none));
+    for await (const _ of g(0)) break;
+    await new Promise(r => setTimeout(r, 50));
+    t.ok(produced < 10000, 'the generator stopped before its end (' + produced + ' produced)');
+    t.ok(released, "generator's finally ran");
+    resolve();
+  }
+);

@@ -12,15 +12,17 @@
 //   await drain(c('input.jsonl'));
 //
 // Internally: an `asyncBlockReader` (async generator yielding decoded blocks
-// from `fs/promises.open` + `StringDecoder('utf8')`) followed by the existing
-// JSONL `parser` flushable (which wraps `fixUtf8Stream → lines → JSON.parse`).
-// Node-only.
+// from `fs/promises.open` + `StringDecoder('utf8')`) followed by `lines()` and
+// the raw `jsonlParser`. Node-only.
 
 import {gen} from '../../core/index.js';
-import parser from '../parser.js';
+import {jsonlParser} from '../parser.js';
+import lines from '../../utils/lines.js';
 import asyncBlockReader from '../../utils/asyncBlockReader.js';
 
-const parseFile = options => gen(asyncBlockReader(options), parser(options));
+// not `parser()`: the reader already decodes and drops the BOM, and the
+// `fixUtf8Stream()` in front of `parser()` would drop a second U+FEFF
+const parseFile = options => gen(asyncBlockReader(options), lines(), jsonlParser(options));
 
 export default parseFile;
 export {parseFile, parseFile as parser};

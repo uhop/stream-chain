@@ -60,7 +60,7 @@ src/                          # Source code
 │   ├── stringerWebStream.js  # JSONL stringer (Web TransformStream): same contract, Web Streams substrate
 │   ├── stringerWebStream.d.ts
 │   └── file/                 # File-edge composites for JSONL (Node-only)
-│       ├── parser.js         # parseFile(options) → gen(asyncBlockReader, parser)
+│       ├── parser.js         # parseFile(options) → gen(asyncBlockReader, lines, jsonlParser)
 │       ├── parser.d.ts
 │       ├── stringer.js       # stringerToFile(path, options) → gen(stringer, asyncBlockWriter)
 │       └── stringer.d.ts
@@ -78,13 +78,13 @@ src/                          # Source code
     ├── readableWebStreamFrom.js  # readableWebStreamFrom({iterable}) — iterable/iterator to Web ReadableStream
     ├── reduceStream.js       # reduceStream(fn, initial) — reduce as Node Writable (.accumulator)
     ├── reduceWebStream.js    # reduceWebStream(fn, initial) — reduce as Web WritableStream ({writable, result, accumulator})
-    ├── fixUtf8Stream.js      # fixUtf8Stream() — repartition chunks for valid UTF-8
+    ├── fixUtf8Stream.js      # fixUtf8Stream({ignoreBOM?}) — repartition chunks for valid UTF-8, drop a leading BOM
     ├── lines.js              # lines() — split byte stream into lines
     ├── streamPuller.js       # makeStreamPuller(readable) — wrap Node Readable as non-destructive async iterator
     ├── webStreamPuller.js    # makeWebStreamPuller(readable) — wrap Web ReadableStream as non-destructive async iterator
     ├── drain.js              # drain(asyncIter) — await an async iterable, return its last value
     ├── pipe.js               # pipe(...stages) — one-shot single-value gen driver with end-of-input flush
-    ├── asyncBlockReader.js   # asyncBlockReader({readBlockSize?}) → (path) async-yields UTF-8 blocks (Node-only)
+    ├── asyncBlockReader.js   # asyncBlockReader({readBlockSize?, ignoreBOM?}) → (path) async-yields UTF-8 blocks (Node-only)
     ├── asyncBlockWriter.js   # asyncBlockWriter(path, {writeBlockSize?}) — flushable file-block sink with close() (Node-only)
     └── *.d.ts                # TypeScript declarations for each utility
 tests/                        # Test files organized by environment (tape-six)
@@ -198,14 +198,14 @@ Both intended for downstream consumers (stream-join, stream-sorting) that need o
 
 ### JSONL support
 
-- `parser(reviver?)` — returns a `gen()` pipeline: `fixUtf8Stream → lines → JSON.parse`. Each emitted record is `{key, value}` where `key` is the zero-based line index. Empty lines are dropped. Error handling: `ignoreErrors: true` drops failed lines but the counter still bumps (gappy keys; back-compat); `errorIndicator` (presence-checked) replaces failed lines with the value or with a function-form `(error, input, reviver) => unknown` result — `undefined` return drops without bumping the counter, so keys stay sequential. `errorIndicator` wins when both are set.
-- `parserStream(options?)` — wraps `parser()` with `asStream()`; threads `errorIndicator` through.
-- `parserWebStream(options?)` — wraps `parser()` with `asWebStream()`; threads `errorIndicator` through.
+- `parser(reviver?)` — returns a `gen()` pipeline: `fixUtf8Stream → lines → JSON.parse`. Each emitted record is `{key, value}` where `key` is the zero-based line index. Empty lines are dropped. Error handling: `ignoreErrors: true` drops failed lines but the counter still bumps (gappy keys; back-compat); `errorIndicator` (presence-checked) replaces failed lines with the value or with a function-form `(error, input, reviver) => unknown` result — `undefined` return drops without bumping the counter, so keys stay sequential. `errorIndicator` wins when both are set. A byte-order mark that starts the input is dropped by the `fixUtf8Stream` front (`ignoreBOM: true` keeps it).
+- `parserStream(options?)` — wraps `parser()` with `asStream()`; threads `errorIndicator` and `ignoreBOM` through.
+- `parserWebStream(options?)` — wraps `parser()` with `asWebStream()`; threads `errorIndicator` and `ignoreBOM` through.
 - Raw export: `jsonlParser(options?)` (the per-line factory without the `fixUtf8Stream → lines` front, for callers whose chunks already arrive line-aligned).
 - `stringer(options?)` (`src/jsonl/stringer.js`) — function-pipeline flushable that serializes values to JSONL fragments. Used as the canonical building block; `stringerStream` (Node Transform) and `stringerWebStream` (Web TransformStream) keep their existing Transform-shape contracts for stream consumers.
 - `stringerStream(options?)` — Duplex stream that serializes objects to JSONL format.
 - Factory-bundled entries (in `src/node/jsonl/` and `src/web/jsonl/`): one factory carrying `.asStream` (Node `Duplex`, node entry only) and `.asWebStream` (Web pair) as methods — `jsonlParser.asStream()`, `jsonlStringer.asWebStream()`, etc. The node parser/stringer attach both adapters; the web entries omit `.asStream` and never import `node:stream` (browser-safe). The two `index.js` barrels export `{jsonlParser, jsonlStringer}` and are exposed as the `stream-chain/node/jsonl` and `stream-chain/web/jsonl` subpaths. These delegate to the suffixed adapters above; they exist so stream-json's deprecated JSONL can be migrated to stream-chain by changing only the import specifier.
-- File-edge composites (Node-only, in `src/jsonl/file/`): `parseFile(options)` returns `gen(asyncBlockReader, parser)` — drive with `pipe(...)` and a path; `stringerToFile(path, options)` returns `gen(stringer, asyncBlockWriter)` — drive with `pipe(...)` so the writer's flushable closes the file. Round-trip via `pipe(parseFile(), r => r.value, stringerToFile(out))` is ~40% faster than the equivalent `fs streams + parserStream + stringerStream` pipeline on 50k-row fixtures (see `bench/jsonl-file.js`). The gain comes from collapsing the per-chunk Transform/Writable boundaries into one fused executor.
+- File-edge composites (Node-only, in `src/jsonl/file/`): `parseFile(options)` returns `gen(asyncBlockReader, lines, jsonlParser)` (the reader decodes and drops the BOM, so `parser()`'s `fixUtf8Stream` front is left out) — drive with `pipe(...)` and a path; `stringerToFile(path, options)` returns `gen(stringer, asyncBlockWriter)` — drive with `pipe(...)` so the writer's flushable closes the file. Round-trip via `pipe(parseFile(), r => r.value, stringerToFile(out))` is ~40% faster than the equivalent `fs streams + parserStream + stringerStream` pipeline on 50k-row fixtures (see `bench/jsonl-file.js`). The gain comes from collapsing the per-chunk Transform/Writable boundaries into one fused executor.
 
 ### Utility functions
 

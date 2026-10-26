@@ -190,6 +190,29 @@ test.asPromise(
   }
 );
 
+test.asPromise(
+  'exec: after a stop, a failing generator cleanup surfaces alone',
+  async (t, resolve) => {
+    const cleanupErr = new Error('cleanup boom');
+    const source = async function* () {
+      try {
+        yield 1;
+        yield 2;
+      } finally {
+        throw cleanupErr;
+      }
+    };
+    let caught;
+    try {
+      await run([source, x => (x === 2 ? stop : x)], [0]);
+    } catch (e) {
+      caught = e;
+    }
+    t.equal(caught, cleanupErr, 'the cleanup error, not an AggregateError holding Stop');
+    resolve();
+  }
+);
+
 test.asPromise('exec: many', async (t, resolve) => {
   const out = await run([x => x * x, x => many([x, x + 1, x + 2]), x => 2 * x + 1], [1, 2, 3]);
   t.deepEqual(out, [3, 5, 7, 9, 11, 13, 19, 21, 23]);

@@ -10,7 +10,7 @@
 
 import * as defs from './defs.js';
 import {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from './defs.js';
-import {next as execNext, flush as execFlush} from './exec.js';
+import {next as execNext, flush as execFlush, withCleanupError, cancelSymbol} from './exec.js';
 
 // Unwinds the producer after cancel/abort: a generator stage would otherwise run
 // to its natural end (forever, if endless) into a dead stream.
@@ -87,9 +87,8 @@ const asWebStream = (fn, options) => {
         unblockDrain();
       },
       cancel(reason) {
-        stopped = cancelled = true;
         readableClosed = true;
-        cancelDrain();
+        cancelProducer();
         errorWritable(reason);
       }
     },
@@ -110,12 +109,21 @@ const asWebStream = (fn, options) => {
     }
   };
 
+  // Teardown: a parked push is rejected with CANCEL, and the push is marked so the
+  // executor also stops a generator whose values never reach it
+  const cancelProducer = () => {
+    stopped = cancelled = true;
+    enqueue[cancelSymbol] = CANCEL;
+    cancelDrain();
+  };
+
   // Slow-path generator queue (preserves iterator state across re-entry) —
   // used by the single-fn processValue path below.
   const queue = [];
 
   const pump = async () => {
     while (queue.length) {
+      if (cancelled) throw CANCEL; // a generator whose values all get dropped
       const g = queue[queue.length - 1];
       let result = g.next();
       if (result && typeof result.then == 'function') result = await result;
@@ -138,12 +146,7 @@ const asWebStream = (fn, options) => {
       try {
         if (g.return) await g.return();
       } catch (cleanupErr) {
-        if (error instanceof Error) {
-          error = new AggregateError(
-            [error, cleanupErr],
-            'pipeline error; generator cleanup also failed'
-          );
-        }
+        error = withCleanupError(error, cleanupErr);
       }
     }
     throw error;
@@ -203,10 +206,7 @@ const asWebStream = (fn, options) => {
       // Bun, which only loses the abort wakeup.
       start(controller) {
         writableController = controller;
-        controller.signal?.addEventListener('abort', () => {
-          stopped = cancelled = true;
-          cancelDrain();
-        });
+        controller.signal?.addEventListener('abort', cancelProducer);
       },
       async write(chunk) {
         if (stopped) return;
@@ -246,8 +246,7 @@ const asWebStream = (fn, options) => {
         closeReadable();
       },
       abort(reason) {
-        stopped = cancelled = true;
-        cancelDrain();
+        cancelProducer();
         errorReadable(reason);
       }
     },

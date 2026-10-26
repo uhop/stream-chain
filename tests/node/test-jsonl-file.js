@@ -221,3 +221,27 @@ test.asPromise(
     resolve();
   }
 );
+
+test.asPromise('parseFile: a leading BOM is dropped, and only one', async (t, resolve) => {
+  const dir = await mkTmp();
+  try {
+    const path = join(dir, 'bom.jsonl');
+    await writeFile(path, '\uFEFF{"a":1}\n{"b":2}', 'utf8');
+    const out = [];
+    for await (const v of pipe(parseFile({readBlockSize: 2}))(path)) out.push(v.value);
+    t.deepEqual(out, [{a: 1}, {b: 2}]);
+
+    const twice = join(dir, 'bom2.jsonl');
+    await writeFile(twice, '\uFEFF\uFEFF{"a":1}', 'utf8');
+    let caught = null;
+    try {
+      for await (const v of pipe(parseFile())(twice)) void v;
+    } catch (e) {
+      caught = e;
+    }
+    t.ok(caught instanceof SyntaxError, 'the second U+FEFF is text');
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+  resolve();
+});

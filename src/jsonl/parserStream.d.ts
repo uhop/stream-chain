@@ -15,6 +15,12 @@ interface ParserOptions extends DuplexOptions {
   /** Whether to ignore errors silently. It defaults to `false`. */
   ignoreErrors?: boolean;
   /**
+   * Keep a byte-order mark (U+FEFF) that starts the input, as `TextDecoder`'s
+   * `ignoreBOM` does. Defaults to `false`: the BOM is dropped, whether the stream
+   * carries bytes or strings. A U+FEFF later in the stream is always kept.
+   */
+  ignoreBOM?: boolean;
+  /**
    * Replace a failed-parse line with this value, or with the result of calling
    * it as `(error, input, reviver) => unknown`. Presence-checked: setting
    * `errorIndicator: undefined` is meaningful (drop bad lines). When both

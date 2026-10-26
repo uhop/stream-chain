@@ -1,7 +1,7 @@
 // @ts-self-types="./gen.d.ts"
 
 import * as defs from './defs.js';
-import {next as execNext, flush as execFlush} from './exec.js';
+import {next as execNext, flush as execFlush, cancelSymbol} from './exec.js';
 
 // gen() builds a push→pull async-generator bridge over the shared executor
 // (exec.next / exec.flush) — ~45% faster than the recursive `async function*` it
@@ -88,6 +88,7 @@ const gen = (...fns) => {
       }
     } finally {
       cancelled = true;
+      push[cancelSymbol] = CANCEL;
       if (rejectProducer) {
         const rj = rejectProducer;
         resolveProducer = rejectProducer = null;

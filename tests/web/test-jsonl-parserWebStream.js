@@ -5,6 +5,7 @@ import test from 'tape-six';
 import parserWebStream from '../../src/jsonl/parserWebStream.js';
 import stringerWebStream from '../../src/jsonl/stringerWebStream.js';
 import reduceWebStream from '../../src/utils/reduceWebStream.js';
+import {whenReady} from '../../src/utils/fixUtf8Stream.js';
 
 const drainKeys = async readable => {
   const out = [];
@@ -135,5 +136,33 @@ test.asPromise('parserWebStream: has Web duplex shape', (t, resolve) => {
   t.ok(p.writable, 'has writable');
   t.equal(typeof p.readable.pipeTo, 'function');
   t.equal(typeof p.writable.getWriter, 'function');
+  resolve();
+});
+
+test.asPromise('parserWebStream: a leading BOM is dropped', async (t, resolve) => {
+  await whenReady(); // on Node, the StringDecoder path, which keeps a BOM on its own
+  const parser = parserWebStream();
+  const bytes = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode('{"a":1}\n{"b":2}')]);
+  const writePromise = writeAll(parser.writable, [bytes]);
+  const out = await drainKeys(parser.readable);
+  await writePromise;
+  t.deepEqual(
+    out.map(item => item.value),
+    [{a: 1}, {b: 2}]
+  );
+  resolve();
+});
+
+test.asPromise('parserWebStream: ignoreBOM keeps the BOM', async (t, resolve) => {
+  const parser = parserWebStream({ignoreBOM: true});
+  const writePromise = writeAll(parser.writable, ['\uFEFF{"a":1}']).catch(() => {});
+  let caught = null;
+  try {
+    await drainKeys(parser.readable);
+  } catch (error) {
+    caught = error;
+  }
+  await writePromise;
+  t.ok(caught instanceof SyntaxError, 'the kept BOM fails JSON.parse');
   resolve();
 });

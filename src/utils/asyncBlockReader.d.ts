@@ -1,6 +1,12 @@
 interface AsyncBlockReaderOptions {
   /** Block size in bytes for `fileHandle.read()`. Defaults to 64 KB. */
   readBlockSize?: number;
+  /**
+   * Keep a byte-order mark (U+FEFF) that starts the file, as `TextDecoder`'s
+   * `ignoreBOM` does. Defaults to `false`: the BOM is dropped. A U+FEFF later in
+   * the file is always kept.
+   */
+  ignoreBOM?: boolean;
 }
 
 /**

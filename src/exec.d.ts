@@ -44,5 +44,17 @@ declare function exec(
   ...fns: Array<Fn | ReadonlyArray<Fn> | null | undefined | false>
 ): (value: unknown, push: Push) => void | Promise<void>;
 
+/**
+ * The error an abnormal exit surfaces when a generator's own cleanup also fails.
+ * Internal: shared by the executor and the stream adapters.
+ */
+declare function withCleanupError(err: unknown, cleanupErr: unknown): unknown;
+
+/**
+ * Set on a push function by its owner on teardown, to the value the executor
+ * throws before a generator's next yield. Internal: shared with the adapters.
+ */
+declare const cancelSymbol: unique symbol;
+
 export default exec;
-export {exec, next, flush};
+export {exec, next, flush, withCleanupError, cancelSymbol};

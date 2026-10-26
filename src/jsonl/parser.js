@@ -62,7 +62,7 @@ const jsonlParser = options => {
   };
 };
 
-const parser = options => gen(fixUtf8Stream(), lines(), jsonlParser(options));
+const parser = options => gen(fixUtf8Stream(options), lines(), jsonlParser(options));
 
 parser.parser = parser;
 parser.jsonlParser = jsonlParser;

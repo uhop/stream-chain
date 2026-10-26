@@ -12,7 +12,7 @@
 
 import {Duplex} from 'node:stream';
 import * as defs from './defs.js';
-import {next as execNext, flush as execFlush} from './exec.js';
+import {next as execNext, flush as execFlush, withCleanupError, cancelSymbol} from './exec.js';
 
 // Unwinds the producer after destroy(): a generator stage would otherwise run to
 // its natural end (forever, if endless) into a dead stream.
@@ -74,6 +74,7 @@ const asStream = (fn, options) => {
 
   const pump = async () => {
     while (queue.length) {
+      if (destroyed) throw CANCEL; // a generator whose values all get dropped
       const g = queue[queue.length - 1];
       let result = g.next();
       if (result && typeof result.then == 'function') result = await result;
@@ -96,12 +97,7 @@ const asStream = (fn, options) => {
       try {
         if (g.return) await g.return();
       } catch (cleanupErr) {
-        if (error instanceof Error) {
-          error = new AggregateError(
-            [error, cleanupErr],
-            'pipeline error; generator cleanup also failed'
-          );
-        }
+        error = withCleanupError(error, cleanupErr);
       }
     }
     throw error;
@@ -235,6 +231,7 @@ const asStream = (fn, options) => {
     // mirrors asWebStream's controller.signal listener for writer.abort().
     destroy(error, callback) {
       stopped = destroyed = true;
+      enqueue[cancelSymbol] = CANCEL;
       cancelPaused();
       callback(error);
     }

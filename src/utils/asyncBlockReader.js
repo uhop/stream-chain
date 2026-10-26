@@ -24,10 +24,21 @@ const asyncBlockReader = options => {
     try {
       const sd = new StringDecoder('utf8');
       const buf = Buffer.allocUnsafe(blockSize);
+      const write = bytes => sd.write(bytes);
+      // StringDecoder keeps a BOM: drop it as TextDecoder does, from the first decoded
+      // output only, then hand every later block straight to `write`
+      let decode = options?.ignoreBOM
+        ? write
+        : bytes => {
+            const s = write(bytes);
+            if (!s) return s;
+            decode = write;
+            return s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
+          };
       for (;;) {
         const {bytesRead} = await fh.read(buf, 0, blockSize);
         if (!bytesRead) break;
-        const s = sd.write(buf.subarray(0, bytesRead));
+        const s = decode(buf.subarray(0, bytesRead));
         if (s) yield s;
       }
       const tail = sd.end();

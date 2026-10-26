@@ -10,6 +10,7 @@ import {Writable} from 'node:stream';
 import {readString} from '../helpers.js';
 
 import parserStream from '../../src/jsonl/parserStream.js';
+import {whenReady} from '../../src/utils/fixUtf8Stream.js';
 
 const roundtrip = (t, resolve, len, quant) => {
   const objects = [];
@@ -130,4 +131,26 @@ test.asPromise('jsonl parserStream: ignoreErrors drops bad lines silently', (t, 
         }
       })
     );
+});
+
+test.asPromise('parserStream: a leading BOM is dropped', async (t, resolve) => {
+  await whenReady(); // on Node, the StringDecoder path, which keeps a BOM on its own
+  const out = [];
+  const stream = parserStream();
+  stream.on('data', item => out.push(item.value));
+  stream.on('end', () => {
+    t.deepEqual(out, [{a: 1}, {b: 2}]);
+    resolve();
+  });
+  stream.end(Buffer.from('\uFEFF{"a":1}\n{"b":2}', 'utf8'));
+});
+
+test.asPromise('parserStream: ignoreBOM keeps the BOM', (t, resolve) => {
+  const stream = parserStream({ignoreBOM: true});
+  stream.on('data', () => {});
+  stream.on('error', error => {
+    t.ok(error instanceof SyntaxError, 'the kept BOM fails JSON.parse');
+    resolve();
+  });
+  stream.end(Buffer.from('\uFEFF{"a":1}', 'utf8'));
 });

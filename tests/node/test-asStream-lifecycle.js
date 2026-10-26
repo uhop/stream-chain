@@ -131,3 +131,77 @@ test.asPromise('asStream: stop from a generator releases it', (t, resolve) => {
   });
   stream.end(1);
 });
+
+test.asPromise(
+  'asStream: after a stop, a failing generator cleanup surfaces alone',
+  (t, resolve) => {
+    const cleanupErr = new Error('cleanup boom');
+    const stream = asStream(function* (x) {
+      try {
+        yield x;
+        yield stop;
+      } finally {
+        throw cleanupErr;
+      }
+    });
+    stream.on('data', () => {});
+    stream.on('error', error => {
+      t.equal(error, cleanupErr, 'the cleanup error, not an AggregateError holding Stop');
+      resolve();
+    });
+    stream.end(1);
+  }
+);
+
+test.asPromise(
+  'asStream: destroy() stops a generator whose values are all dropped',
+  (t, resolve) => {
+    const state = {produced: 0, released: false};
+    let open;
+    const gate = new Promise(r => (open = r));
+    // the stage holds the first value, then drops it and every later one
+    const stream = asStream(gen(makeSource(state, true), () => gate.then(() => none)));
+    stream.write(1);
+    setTimeout(() => {
+      stream.destroy();
+      open();
+      setTimeout(() => {
+        t.equal(state.produced, 1, 'the generator stops at its next yield');
+        t.ok(state.released, "generator's finally ran");
+        resolve();
+      }, 50);
+    }, 20);
+  }
+);
+
+test.asPromise(
+  'asStream: destroy() stops a single generator whose values are all dropped',
+  (t, resolve) => {
+    const state = {produced: 0, released: false};
+    let open;
+    const gate = new Promise(r => (open = r));
+    const stream = asStream(async function* (x) {
+      try {
+        yield x;
+        await gate;
+        for (let i = 0; i < 10000; ++i) {
+          ++state.produced;
+          yield null;
+        }
+      } finally {
+        state.released = true;
+      }
+    });
+    stream.on('data', () => {});
+    stream.write(1);
+    setTimeout(() => {
+      stream.destroy();
+      open();
+      setTimeout(() => {
+        t.equal(state.produced, 1, 'the generator stops at its next yield');
+        t.ok(state.released, "generator's finally ran");
+        resolve();
+      }, 50);
+    }, 20);
+  }
+);

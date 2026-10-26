@@ -495,16 +495,21 @@ import lines from 'stream-chain/utils/lines.js';
 chain([lines()]); // input: "a\nb\nc" → output: "a", "b", "c"
 ```
 
-### fixUtf8Stream()
+### fixUtf8Stream(options?)
 
 Repartition byte chunks so multi-byte UTF-8 characters are not split across chunks.
 Uses `TextDecoder` by default (works in every runtime); on Node, asynchronously
-upgrades to `node:string_decoder` for ≈2–4× faster decoding. Named export
+upgrades to `node:string_decoder`, 2–7× faster on Node 24 and 26. Named export
 `whenReady()` returns a `Promise` that resolves when the upgrade has landed
 (or immediately on non-Node) — optional, only needed when the Node fast path
 must be in effect on the first composition. A stream should carry either bytes or
 strings, not both: string chunks pass through unchanged, ahead of any partial character
 the decoder still holds from an earlier byte chunk. Other chunk types throw `TypeError`.
+
+A byte-order mark (U+FEFF) that starts the stream is dropped, whether the stream carries
+bytes or strings, the same on every runtime and either implementation (the WHATWG
+decoding rule); a U+FEFF later in the stream is kept. `ignoreBOM: true` keeps the
+leading one too, as `TextDecoder`'s option of the same name does.
 
 ```js
 import fixUtf8Stream, {whenReady} from 'stream-chain/utils/fixUtf8Stream.js';
@@ -579,6 +584,7 @@ Returns a `gen()` pipeline that parses JSONL: `fixUtf8Stream → lines → JSON.
 - `options` — object, or a reviver function as a shorthand. Recognized properties:
   - `reviver` — JSON.parse reviver function.
   - `ignoreErrors` (boolean, default: false) — silently drop unparseable lines. The line counter bumps on every line, so emitted keys reflect the source line index with gaps (back-compat behavior).
+  - `ignoreBOM` (boolean, default: false) — keep a leading byte-order mark instead of dropping it; see [`fixUtf8Stream`](#fixutf8streamoptions).
   - `errorIndicator` (any, presence-checked) — alternative error handling. When the option is set (even to `undefined`), parse failures don't propagate. The indicator value — or, if it's a function, the result of calling it as `(error, input, reviver) => unknown` — replaces the failed line. A `undefined` return drops the line and doesn't bump the counter, so the keys stay sequential. `errorIndicator` wins over `ignoreErrors` when both are set.
     - `errorIndicator: undefined` → drop bad lines (sequential keys).
     - `errorIndicator: null` → emit `{key: N, value: null}` for bad lines.
@@ -608,6 +614,7 @@ parser({errorIndicator: (err, line) => ({_error: err.message, _line: line})});
 Wraps `parser()` with `asStream()`. Returns a Node `Duplex`. Options extend Duplex options:
 - `reviver` — JSON.parse reviver function.
 - `ignoreErrors` (boolean) — silently drop unparseable lines (counter bumps; gappy keys).
+- `ignoreBOM` (boolean) — keep a leading byte-order mark; see [`parser`](#parseroptions).
 - `errorIndicator` — presence-checked; see [`parser`](#parseroptions) for semantics.
 - Default: `{writableObjectMode: false, readableObjectMode: true}`.
 
@@ -623,6 +630,7 @@ chain([fs.createReadStream('data.jsonl'), parserStream()]);
 Web Streams counterpart of `parserStream()`. Wraps `parser()` with `asWebStream()`. Returns `{readable, writable}`. Options:
 - `reviver` — JSON.parse reviver function.
 - `ignoreErrors` (boolean) — silently drop unparseable lines.
+- `ignoreBOM` (boolean) — keep a leading byte-order mark; see [`parser`](#parseroptions).
 - `errorIndicator` — presence-checked; see [`parser`](#parseroptions) for semantics.
 - `strategy` / `readableStrategy` / `writableStrategy` — Web Streams `QueuingStrategy` options.
 
@@ -718,10 +726,11 @@ For local-file workloads, `stream-chain/jsonl/file/parser.js` and `stream-chain/
 
 #### parseFile(options?)
 
-Returns a `gen()` pipeline shaped as `(path) => AsyncGenerator<{key, value}>`. Internally `gen(asyncBlockReader(options), parser(options))`.
+Returns a `gen()` pipeline shaped as `(path) => AsyncGenerator<{key, value}>`. Internally `gen(asyncBlockReader(options), lines(), jsonlParser(options))`: the reader already decodes, so `parser()`'s `fixUtf8Stream()` front is left out.
 
 Options:
 - `readBlockSize` (number, default: 65536) — block size in bytes for `fileHandle.read()`.
+- `ignoreBOM` (boolean, default: false) — keep a byte-order mark that starts the file.
 - All `parser` options (`reviver`, `ignoreErrors`, `errorIndicator`) — forwarded.
 
 Drive with `pipe(...)` so the parser's flushable runs its end-of-input flush (otherwise the last line of a file without trailing newline stays in the line buffer):
@@ -780,9 +789,10 @@ Awaits an async iterable, returns its last yielded value (or `undefined` if it y
 
 #### asyncBlockReader(options?)
 
-Returns `(path) => AsyncGenerator<string>` — open the file, read fixed-size blocks via `fileHandle.read()`, decode through `StringDecoder('utf8')` (which buffers multi-byte sequences split across blocks), and yield each decoded block. Closes the handle in `finally`.
+Returns `(path) => AsyncGenerator<string>` — open the file, read fixed-size blocks via `fileHandle.read()`, decode through `StringDecoder('utf8')` (which buffers multi-byte sequences split across blocks), and yield each decoded block. Closes the handle in `finally`. A byte-order mark that starts the file is dropped; a later U+FEFF is kept.
 
 - `readBlockSize` (number, default: 65536) — block size in bytes.
+- `ignoreBOM` (boolean, default: false) — keep a byte-order mark that starts the file.
 
 #### asyncBlockWriter(path, options?)
 

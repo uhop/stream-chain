@@ -217,3 +217,52 @@ test.asPromise('asWebStream: stop from a generator releases it', async (t, resol
   t.ok(released, "generator's finally ran");
   resolve();
 });
+
+test.asPromise(
+  'asWebStream: after a stop, a failing generator cleanup surfaces alone',
+  async (t, resolve) => {
+    const cleanupErr = new Error('cleanup boom');
+    const ws = asWebStream(function* (x) {
+      try {
+        yield x;
+        yield stop;
+      } finally {
+        throw cleanupErr;
+      }
+    });
+    const writer = ws.writable.getWriter();
+    const written = writer.write(1).catch(error => error);
+    writer.close().catch(() => {});
+    let caught;
+    try {
+      for await (const _ of ws.readable);
+    } catch (error) {
+      caught = error;
+    }
+    t.equal(caught, cleanupErr, 'the readable side fails with the cleanup error');
+    t.equal(await written, cleanupErr, 'and so does the write');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asWebStream: reader.cancel() stops a generator whose values are all dropped',
+  async (t, resolve) => {
+    const state = {produced: 0, released: false};
+    let open;
+    const gate = new Promise(r => (open = r));
+    // the stage holds the first value, then drops it and every later one
+    const ws = asWebStream(gen(makeSource(state, true), () => gate.then(() => none)));
+    ws.writable
+      .getWriter()
+      .write(1)
+      .catch(() => {});
+    await new Promise(r => setTimeout(r, 20));
+    await ws.readable.getReader().cancel();
+    open();
+    await new Promise(r => setTimeout(r, 50));
+    t.equal(state.produced, 1, 'the generator stops at its next yield');
+    t.ok(state.released, "generator's finally ran");
+    resolve();
+  }
+);
