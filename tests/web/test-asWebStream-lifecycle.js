@@ -3,6 +3,8 @@
 import test from 'tape-six';
 
 import asWebStream from '../../src/asWebStream.js';
+import gen from '../../src/gen.js';
+import {none, stop} from '../../src/defs.js';
 
 // Lifecycle/error-propagation tests. Cover writer.abort(), reader.cancel(),
 // and user-function errors — all should match TransformStream-shape behavior.
@@ -119,5 +121,99 @@ test.asPromise('asWebStream: web chain mid-stage error reaches producer', async 
 
   t.ok(producerError, 'producer must observe an error');
   t.equal(producerError?.message, 'mid-boom', 'error reason matches throwing stage');
+  resolve();
+});
+
+// Bounded rather than endless so a regression fails instead of hanging the runner.
+const makeSource = (state, isAsync) => {
+  const body = function* (x) {
+    try {
+      for (let i = 0; i < 10000; ++i) {
+        ++state.produced;
+        yield x + i;
+      }
+    } finally {
+      state.released = true;
+    }
+  };
+  if (!isAsync) return body;
+  return async function* (x) {
+    yield* body(x);
+  };
+};
+
+const cancelWhileSuspended = async (t, fn) => {
+  const state = {produced: 0, released: false};
+  const ws = asWebStream(fn(state));
+  ws.writable
+    .getWriter()
+    .write(1)
+    .catch(() => {});
+  // nobody reads → the generator suspends at a backpressured yield
+  await new Promise(r => setTimeout(r, 20));
+  const before = state.produced;
+  await ws.readable.getReader().cancel();
+  await new Promise(r => setTimeout(r, 50));
+  t.ok(state.produced - before <= 1, 'generator stops within one item of cancel()');
+  t.ok(state.released, "generator's finally ran");
+};
+
+test.asPromise(
+  'asWebStream: reader.cancel() releases a suspended generator',
+  async (t, resolve) => {
+    await cancelWhileSuspended(t, state => makeSource(state, false));
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asWebStream: reader.cancel() releases a suspended generator in gen()',
+  async (t, resolve) => {
+    await cancelWhileSuspended(t, state =>
+      // later values never reach the stream's push again
+      gen(makeSource(state, true), x => (x === 1 ? x : none))
+    );
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asWebStream: reader.cancel() during an async stage releases the generator',
+  async (t, resolve) => {
+    const state = {produced: 0, released: false};
+    let open;
+    const gate = new Promise(r => (open = r));
+    const ws = asWebStream(gen(makeSource(state, false), x => gate.then(() => x)));
+    ws.writable
+      .getWriter()
+      .write(1) // the stage holds the first value, so nothing waits on a push
+      .catch(() => {});
+    await new Promise(r => setTimeout(r, 20));
+    await ws.readable.getReader().cancel();
+    open();
+    await new Promise(r => setTimeout(r, 50));
+    t.equal(state.produced, 1, 'generator stops after cancel()');
+    t.ok(state.released, "generator's finally ran");
+    resolve();
+  }
+);
+
+test.asPromise('asWebStream: stop from a generator releases it', async (t, resolve) => {
+  let released = false;
+  const ws = asWebStream(function* (x) {
+    try {
+      yield x;
+      yield stop;
+    } finally {
+      released = true;
+    }
+  });
+  const writer = ws.writable.getWriter();
+  writer.write(1).catch(() => {});
+  writer.close().catch(() => {});
+  const output = [];
+  for await (const value of ws.readable) output.push(value);
+  t.deepEqual(output, [1]);
+  t.ok(released, "generator's finally ran");
   resolve();
 });

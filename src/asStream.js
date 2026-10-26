@@ -14,6 +14,10 @@ import {Duplex} from 'node:stream';
 import * as defs from './defs.js';
 import {next as execNext, flush as execFlush} from './exec.js';
 
+// Unwinds the producer after destroy(): a generator stage would otherwise run to
+// its natural end (forever, if endless) into a dead stream.
+const CANCEL = Symbol('cancel');
+
 const asStream = (fn, options) => {
   if (typeof fn != 'function') {
     throw TypeError('Only a function is accepted as the first argument');
@@ -22,15 +26,26 @@ const asStream = (fn, options) => {
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
 
   let stopped = false;
+  let destroyed = false;
   let nullPushed = false;
   let resolvePaused = null;
+  let rejectPaused = null;
   let stream = null;
 
   const resume = () => {
     if (!resolvePaused) return;
     const resolve = resolvePaused;
-    resolvePaused = null;
+    resolvePaused = rejectPaused = null;
     resolve();
+  };
+
+  // Rejecting the parked push unwinds the producer even when later stages drop
+  // every remaining value, so enqueue would never see `destroyed`.
+  const cancelPaused = () => {
+    if (!rejectPaused) return;
+    const reject = rejectPaused;
+    resolvePaused = rejectPaused = null;
+    reject(CANCEL);
   };
 
   // Idempotent: prevents 'error' from push-after-end on duplicate end signals.
@@ -40,13 +55,15 @@ const asStream = (fn, options) => {
     stream.push(null);
   };
 
-  // After Stop / destroy, enqueue silently no-ops so producers see clean
-  // completion instead of push-after-end errors.
+  // After Stop, enqueue silently no-ops so producers see clean completion
+  // instead of push-after-end errors.
   const enqueue = value => {
+    if (destroyed) throw CANCEL;
     if (stopped) return;
     if (!stream.push(value)) {
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         resolvePaused = resolve;
+        rejectPaused = reject;
       });
     }
   };
@@ -69,6 +86,25 @@ const asStream = (fn, options) => {
       const r = processValue(value);
       if (r) await r;
     }
+  };
+
+  // An abnormal exit leaves queued generators suspended at a yield; return()
+  // them so their `finally` runs, then re-throw – mirrors exec's nextGen abort.
+  const release = async error => {
+    while (queue.length) {
+      const g = queue.pop();
+      try {
+        if (g.return) await g.return();
+      } catch (cleanupErr) {
+        if (error instanceof Error) {
+          error = new AggregateError(
+            [error, cleanupErr],
+            'pipeline error; generator cleanup also failed'
+          );
+        }
+      }
+    }
+    throw error;
   };
 
   // Sync-when-possible single-fn path: returns undefined for plain
@@ -99,7 +135,7 @@ const asStream = (fn, options) => {
     }
     if (value && typeof value.next == 'function') {
       queue.push(value);
-      return pump();
+      return pump().catch(release);
     }
     return enqueue(value);
   };
@@ -114,7 +150,7 @@ const asStream = (fn, options) => {
   };
 
   const finishWrite = (callback, error) => {
-    if (!error) return callback(null);
+    if (!error || error === CANCEL) return callback(null);
     if (absorbStop(error)) return callback(null);
     callback(error);
   };
@@ -198,8 +234,8 @@ const asStream = (fn, options) => {
     // Unblock any pending paused-promise so an in-flight write can settle —
     // mirrors asWebStream's controller.signal listener for writer.abort().
     destroy(error, callback) {
-      stopped = true;
-      resume();
+      stopped = destroyed = true;
+      cancelPaused();
       callback(error);
     }
   });
