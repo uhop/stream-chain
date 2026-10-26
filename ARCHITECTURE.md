@@ -174,11 +174,11 @@ For this reason `fun()` is intentionally NOT on the default `stream-chain` / `/n
 
 ### asStream() — function to Node Duplex
 
-`asStream(fn[, options])` wraps any function (regular, async, generator, async generator) as a `Duplex` stream. Per-item backpressure: every `stream.push()` is awaited if it returned `false`, keeping the readable queue at `hwm + 1` regardless of how many output values one input chunk produces. On `destroy()` the awaited push is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()` and its `finally` runs.
+`asStream(fn[, options])` wraps any function (regular, async, generator, async generator) as a `Duplex` stream. Per-item backpressure: every `stream.push()` is awaited if it returned `false`, keeping the readable queue at `hwm + 1` regardless of how many output values one input chunk produces. On `destroy()` the awaited push is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()` and its `finally` runs. The push is also marked (`cancelSymbol` from `exec.js`), so a generator whose later values all get dropped, and never reach a push, is stopped before its next yield.
 
 ### asWebStream() — function to Web Streams duplex pair
 
-`asWebStream(fn[, options])` wraps any function as a `{readable, writable}` Web Streams duplex pair. NOT a `TransformStream` — `transform()` can't suspend mid-call for per-item backpressure. Per-item backpressure: when `controller.desiredSize <= 0` after an `enqueue`, the next push returns a Promise that resolves when `pull()` fires. On `readable.cancel()` or `writable.abort()` that Promise is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()`.
+`asWebStream(fn[, options])` wraps any function as a `{readable, writable}` Web Streams duplex pair. NOT a `TransformStream` — `transform()` can't suspend mid-call for per-item backpressure. Per-item backpressure: when `controller.desiredSize <= 0` after an `enqueue`, the next push returns a Promise that resolves when `pull()` fires. On `readable.cancel()` or `writable.abort()` that Promise is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()`; the push is marked as well, as in `asStream()`.
 
 ### Stream-type detection (`/node` chain)
 

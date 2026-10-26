@@ -4,7 +4,8 @@ import {none, flushable} from '../defs.js';
 
 // The WHATWG decoding rule: a U+FEFF that starts the first output is a byte-order
 // mark. Applied here for every input on every runtime: StringDecoder keeps the BOM,
-// and Deno 2.9.8's TextDecoder also drops a U+FEFF that starts a later decode() call.
+// and Deno 2.9.8's TextDecoder also drops a U+FEFF that starts a later decode() call
+// (denoland/deno#37090).
 const dropBOM = s => (s.charCodeAt(0) === 0xfeff ? s.slice(1) : s);
 
 // The BOM check is an inline flag, not a self-replacing function: the pipeline holds
