@@ -85,7 +85,7 @@ src/                          # Source code
     ├── drain.js              # drain(asyncIter) — await an async iterable, return its last value
     ├── pipe.js               # pipe(...stages) — one-shot single-value gen driver with end-of-input flush
     ├── asyncBlockReader.js   # asyncBlockReader({readBlockSize?}) → (path) async-yields UTF-8 blocks (Node-only)
-    ├── asyncBlockWriter.js   # asyncBlockWriter(path, {writeBlockSize?}) — flushable file-block sink (Node-only)
+    ├── asyncBlockWriter.js   # asyncBlockWriter(path, {writeBlockSize?}) — flushable file-block sink with close() (Node-only)
     └── *.d.ts                # TypeScript declarations for each utility
 tests/                        # Test files organized by environment (tape-six)
 ├── core/                     # Substrate-agnostic — runs in browser AND CLI (uses /web chain internally via runChain helper)
@@ -110,7 +110,8 @@ wiki/                         # GitHub wiki documentation (git submodule)
 4. All resulting stages are piped together sequentially — `Duplex.pipe()` in `/node`, `ReadableStream.pipeTo()` in `/web`.
 5. A wrapper is created (Node `Duplex` for `/node`, plain `{readable, writable}` object for `/web`) that delegates writes to the first stage and reads from the last stage.
 6. (`/node` only) Error events from all internal stages are forwarded to the wrapper unless `skipEvents: true`. (`/web` propagates errors via `pipeTo`'s default abort-on-error semantics.)
-7. The wrapper exposes `.streams` (all internal stages), `.input` (first), and `.output` (last).
+7. (`/node` only) Destroying the wrapper before both of its sides finish destroys every internal stage, without the error (stage errors are already forwarded); a clean end leaves the stages to finish on their own. (`/web` propagates cancel and abort through `pipeTo`.)
+8. The wrapper exposes `.streams` (all internal stages), `.input` (first), and `.output` (last).
 
 ### How chain() works (`/core`)
 
@@ -173,11 +174,11 @@ For this reason `fun()` is intentionally NOT on the default `stream-chain` / `/n
 
 ### asStream() — function to Node Duplex
 
-`asStream(fn[, options])` wraps any function (regular, async, generator, async generator) as a `Duplex` stream. Per-item backpressure: every `stream.push()` is awaited if it returned `false`, keeping the readable queue at `hwm + 1` regardless of how many output values one input chunk produces.
+`asStream(fn[, options])` wraps any function (regular, async, generator, async generator) as a `Duplex` stream. Per-item backpressure: every `stream.push()` is awaited if it returned `false`, keeping the readable queue at `hwm + 1` regardless of how many output values one input chunk produces. On `destroy()` the awaited push is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()` and its `finally` runs.
 
 ### asWebStream() — function to Web Streams duplex pair
 
-`asWebStream(fn[, options])` wraps any function as a `{readable, writable}` Web Streams duplex pair. NOT a `TransformStream` — `transform()` can't suspend mid-call for per-item backpressure. Per-item backpressure: when `controller.desiredSize <= 0` after an `enqueue`, the next push returns a Promise that resolves when `pull()` fires.
+`asWebStream(fn[, options])` wraps any function as a `{readable, writable}` Web Streams duplex pair. NOT a `TransformStream` — `transform()` can't suspend mid-call for per-item backpressure. Per-item backpressure: when `controller.desiredSize <= 0` after an `enqueue`, the next push returns a Promise that resolves when `pull()` fires. On `readable.cancel()` or `writable.abort()` that Promise is rejected with a private sentinel, and later pushes throw it, so a generator stage gets `it.return()`.
 
 ### Stream-type detection (`/node` chain)
 

@@ -16,7 +16,20 @@ interface AsyncBlockWriterOptions {
 declare function asyncBlockWriter(
   path: string,
   options?: AsyncBlockWriterOptions
-): (value: string) => unknown;
+): AsyncBlockWriter;
+
+/** The sink stage returned by `asyncBlockWriter()`. */
+interface AsyncBlockWriter {
+  (value: string): unknown;
+  /**
+   * Releases the file handle without writing the buffered tail, after any
+   * write in flight settles. Call it from a `finally` when the pipeline may end
+   * without a flush: an error in another stage, a `stop`, or an early break.
+   * Idempotent, and a no-op after a clean flush; every later call to the stage throws.
+   */
+  close(): Promise<void>;
+}
 
 export default asyncBlockWriter;
 export {asyncBlockWriter};
+export type {AsyncBlockWriter, AsyncBlockWriterOptions};

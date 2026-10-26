@@ -23,8 +23,20 @@ interface StringerToFileOptions {
 declare function stringerToFile<T = unknown>(
   path: string,
   options?: StringerToFileOptions
-): (value: T) => AsyncGenerator<never, void, unknown>;
+): StringerToFile<T>;
+
+/** The sink returned by `stringerToFile()`. */
+interface StringerToFile<T = unknown> {
+  (value: T): AsyncGenerator<never, void, unknown>;
+  /**
+   * Releases the file handle without writing the buffered tail, after any
+   * write in flight settles. Call it from a `finally` when the pipeline may end
+   * without a flush: an error in another stage, a `stop`, or an early break.
+   * Idempotent, and a no-op after a clean flush; every later call to the sink throws.
+   */
+  close(): Promise<void>;
+}
 
 export default stringerToFile;
 export {stringerToFile, stringerToFile as stringer};
-export type {StringerToFileOptions};
+export type {StringerToFile, StringerToFileOptions};

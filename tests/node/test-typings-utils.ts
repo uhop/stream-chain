@@ -14,6 +14,12 @@ import reduceStream from '../../src/utils/reduceStream.js';
 import parser from '../../src/jsonl/parser.js';
 import parserStream from '../../src/jsonl/parserStream.js';
 import stringerStream from '../../src/jsonl/stringerStream.js';
+import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
+import stringerToFile from '../../src/jsonl/file/stringer.js';
+
+import {mkdtemp, readFile, rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 
 test.asPromise('typings utils: skip', (t, resolve) => {
   const output: number[] = [];
@@ -156,4 +162,23 @@ test.asPromise('typings jsonl: stringerStream', (t, resolve) => {
     t.equal(output.join(''), '{"a":1}\n{"b":2}');
     resolve();
   });
+});
+
+test.asPromise('typings utils: file sinks expose close()', async (t, resolve) => {
+  const dir = await mkdtemp(join(tmpdir(), 'stream-chain-typings-'));
+  try {
+    const writer = asyncBlockWriter(join(dir, 'w.txt'), {writeBlockSize: 4});
+    await writer('aaaa');
+    const writerClosed: Promise<void> = writer.close();
+    await writerClosed;
+    t.equal(await readFile(join(dir, 'w.txt'), 'utf8'), 'aaaa');
+
+    const sink = stringerToFile<{a: number}>(join(dir, 's.jsonl'));
+    for await (const _ of sink({a: 1}));
+    const sinkClosed: Promise<void> = sink.close();
+    await sinkClosed;
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+  resolve();
 });

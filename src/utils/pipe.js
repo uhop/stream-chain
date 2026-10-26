@@ -20,8 +20,9 @@
 // their handles regardless: a generator source gets `it.return()` (its
 // `finally`) from the executor's abort path, independent of this flush. A
 // resource-owning SINK that needs release on abort guards its own code with
-// `try`/`catch`, or the caller does so in a `catch`/`finally` — the exception
-// propagates intact (never suppressed), so it stays actionable.
+// `try`/`catch`, or the caller releases it in a `catch`/`finally`
+// (`asyncBlockWriter` and `stringerToFile` expose `close()` for that) — the
+// exception propagates intact (never suppressed), so it stays actionable.
 //
 // The returned function is single-shot per call: each invocation builds a
 // fresh `gen` internally, so calling it again with another value is fine

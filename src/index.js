@@ -153,7 +153,16 @@ const chain = (fns, options) => {
       writable: isWritableNodeStream(input),
       write: writeMethod,
       final: finalMethod,
-      read: readMethod
+      read: readMethod,
+      destroy(error, callback) {
+        // a clean end leaves the inner streams alone: an output's writable side can
+        // outlast its readable side; no error is passed down, since inner 'error'
+        // events are re-emitted on this stream
+        if (!stream.writableFinished || !stream.readableEnded) {
+          for (const item of streams) item.destroy();
+        }
+        callback(error);
+      }
     })
   );
   stream.streams = streams;

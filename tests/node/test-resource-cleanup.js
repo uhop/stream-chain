@@ -8,6 +8,9 @@ import {join} from 'node:path';
 
 import asyncBlockReader from '../../src/utils/asyncBlockReader.js';
 import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
+import pipe from '../../src/utils/pipe.js';
+import drain from '../../src/utils/drain.js';
+import stringerToFile from '../../src/jsonl/file/stringer.js';
 import {none} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
@@ -102,6 +105,59 @@ test.asPromise(
     t.equal(caught, writeErr, 'the block write error propagates');
     t.ok(handle, 'the failing write saw the opened FileHandle');
     t.equal(handle?.fd, -1, 'the handle was released despite the data-pass write failure');
+    resolve();
+  }
+);
+
+const capturingWrite = onHandle => ({
+  write(...args) {
+    onHandle(this);
+    return orig.write.apply(this, args);
+  }
+});
+
+test.asPromise('asyncBlockWriter: close() releases the FileHandle', async (t, resolve) => {
+  await ensure();
+  const sink = asyncBlockWriter(join(tmp, 'w-close'), {writeBlockSize: 4});
+  let handle;
+  await withPatched(
+    capturingWrite(h => (handle = h)),
+    () => settle(sink('aaaa')) // fills a block: open + write
+  );
+  t.ok(handle, 'the block write saw the opened FileHandle');
+  t.notEqual(handle?.fd, -1, 'the handle stays open between blocks');
+  await sink.close();
+  t.equal(handle?.fd, -1, 'close() released the handle');
+  resolve();
+});
+
+test.asPromise(
+  'stringerToFile: close() releases the FileHandle after a failed pipe',
+  async (t, resolve) => {
+    await ensure();
+    const sink = stringerToFile(join(tmp, 's-close'), {writeBlockSize: 4});
+    const sourceErr = new Error('source boom');
+    let caught, handle;
+    await withPatched(
+      capturingWrite(h => (handle = h)),
+      async () => {
+        try {
+          await drain(
+            pipe(function* (x) {
+              yield {a: x};
+              throw sourceErr;
+            }, sink)(1)
+          );
+        } catch (e) {
+          caught = e;
+        } finally {
+          await sink.close();
+        }
+      }
+    );
+    t.equal(caught, sourceErr, 'the source error propagates');
+    t.ok(handle, 'a block write opened the FileHandle');
+    t.equal(handle?.fd, -1, 'close() released the handle');
     resolve();
   }
 );

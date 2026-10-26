@@ -123,6 +123,8 @@ Returns: `Duplex` stream with additional properties:
 - `input` — the first stream (write to it or attach event handlers).
 - `output` — the last stream (read from it or attach event handlers).
 
+Destroying the chain before both of its sides finish (`stream.pipeline()` after a failure elsewhere, an early `break` from `for await`) destroys every internal stream, so a generator stage gets `it.return()` and its `finally` runs. A clean end leaves the internal streams to finish on their own.
+
 ### How functions are called
 
 Functions receive `(chunk, encoding)`. The return value determines what happens:
@@ -749,6 +751,17 @@ const c = pipe(parseFile(), r => r.value, stringerToFile('out.jsonl'));
 await drain(c('in.jsonl'));
 ```
 
+A pipe that ends without the flush (another stage throws, a `stop`, an early `break`) leaves the handle open. The returned sink carries `close()`, which releases it without writing the buffered tail; call it from a `finally`. It is idempotent, and a no-op after a clean flush:
+
+```js
+const sink = stringerToFile('out.jsonl');
+try {
+  await drain(pipe(parseFile(), r => r.value, sink)('in.jsonl'));
+} finally {
+  await sink.close();
+}
+```
+
 ### Driving gen pipelines
 
 #### pipe(...stages)
@@ -776,6 +789,8 @@ Returns `(path) => AsyncGenerator<string>` — open the file, read fixed-size bl
 Flushable that accepts string fragments from upstream stages, buffers them, writes whole blocks to `path` via `fileHandle.write()`. The flushable's `final()` writes the tail and closes the handle on flush. After a failed write (or close) every later call, the flush included, throws an `Error` whose `cause` is the original failure; the file is never reopened, so it is not truncated.
 
 - `writeBlockSize` (number, default: 1 MB) — buffered block size in characters before issuing a write.
+
+The returned stage carries `close(): Promise<void>` for a pipe that ends without the flush: it releases the handle after any write in flight settles and drops the buffered tail. Idempotent, and a no-op after a clean flush; every later call to the stage throws.
 
 ## TypeScript
 

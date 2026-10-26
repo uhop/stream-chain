@@ -13,8 +13,8 @@
 // the tail write (final) fails, the handle is released on the way out before
 // the error propagates, so this stage never leaks its own fd. (It cannot,
 // however, observe an UNRELATED stage throwing elsewhere in the pipe — the
-// stage simply stops being called; that is the caller's to handle.) After a
-// failure every later call fails too, with the original error as its `cause`:
+// stage simply stops being called; the caller releases the handle with
+// `close()`.) After a failure or `close()` every later call fails too:
 // reopening would truncate what was written.
 //
 // Node-only (uses `node:fs/promises`).
@@ -30,13 +30,15 @@ const asyncBlockWriter = (path, options) => {
   let buf = '';
   let queue = Promise.resolve();
   let failure = null;
+  let closed = false;
 
   const ensureOpen = async () => {
     if (!fh) fh = await open(path, 'w');
   };
 
-  const checkFailure = () => {
+  const checkUsable = () => {
     if (failure) throw new Error('asyncBlockWriter: an earlier write failed', {cause: failure});
+    if (closed) throw new Error('asyncBlockWriter: closed');
   };
 
   const fail = error => {
@@ -52,16 +54,16 @@ const asyncBlockWriter = (path, options) => {
     return result;
   };
 
-  return flushable(
+  const writer = flushable(
     value => {
-      checkFailure();
+      checkUsable();
       if (typeof value !== 'string' || !value) return none;
       buf += value;
       if (buf.length < blockSize) return none;
       const data = buf;
       buf = '';
       return serialize(async () => {
-        checkFailure();
+        checkUsable();
         try {
           await ensureOpen();
           await fh.write(data);
@@ -91,7 +93,7 @@ const asyncBlockWriter = (path, options) => {
     },
     () =>
       serialize(async () => {
-        checkFailure();
+        checkUsable();
         let pending,
           failed = false;
         try {
@@ -127,6 +129,19 @@ const asyncBlockWriter = (path, options) => {
         return none;
       })
   );
+
+  // release, not finalize: the buffered tail is dropped, an in-flight write settles first
+  const close = () => {
+    closed = true;
+    buf = '';
+    return serialize(async () => {
+      const f = fh;
+      fh = null;
+      if (f) await f.close();
+    });
+  };
+
+  return Object.assign(writer, {close});
 };
 
 export default asyncBlockWriter;

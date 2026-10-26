@@ -129,6 +129,65 @@ test.asPromise(
   }
 );
 
+test.asPromise(
+  'asyncBlockWriter: close() drops the tail and refuses later calls',
+  async (t, resolve) => {
+    const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+    try {
+      const path = join(dir, 'out.txt');
+      const sink = asyncBlockWriter(path, {writeBlockSize: 4});
+      await sink('aaaa');
+      await sink('bb');
+      await sink.close();
+      await sink.close();
+      t.equal(await readFile(path, 'utf8'), 'aaaa', 'the buffered tail is dropped');
+      t.throws(() => sink('cc'), 'a later value is refused');
+      try {
+        await sink(none);
+        t.fail('a flush after close() must be refused');
+      } catch (e) {
+        t.ok(/closed/.test(e.message), 'flush refused');
+      }
+      t.equal(await readFile(path, 'utf8'), 'aaaa', 'not reopened, not truncated');
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+    resolve();
+  }
+);
+
+test.asPromise('asyncBlockWriter: close() lets a write in flight finish', async (t, resolve) => {
+  const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+  try {
+    const path = join(dir, 'out.txt');
+    const sink = asyncBlockWriter(path, {writeBlockSize: 4});
+    const pending = sink('aaaa');
+    await new Promise(r => setImmediate(r)); // the block write has started
+    await sink.close();
+    t.equal(await pending, none, 'the write in flight completed');
+    t.equal(await readFile(path, 'utf8'), 'aaaa');
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+  resolve();
+});
+
+test.asPromise('asyncBlockWriter: close() after a clean flush is a no-op', async (t, resolve) => {
+  const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+  try {
+    const path = join(dir, 'out.txt');
+    const sink = asyncBlockWriter(path, {writeBlockSize: 4});
+    await sink('aaaa');
+    await sink('bb');
+    await sink(none);
+    await sink.close();
+    t.equal(await readFile(path, 'utf8'), 'aaaabb');
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+  resolve();
+});
+
 test.asPromise('asyncBlockWriter: the tail is written once on flush', async (t, resolve) => {
   const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
   try {
