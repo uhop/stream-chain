@@ -245,3 +245,28 @@ test.asPromise('asStream: a clean end flushes and never aborts', (t, resolve) =>
   });
   stream.end(1);
 });
+
+test.asPromise(
+  'asStream: a stop flushes the stages after it and aborts those before',
+  (t, resolve) => {
+    const up = makeCountingStage();
+    let downFlushed = 0;
+    const down = flushable(
+      x => x,
+      () => (++downFlushed, 'tail')
+    );
+    const stream = asStream(gen(up.stage, x => (x === 2 ? stop : x), down));
+    const output = [];
+    stream.on('data', value => output.push(value));
+    stream.on('end', () => {
+      t.deepEqual(output, [1, 'tail'], "the flushed stage's output still reaches the reader");
+      t.equal(downFlushed, 1, 'the stage after the stopper is flushed once');
+      t.equal(up.state.flushed, 0, 'the stage before the stopper is not flushed');
+      t.equal(up.state.aborted, 1, 'it is aborted once');
+      resolve();
+    });
+    stream.write(1);
+    stream.write(2);
+    stream.end(3);
+  }
+);

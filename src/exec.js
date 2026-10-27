@@ -24,6 +24,13 @@ import * as defs from './defs.js';
 // On a push function: the value to throw once its owner is torn down.
 const cancelSymbol = Symbol('cancel');
 
+// On a Stop thrown by next(): the index of the first stage after the one that stopped.
+const stopAtSymbol = Symbol('stopAt');
+
+// Where the flush after a stop starts; a Stop with no index (thrown by hand, or by an
+// adapter's single function) leaves no stage after the stopper to flush.
+const stopIndex = (stop, fns) => stop[stopAtSymbol] ?? fns.length;
+
 // The error an abnormal exit surfaces when a cleanup also fails (a generator's
 // `finally`, fired by `it.return()`, or a stage's `abort`): the cleanup error alone
 // when there was no error or only a `stop`, a clean end; both, when the original is a
@@ -65,7 +72,11 @@ const next = (value, fns, index, push) => {
       return value.then(v => next(v, fns, ii, push));
     }
     if (value == null || value === defs.none) return;
-    if (value === defs.stop) throw new defs.Stop();
+    if (value === defs.stop) {
+      const stop = new defs.Stop();
+      stop[stopAtSymbol] = i;
+      throw stop;
+    }
     if (defs.isFinalValue(value)) {
       return push(defs.getFinalValue(value)); // emit, bypass remaining fns
     }
@@ -182,11 +193,26 @@ const flush = (fns, index, push) => {
   return step(index);
 };
 
+// A stop is a clean end for the stages after the one that stopped: they are flushed,
+// and the stopper and the stages before it are released, never flushed. For a driver
+// that flushes on its own (asStream, asWebStream); a nested stop just ends the flush.
+const finishStop = async (fns, stop, push) => {
+  const at = stopIndex(stop, fns);
+  let error;
+  try {
+    await flush(fns, at, push);
+  } catch (e) {
+    if (!(e instanceof defs.Stop)) error = e;
+  }
+  const failure = await abortStages(collectAborters(fns.slice(0, at)));
+  if (failure !== undefined) error = withCleanupError(error, failure);
+  if (error !== undefined) throw error;
+};
+
 // Factory parallel to fun()/gen(): normalize the fn-list (flatten, unwrap nested
 // function-lists, default to identity) and return a push-driven function tagged
 // as a function-list. The driver is `(value, push) => void | Promise`; calling
-// it with `none` flushes. Note `stop` halts without flushing buffered
-// flushables — same as gen() (only `fun()` flushes on stop).
+// it with `none` flushes: after a `stop`, only the stages after the stopper.
 const exec = (...fns) => {
   fns = fns
     .filter(fn => fn)
@@ -196,14 +222,25 @@ const exec = (...fns) => {
   if (!fns.length) {
     fns = [x => x];
   }
-  let flushed = false;
+  let flushed = false,
+    stopAt = 0;
+  const noteStop = error => {
+    if (error instanceof defs.Stop) stopAt = stopIndex(error, fns);
+    throw error;
+  };
   let g = (value, push) => {
     if (flushed) throw Error('Call to a flushed pipe.');
     if (value === defs.none) {
       flushed = true;
-      return flush(fns, 0, push);
+      return flush(fns, stopAt, push);
     }
-    return next(value, fns, 0, push);
+    let r;
+    try {
+      r = next(value, fns, 0, push);
+    } catch (error) {
+      noteStop(error);
+    }
+    return r && typeof r.then == 'function' ? r.then(undefined, noteStop) : r;
   };
   const needToFlush = fns.some(fn => defs.isFlushable(fn));
   if (needToFlush) g = defs.flushable(g);
@@ -211,4 +248,14 @@ const exec = (...fns) => {
 };
 
 export default exec;
-export {exec, next, flush, withCleanupError, cancelSymbol, collectAborters, abortStages};
+export {
+  exec,
+  next,
+  flush,
+  withCleanupError,
+  cancelSymbol,
+  collectAborters,
+  abortStages,
+  stopIndex,
+  finishStop
+};

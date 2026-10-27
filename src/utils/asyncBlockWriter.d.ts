@@ -23,9 +23,10 @@ interface AsyncBlockWriter {
   (value: string): unknown;
   /**
    * Releases the file handle without writing the buffered tail, after any
-   * write in flight settles. Call it from a `finally` when the pipeline may end
-   * without a flush: an error in another stage, a `stop`, or an early break.
-   * Idempotent, and a no-op after a clean flush; every later call to the stage throws.
+   * write in flight settles. Also the stage's flushable `abort`: `gen()`, `asStream()`,
+   * and `asWebStream()` call it when a pipeline ends without a flush (an error in
+   * another stage, an early break). Call it yourself when driving the stage some other
+   * way. Idempotent, and a no-op after a clean flush; every later call to the stage throws.
    */
   close(): Promise<void>;
 }

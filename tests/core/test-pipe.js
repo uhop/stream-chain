@@ -37,30 +37,47 @@ test.asPromise('pipe: flushes a flushable sink on normal completion', async (t, 
   resolve();
 });
 
-// The flush finalizes only a pipeline that COMPLETED. An abort — a stage throws,
-// a stage issues `stop`, or the consumer breaks — leaves the generator before
-// `g(none)`, so the sink's `final()` does not run. An exception is not
-// recoverable: a failed pipeline must not be finalized. (Resource-owning SOURCE
-// stages still release inline via the executor's abort path — see
-// test-resource-cleanup.js.)
-test.asPromise('pipe: does NOT flush when a stage issues stop', async (t, resolve) => {
-  const s = recordingSink();
-  let caught = null;
-  try {
-    await drive(
-      pipe(function* (x) {
-        yield x;
-        yield stop;
-      }, s.fn)(7)
+// The flush finalizes a pipeline that COMPLETED, and, after a `stop`, the stages
+// after the one that stopped: a stop is a clean end for them, and the stopper and
+// the stages before it are not flushed. An abort — a stage throws or the consumer
+// breaks — leaves the generator before `g(none)`, so the sink's `final()` does not
+// run. An exception is not recoverable: a failed pipeline must not be finalized.
+// (Resource-owning SOURCE stages still release inline via the executor's abort
+// path — see test-resource-cleanup.js.)
+test.asPromise(
+  'pipe: after a stop, flushes only the stages after the stopper',
+  async (t, resolve) => {
+    const s = recordingSink();
+    let upstreamFlushed = false;
+    const upstream = flushable(
+      x => x,
+      () => {
+        upstreamFlushed = true;
+        return none;
+      }
     );
-  } catch (e) {
-    caught = e;
+    let caught = null;
+    try {
+      await drive(
+        pipe(
+          upstream,
+          function* (x) {
+            yield x;
+            yield stop;
+          },
+          s.fn
+        )(7)
+      );
+    } catch (e) {
+      caught = e;
+    }
+    t.ok(caught instanceof Stop, 'Stop propagated to the consumer');
+    t.deepEqual(s.log.seen, [7], 'data up to the stop reached the sink');
+    t.ok(s.log.finalRan, 'the sink after the stopper was flushed');
+    t.notOk(upstreamFlushed, 'the stage before the stopper was not');
+    resolve();
   }
-  t.ok(caught instanceof Stop, 'Stop propagated to the consumer');
-  t.deepEqual(s.log.seen, [7], 'data up to the stop reached the sink');
-  t.notOk(s.log.finalRan, 'final() did not run — a stopped pipeline is not finalized');
-  resolve();
-});
+);
 
 test.asPromise('pipe: does NOT flush when a stage throws', async (t, resolve) => {
   const s = recordingSink();

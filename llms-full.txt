@@ -165,6 +165,8 @@ chain([x => x > 0 ? x : none]); // filter: pass only positive values
 
 `Symbol.for('object-stream.stop')` — return to skip and terminate the generator. Works only within `gen()` or `fun()` segments.
 
+A stop is a clean end for the stages after the one that stopped: their flushables are still flushed, so a downstream sink (a `stringerToFile`, a `batch`) writes or emits what it buffered. The stopper and the stages before it are not flushed, and their `abort` (if any) is called. `asStream()` and `asWebStream()` do that flush themselves before ending their readable side; with `gen()`, `fun()`, and `exec()`, the caller's `none` flush covers only those stages, and `pipe()` runs it before rethrowing the `Stop`.
+
 ```js
 chain([
   function* () { for (let i = 0; ; ++i) yield i; },
@@ -208,7 +210,7 @@ Helper functions:
 
 Marks a function to be called when the stream ends. When called at end-of-stream, `fn` receives `none` as its argument. Alternatively, provide a separate `final` function that is called with no arguments at end-of-stream.
 
-`abort` (optional, stored under `abortSymbol`) releases the stage's resources when the pipeline ends abnormally: an error in another stage, a `stop`, an early `break`, or a destroyed or cancelled stream. `gen()`, `asStream()`, and `asWebStream()` call it at most once, never after a completed flush, possibly while a call to the stage is still in flight. It releases and must not flush: buffered output is dropped. A throw or a rejection surfaces like a failing cleanup (combined with the pipeline's error, if any). `fun()` and the bare `exec()` driver have no teardown and never call it.
+`abort` (optional, stored under `abortSymbol`) releases the stage's resources when the pipeline ends abnormally: an error in another stage, an early `break`, a destroyed or cancelled stream, or a `stop` by this stage or a later one (stages after the stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most once, never after a completed flush, possibly while a call to the stage is still in flight. It releases and must not flush: buffered output is dropped. A throw or a rejection surfaces like a failing cleanup (combined with the pipeline's error, if any). `fun()` and the bare `exec()` driver have no teardown and never call it.
 
 ```js
 let sum = 0;
@@ -762,7 +764,7 @@ const c = pipe(parseFile(), r => r.value, stringerToFile('out.jsonl'));
 await drain(c('in.jsonl'));
 ```
 
-When a pipeline ends without the flush (another stage throws, a `stop`, an early `break`), its owner (`gen()`, `pipe()`, `asStream()`, `asWebStream()`, a chain) releases the handle through the writer's `abort`, without writing the buffered tail. The returned sink also carries `close()`, idempotent and a no-op after a clean flush, for a caller that drives it some other way or fails outside the pipeline:
+When a pipeline ends without the flush (another stage throws, an early `break`), its owner (`gen()`, `pipe()`, `asStream()`, `asWebStream()`, a chain) releases the handle through the writer's `abort`, without writing the buffered tail. The returned sink also carries `close()`, idempotent and a no-op after a clean flush, for a caller that drives it some other way or fails outside the pipeline:
 
 ```js
 const sink = stringerToFile('out.jsonl');

@@ -68,5 +68,28 @@ declare function collectAborters(fns: readonly Fn[]): Array<() => unknown>;
  */
 declare function abortStages(aborters: ReadonlyArray<() => unknown>): Promise<unknown>;
 
+/**
+ * Where the flush after a `stop` starts: the index of the stage after the stopper,
+ * or `fns.length` when the `Stop` carries none. Internal: shared by the owners.
+ */
+declare function stopIndex(stop: unknown, fns: readonly Fn[]): number;
+
+/**
+ * Ends a pipeline after a `stop` for an owner that flushes on its own: flushes the
+ * stages after the stopper, then releases the stopper and the stages before it.
+ * Internal: shared by `asStream` and `asWebStream`.
+ */
+declare function finishStop(fns: readonly Fn[], stop: unknown, push: Push): Promise<void>;
+
 export default exec;
-export {exec, next, flush, withCleanupError, cancelSymbol, collectAborters, abortStages};
+export {
+  exec,
+  next,
+  flush,
+  withCleanupError,
+  cancelSymbol,
+  collectAborters,
+  abortStages,
+  stopIndex,
+  finishStop
+};

@@ -12,8 +12,9 @@
 // Both I/O branches guard their OWN operations: if a block write (data pass) or
 // the tail write (final) fails, the handle is released on the way out before
 // the error propagates, so this stage never leaks its own fd. An UNRELATED stage
-// throwing elsewhere, a `stop`, or an early break reaches it as the flushable's
-// abort, `close()`, which `gen()`, `asStream`, and `asWebStream` call on teardown;
+// throwing elsewhere or an early break reaches it as the flushable's abort,
+// `close()`, which `gen()`, `asStream`, and `asWebStream` call on teardown (a
+// `stop` upstream flushes it instead);
 // a caller driving the stage some other way calls `close()` itself. After a
 // failure or `close()` every later call fails too: reopening would truncate what
 // was written.

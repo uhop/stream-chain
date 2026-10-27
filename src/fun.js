@@ -8,12 +8,13 @@
 // [[projects/stream-chain/design/sync-when-possible-executor]].
 //
 // Behavioral note vs. the previous bespoke trampoline: `stop` halts without
-// flushing buffered flushables (now consistent with gen(); only the explicit
-// `none` flush emits them), and a sync generator stage is iterated
-// synchronously rather than always-async. Output values are unchanged.
+// flushing buffered flushables (consistent with gen(): the explicit `none` flush
+// emits them, after a stop only those of the stages after the stopper), and a sync
+// generator stage is iterated synchronously rather than always-async. Output
+// values are unchanged.
 
 import * as defs from './defs.js';
-import {next, flush} from './exec.js';
+import {next, flush, stopIndex} from './exec.js';
 
 const asArray = (...fns) => {
   fns = fns
@@ -24,7 +25,12 @@ const asArray = (...fns) => {
   if (!fns.length) {
     fns = [x => x];
   }
-  let flushed = false;
+  let flushed = false,
+    stopAt = 0; // after a stop, the flush starts at the stage after the stopper
+  const noteStop = error => {
+    if (error instanceof defs.Stop) stopAt = stopIndex(error, fns);
+    throw error;
+  };
   // results are per call: overlapping async calls must not share them (as in gen())
   let g = value => {
     if (flushed) throw Error('Call to a flushed pipe.');
@@ -34,12 +40,18 @@ const asArray = (...fns) => {
       };
     let pending;
     if (value !== defs.none) {
-      pending = next(value, fns, 0, push);
+      try {
+        pending = next(value, fns, 0, push);
+      } catch (error) {
+        noteStop(error);
+      }
     } else {
       flushed = true;
-      pending = flush(fns, 0, push);
+      pending = flush(fns, stopAt, push);
     }
-    return pending && typeof pending.then == 'function' ? pending.then(() => results) : results;
+    return pending && typeof pending.then == 'function'
+      ? pending.then(() => results, noteStop)
+      : results;
   };
   const needToFlush = fns.some(fn => defs.isFlushable(fn));
   if (needToFlush) g = defs.flushable(g);

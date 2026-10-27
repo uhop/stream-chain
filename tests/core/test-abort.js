@@ -4,6 +4,8 @@ import test from 'tape-six';
 
 import {flushable, none, stop, Stop, abortSymbol} from '../../src/defs.js';
 import gen from '../../src/gen.js';
+import fun from '../../src/fun.js';
+import exec from '../../src/exec.js';
 import pipe from '../../src/utils/pipe.js';
 import drain from '../../src/utils/drain.js';
 
@@ -68,20 +70,58 @@ test.asPromise('gen: a failing stage aborts once, and its error propagates', asy
   resolve();
 });
 
-test.asPromise('gen: a stop aborts instead of flushing', async (t, resolve) => {
-  const {state, stage} = makeStage();
-  let caught;
-  try {
-    await drain(pipe(source, x => (x === 2 ? stop : x), stage)(0));
-  } catch (error) {
-    caught = error;
+test.asPromise(
+  'gen: a stop flushes the stages after it and aborts those before',
+  async (t, resolve) => {
+    const up = makeStage(),
+      down = makeStage();
+    let caught;
+    try {
+      await drain(pipe(source, up.stage, x => (x === 2 ? stop : x), down.stage)(0));
+    } catch (error) {
+      caught = error;
+    }
+    t.ok(caught instanceof Stop, 'Stop propagates, as from any functional pipeline');
+    t.deepEqual(down.state.seen, [1]);
+    t.equal(down.state.flushed, 1, 'the stage after the stopper is flushed');
+    t.equal(down.state.aborted, 0, 'and not aborted');
+    t.deepEqual(up.state.seen, [1, 2]);
+    t.equal(up.state.flushed, 0, 'the stage before the stopper is not flushed');
+    t.equal(up.state.aborted, 1, 'it is aborted once');
+    resolve();
   }
-  t.ok(caught instanceof Stop, 'Stop propagates, as from any functional pipeline');
-  t.deepEqual(state.seen, [1]);
-  t.equal(state.aborted, 1, 'aborted once');
-  t.equal(state.flushed, 0, 'not flushed');
-  resolve();
-});
+);
+
+test.asPromise(
+  'fun: the flush after a stop covers only the stages after it',
+  async (t, resolve) => {
+    const up = makeStage(),
+      down = makeStage();
+    const f = fun(up.stage, x => (x === 2 ? stop : x), down.stage);
+    f(1);
+    t.throws(() => f(2), 'the stop reaches the caller');
+    f(none);
+    t.equal(down.state.flushed, 1, 'the stage after the stopper is flushed');
+    t.equal(up.state.flushed, 0, 'the stage before it is not');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'exec: the flush after a stop covers only the stages after it',
+  async (t, resolve) => {
+    const up = makeStage(),
+      down = makeStage();
+    const g = exec(up.stage, x => (x === 2 ? stop : x), down.stage);
+    const push = () => {};
+    g(1, push);
+    t.throws(() => g(2, push), 'the stop reaches the caller');
+    g(none, push);
+    t.equal(down.state.flushed, 1, 'the stage after the stopper is flushed');
+    t.equal(up.state.flushed, 0, 'the stage before it is not');
+    resolve();
+  }
+);
 
 test.asPromise('gen: breaking out aborts once', async (t, resolve) => {
   const {state, stage} = makeStage();

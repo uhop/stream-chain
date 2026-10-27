@@ -309,19 +309,28 @@ test.asPromise('asWebStream: a clean close flushes and never aborts', async (t, 
   resolve();
 });
 
-test.asPromise('asWebStream: a stop aborts instead of flushing', async (t, resolve) => {
-  const {state, stage} = makeCountingStage();
-  const ws = asWebStream(gen(x => (x === 2 ? stop : x), stage));
-  const writer = ws.writable.getWriter();
-  const written = writer
-    .write(1)
-    .then(() => writer.write(2))
-    .then(() => writer.close());
-  const output = [];
-  for await (const value of ws.readable) output.push(value);
-  await written;
-  t.deepEqual(output, [1]);
-  t.equal(state.aborted, 1, 'aborted once');
-  t.equal(state.flushed, 0, 'not flushed');
-  resolve();
-});
+test.asPromise(
+  'asWebStream: a stop flushes the stages after it and aborts those before',
+  async (t, resolve) => {
+    const up = makeCountingStage();
+    let downFlushed = 0;
+    const down = flushable(
+      x => x,
+      () => (++downFlushed, 'tail')
+    );
+    const ws = asWebStream(gen(up.stage, x => (x === 2 ? stop : x), down));
+    const writer = ws.writable.getWriter();
+    const written = writer
+      .write(1)
+      .then(() => writer.write(2))
+      .then(() => writer.close());
+    const output = [];
+    for await (const value of ws.readable) output.push(value);
+    await written;
+    t.deepEqual(output, [1, 'tail'], "the flushed stage's output still reaches the reader");
+    t.equal(downFlushed, 1, 'the stage after the stopper is flushed once');
+    t.equal(up.state.flushed, 0, 'the stage before the stopper is not flushed');
+    t.equal(up.state.aborted, 1, 'it is aborted once');
+    resolve();
+  }
+);

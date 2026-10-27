@@ -7,7 +7,8 @@ import {
   cancelSymbol,
   collectAborters,
   abortStages,
-  withCleanupError
+  withCleanupError,
+  stopIndex
 } from './exec.js';
 
 // gen() builds a push→pull async-generator bridge over the shared executor
@@ -24,7 +25,8 @@ const gen = (...fns) => {
     fns = [x => x];
   }
   const aborters = collectAborters(fns);
-  let flushed = false;
+  let flushed = false,
+    stopAt = 0; // after a stop, the flush starts at the stage after the stopper
 
   // push→pull bridge: the shared executor drives the producer (exec.next, or
   // exec.flush on `none`); each push parks on a promise the consumer resolves
@@ -64,11 +66,13 @@ const gen = (...fns) => {
     };
 
     Promise.resolve()
-      .then(() => (isFlush ? execFlush(fns, 0, push) : execNext(value, fns, 0, push)))
+      .then(() => (isFlush ? execFlush(fns, stopAt, push) : execNext(value, fns, 0, push)))
       .then(
         () => {},
         e => {
-          if (e !== CANCEL) error = e;
+          if (e === CANCEL) return;
+          error = e;
+          if (!isFlush && e instanceof defs.Stop) stopAt = stopIndex(e, fns);
         }
       )
       .finally(() => {
@@ -106,9 +110,14 @@ const gen = (...fns) => {
         resolveProducer = rejectProducer = null;
         rj(CANCEL);
       }
-      // an error, a stop, or a break: release resource-owning stages (never a flush)
+      // an error or a break: release resource-owning stages (never a flush); after a
+      // stop, only the stages up to the stopper, the rest waiting for the caller's flush
       if (!completed && aborters.length) {
-        const failure = await abortStages(aborters);
+        const failure = await abortStages(
+          error instanceof defs.Stop
+            ? collectAborters(fns.slice(0, stopIndex(error, fns)))
+            : aborters
+        );
         if (failure !== undefined) throw withCleanupError(error, failure);
       }
     }

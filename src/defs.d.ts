@@ -105,8 +105,9 @@ export declare function isFlushable<I, O>(o: (value: I, ...rest: any[]) => O): o
  * @param write function to be marked as flushable
  * @param final an optional function to be called when the pipeline is stopped
  * @param abort an optional function that releases the stage's resources when the
- *   pipeline ends abnormally (an error elsewhere, a `stop`, an early break, a destroyed
- *   or cancelled stream). `gen()`, `asStream()`, and `asWebStream()` call it at most once,
+ *   pipeline ends abnormally (an error elsewhere, an early break, a destroyed or
+ *   cancelled stream, or a `stop` by this stage or a later one; the stages after a
+ *   stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most once,
  *   never after a completed flush, and possibly while a call to the stage is still in
  *   flight. It releases and must not flush: buffered output is dropped. A rejection or a
  *   throw surfaces like a failing cleanup.

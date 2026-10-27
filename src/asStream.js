@@ -18,7 +18,8 @@ import {
   withCleanupError,
   cancelSymbol,
   collectAborters,
-  abortStages
+  abortStages,
+  finishStop
 } from './exec.js';
 
 // Unwinds the producer after destroy(): a generator stage would otherwise run to
@@ -64,11 +65,11 @@ const asStream = (fn, options) => {
     stream.push(null);
   };
 
-  // After Stop, enqueue silently no-ops so producers see clean completion
-  // instead of push-after-end errors.
+  // Once a stop has ended the readable side, enqueue silently no-ops so producers
+  // see clean completion instead of push-after-end errors.
   const enqueue = value => {
     if (destroyed) throw CANCEL;
-    if (stopped) return;
+    if (nullPushed) return;
     if (!stream.push(value)) {
       return new Promise((resolve, reject) => {
         resolvePaused = resolve;
@@ -145,19 +146,24 @@ const asStream = (fn, options) => {
     return enqueue(value);
   };
 
-  const absorbStop = error => {
-    if (error instanceof defs.Stop) {
-      stopped = true;
-      signalEnd();
-      return true;
-    }
-    return false;
-  };
-
+  // A stop is a clean end: the stages after the stopper are flushed and the rest
+  // released (finishStop), then the readable side ends.
   const finishWrite = (callback, error) => {
-    if (!error || error === CANCEL) return callback(null);
-    if (absorbStop(error)) return callback(null);
-    callback(error);
+    if (!error || error === CANCEL) {
+      callback(null);
+    } else if (!(error instanceof defs.Stop)) {
+      callback(error);
+    } else {
+      stopped = true;
+      finishStop(innerFns ?? [fn], error, enqueue).then(
+        () => {
+          flushed = true;
+          signalEnd();
+          callback(null);
+        },
+        failure => callback(failure)
+      );
+    }
   };
 
   stream = new Duplex({
@@ -204,6 +210,10 @@ const asStream = (fn, options) => {
         signalEnd();
         callback(null);
       };
+      if (stopped) {
+        onComplete(); // the stop already flushed the stages after the stopper
+        return;
+      }
       if (innerFns) {
         let r;
         try {

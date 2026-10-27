@@ -13,7 +13,7 @@ import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
 import pipe from '../../src/utils/pipe.js';
 import drain from '../../src/utils/drain.js';
 import stringerToFile from '../../src/jsonl/file/stringer.js';
-import {none} from '../../src/defs.js';
+import {none, stop} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
 // per-instance property (not patchable). So we inject a write/read failure via
@@ -252,6 +252,30 @@ test.asPromise(
     t.equal(caught, sourceErr, 'the source error reaches pipeline()');
     t.ok(handle, 'a block write opened the FileHandle');
     t.equal(handle?.fd, -1, 'the teardown released the handle');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'stringerToFile: a stop in a web chain still writes the buffered lines',
+  async (t, resolve) => {
+    await ensure();
+    const {chain: webChain} = await import('../../src/web/index.js');
+    const {readFile} = await import('node:fs/promises');
+    const path = join(tmp, 's-stop');
+    const c = webChain([x => (x === 3 ? stop : {n: x}), stringerToFile(path)]);
+    const writer = c.writable.getWriter();
+    const written = (async () => {
+      for (const x of [1, 2, 3, 4]) await writer.write(x).catch(() => {});
+      await writer.close().catch(() => {});
+    })();
+    for await (const _ of c.readable);
+    await written;
+    t.equal(
+      await readFile(path, 'utf8'),
+      '{"n":1}\n{"n":2}',
+      'the lines before the stop reached the file'
+    );
     resolve();
   }
 );

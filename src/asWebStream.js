@@ -16,7 +16,8 @@ import {
   withCleanupError,
   cancelSymbol,
   collectAborters,
-  abortStages
+  abortStages,
+  finishStop
 } from './exec.js';
 
 // Unwinds the producer after cancel/abort: a generator stage would otherwise run
@@ -106,11 +107,11 @@ const asWebStream = (fn, options) => {
     readableStrategy
   );
 
-  // After Stop, enqueue silently no-ops so producers see clean completion
-  // instead of TypeError from enqueue-on-closed-controller.
+  // Once a stop has closed the readable side, enqueue silently no-ops so producers
+  // see clean completion instead of TypeError from enqueue-on-closed-controller.
   const enqueue = value => {
     if (cancelled) throw CANCEL;
-    if (stopped) return;
+    if (readableClosed) return;
     readableController.enqueue(value);
     if (readableController.desiredSize <= 0) {
       return new Promise((resolve, reject) => {
@@ -207,12 +208,18 @@ const asWebStream = (fn, options) => {
     return enqueue(value);
   };
 
-  const absorbStop = error => {
-    if (error instanceof defs.Stop) {
-      stopped = true;
-      return true;
+  // A stop is a clean end: the stages after the stopper are flushed and the rest
+  // released (finishStop), then the readable side closes.
+  const endAfterStop = async stop => {
+    stopped = true;
+    try {
+      await finishStop(innerFns ?? [fn], stop, enqueue);
+    } catch (error) {
+      errorReadable(error);
+      throw error;
     }
-    return false;
+    flushed = true;
+    closeReadable();
   };
 
   const writable = new WritableStream(
@@ -241,7 +248,8 @@ const asWebStream = (fn, options) => {
           const r = processValue(fn(chunk));
           if (r) await r;
         } catch (error) {
-          if (error === CANCEL || absorbStop(error)) return;
+          if (error === CANCEL) return;
+          if (error instanceof defs.Stop) return endAfterStop(error);
           // Propagate user-function errors to the readable side so downstream
           // consumers (and pipeTo'd stages) learn — matches TransformStream.
           errorReadable(error);
@@ -262,17 +270,12 @@ const asWebStream = (fn, options) => {
             flushed = true;
           }
         } catch (error) {
-          if (error !== CANCEL && !absorbStop(error)) {
+          if (error instanceof defs.Stop) return endAfterStop(error);
+          if (error !== CANCEL) {
             errorReadable(error);
             const failure = await releaseStages();
             throw failure === undefined ? error : withCleanupError(error, failure);
           }
-        }
-        // a stop ended the pipeline without a flush: release, never flush
-        const failure = await releaseStages();
-        if (failure !== undefined) {
-          errorReadable(failure);
-          throw failure;
         }
         closeReadable();
       },
