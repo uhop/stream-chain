@@ -2,6 +2,9 @@
 
 import test from 'tape-six';
 
+import {Readable} from 'node:stream';
+
+import chain from '../../src/index.js';
 import asStream from '../../src/asStream.js';
 import gen from '../../src/gen.js';
 import {none, stop, Stop, flushable} from '../../src/defs.js';
@@ -405,4 +408,24 @@ test.asPromise('asStream: a failing abort after a stop is not called again', asy
   t.equal(down.state.flushed, 1, 'the stage after the stopper was flushed');
   t.equal(down.state.aborted, 0, 'so it is not aborted');
   resolve();
+});
+
+// A stop's use on an endless source: holding the end until the input ends (tried
+// 2026-10-26) passed every other test and read this input to its end.
+test('chain: a stop ends the output long before a large input ends', async t => {
+  const total = 100000;
+  let i = 0;
+  const source = new Readable({
+    objectMode: true,
+    read() {
+      setImmediate(() => this.push(i < total ? i++ : null));
+    }
+  });
+  const c = chain([take(2, stop)]);
+  source.pipe(c);
+  const out = [];
+  for await (const x of c) out.push(x);
+  source.destroy();
+  t.deepEqual(out, [0, 1], 'the values before the stop');
+  t.ok(i < 100, `the output ended after ${i} of ${total} input values`);
 });

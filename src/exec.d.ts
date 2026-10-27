@@ -64,6 +64,12 @@ declare function withCleanupError(err: unknown, cleanupErr: unknown): unknown;
 declare const cancelSymbol: unique symbol;
 
 /**
+ * Set on the async generator a `pipe()` run returns: `drain()` ends the run on a
+ * `Stop` from it, which comes after the flush. Internal: shared by `pipe()` and `drain()`.
+ */
+declare const pipeRunSymbol: unique symbol;
+
+/**
  * Whether any stage in `fns` has an `abort`. Internal: shared by the pipeline owners.
  */
 declare function hasAborters(fns: readonly Fn[]): boolean;
@@ -131,6 +137,7 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
+  pipeRunSymbol,
   hasAborters,
   noteFinal,
   abortStages,

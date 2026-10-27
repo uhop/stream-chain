@@ -19,7 +19,8 @@
 // finalized. A `stop` is a clean end instead: the stages after the one that stopped
 // are flushed, then the stopper and the stages before it are released, in the order
 // asStream and asWebStream use, so a failing release cannot cost the flushed output;
-// then the `Stop`, or the release failure, propagates. Resource-owning SOURCE stages
+// then the `Stop`, or the release failure, propagates; `drain()` ends the run on that
+// `Stop` (the run carries `pipeRunSymbol`). Resource-owning SOURCE stages
 // still release their handles: a generator source gets `it.return()` (its
 // `finally`) from the executor's abort path. A resource-owning SINK registers an
 // `abort` with `flushable()`, which the pipeline calls when it fails
@@ -32,12 +33,14 @@
 // stringers / writers, build a fresh `pipe` per use). Suitable for the
 // "drive one path through, await completion" shape: `await drain(pipe(…)(path))`.
 
-import {genBridge} from '../exec.js';
+import {genBridge, pipeRunSymbol} from '../exec.js';
 
-const pipe = (...stages) =>
-  async function* (value) {
+const pipe = (...stages) => {
+  const run = async function* (value) {
     yield* genBridge(stages, true)(value);
   };
+  return value => Object.assign(run(value), {[pipeRunSymbol]: true});
+};
 
 export default pipe;
 export {pipe};

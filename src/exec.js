@@ -24,6 +24,9 @@ import * as defs from './defs.js';
 // On a push function: the value to throw once its owner is torn down.
 const cancelSymbol = Symbol('cancel');
 
+// On a pipe() run: its Stop comes after the flush, so drain() ends the run on it.
+const pipeRunSymbol = Symbol('pipeRun');
+
 // On a Stop: the index of the first stage after the one that stopped. Set at every
 // stage call it leaves, so an index from an inner pipeline (a `pipe()` stage) is
 // replaced by the outer one.
@@ -459,6 +462,7 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
+  pipeRunSymbol,
   hasAborters,
   noteFinal,
   abortStages,

@@ -167,7 +167,7 @@ Crucially, the **`push` return value is honored**: when `push` returns a Promise
 4. Calls flushable functions with `none` when the input is exhausted.
 5. Tags the result with a function list (`fListSymbol`) so `chain()` can inline it.
 
-The bridge itself is `genBridge` in `exec.js` (internal); `gen(...fns)` is `genBridge(fns, false)`. `pipe()` uses `genBridge(stages, true)`: a call drives one value and then the flush, and after a `stop` it flushes the stages after the stopper before it releases the stopper and the stages before it (`finishStop`), as `asStream()` and `asWebStream()` do.
+The bridge itself is `genBridge` in `exec.js` (internal); `gen(...fns)` is `genBridge(fns, false)`. `pipe()` uses `genBridge(stages, true)`: a call drives one value and then the flush, and after a `stop` it flushes the stages after the stopper before it releases the stopper and the stages before it (`finishStop`), as `asStream()` and `asWebStream()` do. The run it returns carries `pipeRunSymbol`, so `drain()` ends it on its `Stop`, which comes after the flush; a `pipe()` used as a stage is iterated by its outer pipeline, which keeps the `Stop`.
 
 ### fun() — function pipeline (sync-first)
 

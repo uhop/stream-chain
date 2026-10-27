@@ -3,7 +3,9 @@
 import test from 'tape-six';
 
 import {none, stop, flushable, Stop} from '../../src/defs.js';
+import gen from '../../src/gen.js';
 import pipe from '../../src/utils/pipe.js';
+import drain from '../../src/utils/drain.js';
 
 // A flushable sink that records whether its final() ran (stands in for a
 // resource-owning sink such as asyncBlockWriter, whose final() closes a
@@ -158,3 +160,50 @@ test.asPromise(
     resolve();
   }
 );
+
+// A pipe() run has nothing more to feed and has flushed the stages after the stopper,
+// so drain() ends it cleanly; a gen() run's caller keeps feeding, so its Stop stays.
+test.asPromise('drain: a stop in a pipe() run ends the run', async (t, resolve) => {
+  const s = recordingSink();
+  const last = await drain(
+    pipe(
+      function* () {
+        yield* [1, 2, 3, 4];
+      },
+      x => (x === 3 ? stop : x),
+      x => x * 10
+    )(0)
+  );
+  t.equal(last, 20, 'the last value before the stop');
+  await drain(pipe(x => (x === 1 ? stop : x), s.fn)(1));
+  t.ok(s.log.finalRan, 'the sink after the stopper was flushed');
+  resolve();
+});
+
+test.asPromise('drain: a Stop from a gen() run still propagates', async (t, resolve) => {
+  const g = gen(x => (x === 3 ? stop : x));
+  let caught = null;
+  try {
+    await drain(g(3));
+  } catch (e) {
+    caught = e;
+  }
+  t.ok(caught instanceof Stop, 'the Stop reaches the caller');
+  resolve();
+});
+
+test.asPromise('drain: a stop in a nested pipe() still ends the outer run', async (t, resolve) => {
+  const seen = [];
+  const last = await drain(
+    pipe(
+      function* () {
+        yield* [1, 2, 3, 4];
+      },
+      pipe(x => (x === 3 ? stop : x)),
+      x => (seen.push(x), x)
+    )(0)
+  );
+  t.equal(last, 2, 'the outer run ended at the inner stop');
+  t.deepEqual(seen, [1, 2], 'no value after the stop reached the outer stage');
+  resolve();
+});

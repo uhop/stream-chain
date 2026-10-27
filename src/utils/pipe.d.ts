@@ -6,7 +6,8 @@
  * stage throws, the error propagates and the flush is skipped — a failed
  * pipeline is not finalized. After a `stop`, the stages after the stopper are
  * flushed, then the stopper and the stages before it are released, and the `Stop`
- * (or a failure of that release) propagates.
+ * (or a failure of that release) propagates. `drain()` ends the run on that `Stop`
+ * and returns normally; iterate the run yourself to see it.
  */
 declare function pipe(
   ...stages: unknown[]

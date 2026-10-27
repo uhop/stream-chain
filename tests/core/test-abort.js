@@ -82,7 +82,7 @@ test.asPromise(
     } catch (error) {
       caught = error;
     }
-    t.ok(caught instanceof Stop, 'Stop propagates, as from any functional pipeline');
+    t.equal(caught, undefined, 'drain() ends the pipe() run at its stop');
     t.deepEqual(down.state.seen, [1]);
     t.equal(down.state.flushed, 1, 'the stage after the stopper is flushed');
     t.equal(down.state.aborted, 0, 'and not aborted');
@@ -198,7 +198,7 @@ const stopsAt = async fn => {
 test.asPromise('gen: a thrown Stop flushes the stages after the thrower', async (t, resolve) => {
   for (const [name, thrower] of Object.entries(throwers)) {
     const {caught, up, down} = await stopsAt((up, down) => pipe(source, up, thrower, down)(0));
-    t.ok(caught instanceof Stop, name + ': the Stop propagates');
+    t.equal(caught, undefined, name + ': drain() ends the pipe() run at its stop');
     t.deepEqual(down.seen, [1], name + ': data before the stop reached the stage after');
     t.equal(down.flushed, 1, name + ': the stage after the thrower is flushed');
     t.equal(down.aborted, 0, name + ': and not aborted');
@@ -279,7 +279,7 @@ test.asPromise('gen: a stop during the flush flushes the stages after it', async
     } catch (error) {
       caught = error;
     }
-    t.ok(caught instanceof Stop, name + ': the Stop propagates');
+    t.equal(caught, undefined, name + ': drain() ends the pipe() run at its stop');
     t.equal(tail.state.flushed, 1, name + ': the stage before the stopper was flushed');
     t.equal(tail.state.aborted, 0, name + ': and, flushed, it is not aborted');
     t.deepEqual(down.state.seen, [1], name + ': the tail stopped at the stopper');
@@ -329,7 +329,7 @@ test.asPromise(
     } catch (error) {
       caught = error;
     }
-    t.ok(caught instanceof Stop, 'the Stop propagates');
+    t.equal(caught, undefined, 'drain() ends the pipe() run at its stop');
     t.equal(up.state.aborted, 1, 'the stage before the first stopper is aborted once');
     t.equal(up.state.flushed, 0, 'and not flushed');
     t.equal(mid.state.flushed, 1, 'the stage between the stoppers is flushed');
