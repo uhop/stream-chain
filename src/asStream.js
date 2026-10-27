@@ -12,7 +12,14 @@
 
 import {Duplex} from 'node:stream';
 import * as defs from './defs.js';
-import {next as execNext, flush as execFlush, withCleanupError, cancelSymbol} from './exec.js';
+import {
+  next as execNext,
+  flush as execFlush,
+  withCleanupError,
+  cancelSymbol,
+  collectAborters,
+  abortStages
+} from './exec.js';
 
 // Unwinds the producer after destroy(): a generator stage would otherwise run to
 // its natural end (forever, if endless) into a dead stream.
@@ -24,9 +31,11 @@ const asStream = (fn, options) => {
   }
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
+  const aborters = collectAborters(innerFns ?? [fn]);
 
   let stopped = false;
   let destroyed = false;
+  let flushed = false;
   let nullPushed = false;
   let resolvePaused = null;
   let rejectPaused = null;
@@ -191,6 +200,7 @@ const asStream = (fn, options) => {
     },
     final(callback) {
       const onComplete = () => {
+        flushed = true;
         signalEnd();
         callback(null);
       };
@@ -233,7 +243,16 @@ const asStream = (fn, options) => {
       stopped = destroyed = true;
       enqueue[cancelSymbol] = CANCEL;
       cancelPaused();
-      callback(error);
+      // a completed flush already released every stage; otherwise release, never flush
+      if (flushed || !aborters.length) {
+        callback(error);
+        return;
+      }
+      abortStages(aborters).then(failure =>
+        callback(
+          failure === undefined ? error : /** @type {Error} */ (withCleanupError(error, failure))
+        )
+      );
     }
   });
 

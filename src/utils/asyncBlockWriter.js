@@ -11,11 +11,12 @@
 //
 // Both I/O branches guard their OWN operations: if a block write (data pass) or
 // the tail write (final) fails, the handle is released on the way out before
-// the error propagates, so this stage never leaks its own fd. (It cannot,
-// however, observe an UNRELATED stage throwing elsewhere in the pipe — the
-// stage simply stops being called; the caller releases the handle with
-// `close()`.) After a failure or `close()` every later call fails too:
-// reopening would truncate what was written.
+// the error propagates, so this stage never leaks its own fd. An UNRELATED stage
+// throwing elsewhere, a `stop`, or an early break reaches it as the flushable's
+// abort, `close()`, which `gen()`, `asStream`, and `asWebStream` call on teardown;
+// a caller driving the stage some other way calls `close()` itself. After a
+// failure or `close()` every later call fails too: reopening would truncate what
+// was written.
 //
 // Node-only (uses `node:fs/promises`).
 
@@ -52,6 +53,18 @@ const asyncBlockWriter = (path, options) => {
     const result = queue.then(op);
     queue = result.catch(() => {});
     return result;
+  };
+
+  // release, not finalize: the buffered tail is dropped, an in-flight write settles first;
+  // also the stage's abort, which pipeline owners call on abnormal termination
+  const close = () => {
+    closed = true;
+    buf = '';
+    return serialize(async () => {
+      const f = fh;
+      fh = null;
+      if (f) await f.close();
+    });
   };
 
   const writer = flushable(
@@ -127,19 +140,9 @@ const asyncBlockWriter = (path, options) => {
         }
         if (failed) fail(pending);
         return none;
-      })
+      }),
+    close
   );
-
-  // release, not finalize: the buffered tail is dropped, an in-flight write settles first
-  const close = () => {
-    closed = true;
-    buf = '';
-    return serialize(async () => {
-      const f = fh;
-      fh = null;
-      if (f) await f.close();
-    });
-  };
 
   return Object.assign(writer, {close});
 };

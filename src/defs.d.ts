@@ -16,6 +16,8 @@ export declare const finalSymbol: unique symbol;
 export declare const manySymbol: unique symbol;
 /** Used internally to mark a function as capable of being flushed. */
 export declare const flushSymbol: unique symbol;
+/** Holds a flushable's release function, called when a pipeline ends abnormally. */
+export declare const abortSymbol: unique symbol;
 /** Used internally to mark a function as being derived from a function list. */
 export declare const fListSymbol: unique symbol;
 
@@ -89,6 +91,8 @@ export declare function getManyValues<T>(o: Many<T>): T[];
 export interface Flushable<I = unknown, O = unknown> {
   (value: I, ...rest: any[]): O;
   [flushSymbol]: 1;
+  /** The release function given to {@link flushable} as `abort`, if any. */
+  [abortSymbol]?: () => unknown;
 }
 /**
  * Type predicate for `Flushable`.
@@ -100,12 +104,19 @@ export declare function isFlushable<I, O>(o: (value: I, ...rest: any[]) => O): o
  * Creates a `Flushable`
  * @param write function to be marked as flushable
  * @param final an optional function to be called when the pipeline is stopped
+ * @param abort an optional function that releases the stage's resources when the
+ *   pipeline ends abnormally (an error elsewhere, a `stop`, an early break, a destroyed
+ *   or cancelled stream). `gen()`, `asStream()`, and `asWebStream()` call it at most once,
+ *   never after a completed flush, and possibly while a call to the stage is still in
+ *   flight. It releases and must not flush: buffered output is dropped. A rejection or a
+ *   throw surfaces like a failing cleanup.
  * @returns a `Flushable`
  * @remarks If `final` is not provided, `write` will be called with {@link none} when the pipeline is stopped
  */
 export declare function flushable<I, O>(
   write: (value: I, ...rest: any[]) => O,
-  final?: () => O
+  final?: (() => O) | null,
+  abort?: (() => unknown) | null
 ): Flushable<I, O>;
 
 /**

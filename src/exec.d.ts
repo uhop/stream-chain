@@ -56,5 +56,17 @@ declare function withCleanupError(err: unknown, cleanupErr: unknown): unknown;
  */
 declare const cancelSymbol: unique symbol;
 
+/**
+ * The `abort` functions of the flushable stages in `fns`. Internal: shared by the
+ * pipeline owners.
+ */
+declare function collectAborters(fns: readonly Fn[]): Array<() => unknown>;
+
+/**
+ * Calls each `abort` once, in order; resolves to the failure to surface, or
+ * `undefined`. Internal: shared by the pipeline owners.
+ */
+declare function abortStages(aborters: ReadonlyArray<() => unknown>): Promise<unknown>;
+
 export default exec;
-export {exec, next, flush, withCleanupError, cancelSymbol};
+export {exec, next, flush, withCleanupError, cancelSymbol, collectAborters, abortStages};

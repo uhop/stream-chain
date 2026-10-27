@@ -6,6 +6,7 @@ const stop = Symbol.for('object-stream.stop');
 const finalSymbol = Symbol.for('object-stream.final');
 const manySymbol = Symbol.for('object-stream.many');
 const flushSymbol = Symbol.for('object-stream.flush');
+const abortSymbol = Symbol.for('object-stream.abort');
 const fListSymbol = Symbol.for('object-stream.fList');
 
 const finalValue = value => ({[finalSymbol]: 1, value});
@@ -20,9 +21,10 @@ const getFinalValue = o => o.value;
 const getManyValues = o => o.values;
 const getFunctionList = o => o.fList;
 
-const flushable = (write, final = null) => {
+const flushable = (write, final = null, abort = null) => {
   const fn = final ? value => (value === none ? final() : write(value)) : write;
   fn[flushSymbol] = 1;
+  if (abort) fn[abortSymbol] = abort;
   return fn;
 };
 
@@ -162,6 +164,7 @@ export {
   flushSymbol,
   flushable,
   isFlushable,
+  abortSymbol,
   fListSymbol,
   isFunctionList,
   getFunctionList,

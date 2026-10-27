@@ -10,7 +10,14 @@
 
 import * as defs from './defs.js';
 import {isReadableWebStream, isWritableWebStream, isDuplexWebStream} from './defs.js';
-import {next as execNext, flush as execFlush, withCleanupError, cancelSymbol} from './exec.js';
+import {
+  next as execNext,
+  flush as execFlush,
+  withCleanupError,
+  cancelSymbol,
+  collectAborters,
+  abortStages
+} from './exec.js';
 
 // Unwinds the producer after cancel/abort: a generator stage would otherwise run
 // to its natural end (forever, if endless) into a dead stream.
@@ -31,9 +38,12 @@ const asWebStream = (fn, options) => {
   const writableStrategy = options?.writableStrategy ?? strategy;
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
+  const aborters = collectAborters(innerFns ?? [fn]);
 
   let stopped = false;
   let cancelled = false;
+  let flushed = false;
+  let releasing = null;
   let readableClosed = false;
   let writableErrored = false;
   let readableController;
@@ -90,6 +100,7 @@ const asWebStream = (fn, options) => {
         readableClosed = true;
         cancelProducer();
         errorWritable(reason);
+        return releaseStages().then(rethrow);
       }
     },
     readableStrategy
@@ -115,6 +126,17 @@ const asWebStream = (fn, options) => {
     stopped = cancelled = true;
     enqueue[cancelSymbol] = CANCEL;
     cancelDrain();
+  };
+
+  // Releases resource-owning stages once, unless a completed flush already did;
+  // resolves to the failure to surface, or undefined
+  const releaseStages = () => {
+    if (flushed || !aborters.length) return Promise.resolve(undefined);
+    releasing ??= abortStages(aborters);
+    return releasing;
+  };
+  const rethrow = failure => {
+    if (failure !== undefined) throw failure;
   };
 
   // Slow-path generator queue (preserves iterator state across re-entry) —
@@ -223,7 +245,8 @@ const asWebStream = (fn, options) => {
           // Propagate user-function errors to the readable side so downstream
           // consumers (and pipeTo'd stages) learn — matches TransformStream.
           errorReadable(error);
-          throw error;
+          const failure = await releaseStages();
+          throw failure === undefined ? error : withCleanupError(error, failure);
         }
       },
       async close() {
@@ -236,18 +259,27 @@ const asWebStream = (fn, options) => {
               const r = processValue(fn(defs.none));
               if (r) await r;
             }
+            flushed = true;
           }
         } catch (error) {
           if (error !== CANCEL && !absorbStop(error)) {
             errorReadable(error);
-            throw error;
+            const failure = await releaseStages();
+            throw failure === undefined ? error : withCleanupError(error, failure);
           }
+        }
+        // a stop ended the pipeline without a flush: release, never flush
+        const failure = await releaseStages();
+        if (failure !== undefined) {
+          errorReadable(failure);
+          throw failure;
         }
         closeReadable();
       },
       abort(reason) {
         cancelProducer();
         errorReadable(reason);
+        return releaseStages().then(rethrow);
       }
     },
     writableStrategy

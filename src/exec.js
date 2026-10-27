@@ -24,16 +24,38 @@ import * as defs from './defs.js';
 // On a push function: the value to throw once its owner is torn down.
 const cancelSymbol = Symbol('cancel');
 
-// The error an abnormal exit surfaces when a generator's own cleanup (its `finally`,
-// fired by `it.return()`) also fails: the cleanup error alone after a `stop`, a clean
-// end; both, when the original is a real Error; a non-Error control sentinel (gen()'s
-// CANCEL) keeps its identity, since callers compare against it. One home for
-// nextGen's abort and the adapters' release.
+// The error an abnormal exit surfaces when a cleanup also fails (a generator's
+// `finally`, fired by `it.return()`, or a stage's `abort`): the cleanup error alone
+// when there was no error or only a `stop`, a clean end; both, when the original is a
+// real Error; a non-Error control sentinel (gen()'s CANCEL) keeps its identity, since
+// callers compare against it. One home for nextGen's abort and the owners' releases.
 const withCleanupError = (err, cleanupErr) => {
-  if (err instanceof defs.Stop) return cleanupErr;
+  if (err == null || err instanceof defs.Stop) return cleanupErr;
   return err instanceof Error
     ? new AggregateError([err, cleanupErr], 'pipeline error; generator cleanup also failed')
     : err;
+};
+
+// The `abort` functions of a pipeline's flushable stages, collected once at build time
+// so a pipeline without one pays nothing at teardown.
+const collectAborters = fns =>
+  fns.filter(fn => fn[defs.abortSymbol]).map(fn => fn[defs.abortSymbol]);
+
+// Releases resource-owning stages on abnormal termination, in order, each once per
+// call; resolves to the failure to surface, or undefined.
+const abortStages = async aborters => {
+  let failure;
+  for (const abort of aborters) {
+    try {
+      await abort();
+    } catch (error) {
+      failure =
+        failure === undefined
+          ? error
+          : new AggregateError([failure, error], 'stage cleanup failed more than once');
+    }
+  }
+  return failure;
 };
 
 const next = (value, fns, index, push) => {
@@ -189,4 +211,4 @@ const exec = (...fns) => {
 };
 
 export default exec;
-export {exec, next, flush, withCleanupError, cancelSymbol};
+export {exec, next, flush, withCleanupError, cancelSymbol, collectAborters, abortStages};

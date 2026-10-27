@@ -1,7 +1,14 @@
 // @ts-self-types="./gen.d.ts"
 
 import * as defs from './defs.js';
-import {next as execNext, flush as execFlush, cancelSymbol} from './exec.js';
+import {
+  next as execNext,
+  flush as execFlush,
+  cancelSymbol,
+  collectAborters,
+  abortStages,
+  withCleanupError
+} from './exec.js';
 
 // gen() builds a push→pull async-generator bridge over the shared executor
 // (exec.next / exec.flush) — ~45% faster than the recursive `async function*` it
@@ -16,6 +23,7 @@ const gen = (...fns) => {
   if (!fns.length) {
     fns = [x => x];
   }
+  const aborters = collectAborters(fns);
   let flushed = false;
 
   // push→pull bridge: the shared executor drives the producer (exec.next, or
@@ -37,7 +45,8 @@ const gen = (...fns) => {
     let rejectProducer = null;
     let done = false,
       error = null,
-      cancelled = false;
+      cancelled = false,
+      completed = false;
     const CANCEL = Symbol('cancel');
 
     const push = v => {
@@ -83,7 +92,10 @@ const gen = (...fns) => {
           yield v;
         }
         if (error) throw error;
-        if (done) return;
+        if (done) {
+          completed = true;
+          return;
+        }
         await new Promise(res => (wakeConsumer = res));
       }
     } finally {
@@ -93,6 +105,11 @@ const gen = (...fns) => {
         const rj = rejectProducer;
         resolveProducer = rejectProducer = null;
         rj(CANCEL);
+      }
+      // an error, a stop, or a break: release resource-owning stages (never a flush)
+      if (!completed && aborters.length) {
+        const failure = await abortStages(aborters);
+        if (failure !== undefined) throw withCleanupError(error, failure);
       }
     }
   };

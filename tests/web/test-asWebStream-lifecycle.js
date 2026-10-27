@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import asWebStream from '../../src/asWebStream.js';
 import gen from '../../src/gen.js';
-import {none, stop} from '../../src/defs.js';
+import {none, stop, flushable} from '../../src/defs.js';
 
 // Lifecycle/error-propagation tests. Cover writer.abort(), reader.cancel(),
 // and user-function errors — all should match TransformStream-shape behavior.
@@ -266,3 +266,62 @@ test.asPromise(
     resolve();
   }
 );
+
+const makeCountingStage = () => {
+  const state = {flushed: 0, aborted: 0};
+  const stage = flushable(
+    x => x,
+    () => {
+      ++state.flushed;
+      return none;
+    },
+    () => {
+      ++state.aborted;
+    }
+  );
+  return {state, stage};
+};
+
+test.asPromise('asWebStream: reader.cancel() aborts a stage once', async (t, resolve) => {
+  const {state, stage} = makeCountingStage();
+  const ws = asWebStream(gen(x => x, stage));
+  ws.writable
+    .getWriter()
+    .write(1)
+    .catch(() => {});
+  const reader = ws.readable.getReader();
+  await reader.read();
+  await reader.cancel();
+  t.equal(state.aborted, 1, 'aborted once');
+  t.equal(state.flushed, 0, 'not flushed');
+  resolve();
+});
+
+test.asPromise('asWebStream: a clean close flushes and never aborts', async (t, resolve) => {
+  const {state, stage} = makeCountingStage();
+  const ws = asWebStream(gen(x => x, stage));
+  const writer = ws.writable.getWriter();
+  const written = writer.write(1).then(() => writer.close());
+  for await (const _ of ws.readable);
+  await written;
+  t.equal(state.flushed, 1, 'flushed once');
+  t.equal(state.aborted, 0, 'not aborted');
+  resolve();
+});
+
+test.asPromise('asWebStream: a stop aborts instead of flushing', async (t, resolve) => {
+  const {state, stage} = makeCountingStage();
+  const ws = asWebStream(gen(x => (x === 2 ? stop : x), stage));
+  const writer = ws.writable.getWriter();
+  const written = writer
+    .write(1)
+    .then(() => writer.write(2))
+    .then(() => writer.close());
+  const output = [];
+  for await (const value of ws.readable) output.push(value);
+  await written;
+  t.deepEqual(output, [1]);
+  t.equal(state.aborted, 1, 'aborted once');
+  t.equal(state.flushed, 0, 'not flushed');
+  resolve();
+});

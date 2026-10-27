@@ -5,7 +5,9 @@ import test from 'tape-six';
 import {open, mkdtemp, writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {pipeline, Readable} from 'node:stream';
 
+import chain from '../../src/index.js';
 import asyncBlockReader from '../../src/utils/asyncBlockReader.js';
 import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
 import pipe from '../../src/utils/pipe.js';
@@ -189,6 +191,67 @@ test.asPromise(
     t.equal(caught, readErr, 'the read error propagates');
     t.ok(handle, 'the failing read saw the opened FileHandle');
     t.equal(handle?.fd, -1, 'the handle was released despite the read failure');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asyncBlockWriter: a failed pipe releases the FileHandle without close()',
+  async (t, resolve) => {
+    await ensure();
+    const sourceErr = new Error('source boom');
+    let caught, handle;
+    await withPatched(
+      capturingWrite(h => (handle = h)),
+      async () => {
+        try {
+          await drain(
+            pipe(
+              function* () {
+                yield 'aaaa';
+                throw sourceErr;
+              },
+              asyncBlockWriter(join(tmp, 'w-abort'), {writeBlockSize: 4})
+            )(0)
+          );
+        } catch (e) {
+          caught = e;
+        }
+      }
+    );
+    t.equal(caught, sourceErr, 'the source error propagates');
+    t.ok(handle, 'a block write opened the FileHandle');
+    t.equal(handle?.fd, -1, 'the teardown released the handle');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'stringerToFile: a torn-down chain releases the FileHandle without close()',
+  async (t, resolve) => {
+    await ensure();
+    const sourceErr = new Error('source boom');
+    let caught, handle;
+    await withPatched(
+      capturingWrite(h => (handle = h)),
+      () =>
+        new Promise(done => {
+          const c = chain([
+            function* () {
+              yield {a: 1};
+              throw sourceErr;
+            },
+            stringerToFile(join(tmp, 's-abort'), {writeBlockSize: 4})
+          ]);
+          pipeline(Readable.from([0]), c, error => {
+            caught = error;
+            setTimeout(done, 20);
+          });
+        })
+    );
+    t.equal(caught, sourceErr, 'the source error reaches pipeline()');
+    t.ok(handle, 'a block write opened the FileHandle');
+    t.equal(handle?.fd, -1, 'the teardown released the handle');
     resolve();
   }
 );

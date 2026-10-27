@@ -4,7 +4,7 @@ import test from 'tape-six';
 
 import asStream from '../../src/asStream.js';
 import gen from '../../src/gen.js';
-import {none, stop} from '../../src/defs.js';
+import {none, stop, flushable} from '../../src/defs.js';
 
 // Lifecycle tests for asStream — destroy() while a write is awaiting paused,
 // plus error propagation from user fn.
@@ -205,3 +205,43 @@ test.asPromise(
     }, 20);
   }
 );
+
+const makeCountingStage = () => {
+  const state = {flushed: 0, aborted: 0};
+  const stage = flushable(
+    x => x,
+    () => {
+      ++state.flushed;
+      return none;
+    },
+    () => {
+      ++state.aborted;
+    }
+  );
+  return {state, stage};
+};
+
+test.asPromise('asStream: destroy() before the end aborts a stage once', (t, resolve) => {
+  const {state, stage} = makeCountingStage();
+  const stream = asStream(gen(x => x, stage));
+  stream.on('data', () => {});
+  stream.on('close', () => {
+    t.equal(state.aborted, 1, 'aborted once');
+    t.equal(state.flushed, 0, 'not flushed');
+    resolve();
+  });
+  stream.write(1);
+  setTimeout(() => stream.destroy(), 20);
+});
+
+test.asPromise('asStream: a clean end flushes and never aborts', (t, resolve) => {
+  const {state, stage} = makeCountingStage();
+  const stream = asStream(gen(x => x, stage));
+  stream.on('data', () => {});
+  stream.on('close', () => {
+    t.equal(state.flushed, 1, 'flushed once');
+    t.equal(state.aborted, 0, 'not aborted');
+    resolve();
+  });
+  stream.end(1);
+});

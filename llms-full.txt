@@ -204,9 +204,11 @@ Helper functions:
 - `isFinalValue(value)` — check if value is a final wrapper.
 - `getFinalValue(value)` — extract the value.
 
-### flushable(fn, final?)
+### flushable(fn, final?, abort?)
 
 Marks a function to be called when the stream ends. When called at end-of-stream, `fn` receives `none` as its argument. Alternatively, provide a separate `final` function that is called with no arguments at end-of-stream.
+
+`abort` (optional, stored under `abortSymbol`) releases the stage's resources when the pipeline ends abnormally: an error in another stage, a `stop`, an early `break`, or a destroyed or cancelled stream. `gen()`, `asStream()`, and `asWebStream()` call it at most once, never after a completed flush, possibly while a call to the stage is still in flight. It releases and must not flush: buffered output is dropped. A throw or a rejection surfaces like a failing cleanup (combined with the pipeline's error, if any). `fun()` and the bare `exec()` driver have no teardown and never call it.
 
 ```js
 let sum = 0;
@@ -760,14 +762,14 @@ const c = pipe(parseFile(), r => r.value, stringerToFile('out.jsonl'));
 await drain(c('in.jsonl'));
 ```
 
-A pipe that ends without the flush (another stage throws, a `stop`, an early `break`) leaves the handle open. The returned sink carries `close()`, which releases it without writing the buffered tail; call it from a `finally`. It is idempotent, and a no-op after a clean flush:
+When a pipeline ends without the flush (another stage throws, a `stop`, an early `break`), its owner (`gen()`, `pipe()`, `asStream()`, `asWebStream()`, a chain) releases the handle through the writer's `abort`, without writing the buffered tail. The returned sink also carries `close()`, idempotent and a no-op after a clean flush, for a caller that drives it some other way or fails outside the pipeline:
 
 ```js
 const sink = stringerToFile('out.jsonl');
 try {
   await drain(pipe(parseFile(), r => r.value, sink)('in.jsonl'));
 } finally {
-  await sink.close();
+  await sink.close(); // only needed when something outside the pipe can fail
 }
 ```
 
@@ -800,7 +802,7 @@ Flushable that accepts string fragments from upstream stages, buffers them, writ
 
 - `writeBlockSize` (number, default: 1 MB) — buffered block size in characters before issuing a write.
 
-The returned stage carries `close(): Promise<void>` for a pipe that ends without the flush: it releases the handle after any write in flight settles and drops the buffered tail. Idempotent, and a no-op after a clean flush; every later call to the stage throws.
+The returned stage carries `close(): Promise<void>`, also registered as the flushable's `abort`: it releases the handle after any write in flight settles and drops the buffered tail. `gen()`, `asStream()`, and `asWebStream()` call it when a pipeline ends without the flush; call it yourself when driving the stage some other way. Idempotent, and a no-op after a clean flush; every later call to the stage throws.
 
 ## TypeScript
 

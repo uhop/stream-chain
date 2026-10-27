@@ -115,6 +115,7 @@ chain.getManyValues = defs.getManyValues;
 chain.flushSymbol = defs.flushSymbol;
 chain.flushable = defs.flushable;
 chain.isFlushable = defs.isFlushable;
+chain.abortSymbol = defs.abortSymbol;
 
 chain.fListSymbol = defs.fListSymbol;
 chain.isFunctionList = defs.isFunctionList;
