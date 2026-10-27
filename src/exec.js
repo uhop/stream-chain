@@ -277,6 +277,143 @@ const finishStop = async (fns, stop, push, finished) => {
   if (error !== undefined) throw error;
 };
 
+// gen()'s push→pull bridge over the executor (next / flush); with `once`, pipe()'s
+// one-shot driver: a call drives one value, then the flush.
+const genBridge = (fns, once) => {
+  fns = fns
+    .filter(fn => fn)
+    .flat(Infinity)
+    .map(fn => (defs.isFunctionList(fn) ? defs.getFunctionList(fn) : fn))
+    .flat(Infinity);
+  if (!fns.length) {
+    fns = [x => x];
+  }
+  const canAbort = hasAborters(fns),
+    finished = new Set(); // see exec.js noteFinal
+  let flushed = false,
+    stopAt = 0; // after a stop, the flush starts at the stage after the stopper
+
+  // `once`: one value, then the flush, in finishStop's order, as asStream and
+  // asWebStream do: after a stop, the stages after the stopper are flushed before the
+  // stopper and the stages before it are released
+  const drive = async (value, push) => {
+    try {
+      await next(value, fns, 0, push);
+    } catch (error) {
+      if (!(error instanceof defs.Stop)) throw error;
+      await finishStop(fns, error, push, finished);
+      throw error;
+    }
+    await flush(fns, 0, push, finished);
+  };
+
+  // push→pull bridge: the shared executor drives the producer (exec.next, or
+  // exec.flush on `none`); each push parks on a promise the consumer resolves
+  // when it pulls the next value, so production stays one item ahead (bounded).
+  // A for-await `break` runs .return() → the finally rejects the parked push
+  // with CANCEL, unwinding exec; the driver swallows it (no leaked producer).
+  let g = async function* (value) {
+    if (flushed) throw Error('Call to a flushed pipe.');
+    const isFlush = !once && value === defs.none;
+    if (isFlush || once) flushed = true;
+
+    const pending = [];
+    /** @type {((value?: any) => void) | null} */
+    let wakeConsumer = null;
+    /** @type {((value?: any) => void) | null} */
+    let resolveProducer = null;
+    /** @type {((reason?: any) => void) | null} */
+    let rejectProducer = null;
+    let done = false,
+      error = null,
+      cancelled = false,
+      completed = false;
+    const CANCEL = Symbol('cancel');
+
+    const push = v => {
+      if (cancelled) throw CANCEL;
+      pending.push(v);
+      if (wakeConsumer) {
+        const w = wakeConsumer;
+        wakeConsumer = null;
+        w();
+      }
+      return new Promise((res, rej) => {
+        resolveProducer = res;
+        rejectProducer = rej;
+      });
+    };
+
+    Promise.resolve()
+      .then(() =>
+        once
+          ? drive(value, push)
+          : isFlush
+            ? flush(fns, stopAt, push, finished)
+            : next(value, fns, 0, push)
+      )
+      .then(
+        () => {},
+        e => {
+          if (e === CANCEL) return;
+          error = e;
+          if (!isFlush && e instanceof defs.Stop) stopAt = stopIndex(e, fns);
+        }
+      )
+      .finally(() => {
+        done = true;
+        if (wakeConsumer) {
+          const w = wakeConsumer;
+          wakeConsumer = null;
+          w();
+        }
+      });
+
+    try {
+      for (;;) {
+        while (pending.length) {
+          const v = pending.shift();
+          if (resolveProducer) {
+            const r = resolveProducer;
+            resolveProducer = rejectProducer = null;
+            r();
+          }
+          yield v;
+        }
+        if (error) throw error;
+        if (done) {
+          completed = true;
+          return;
+        }
+        await new Promise(res => (wakeConsumer = res));
+      }
+    } finally {
+      cancelled = true;
+      push[cancelSymbol] = CANCEL;
+      if (rejectProducer) {
+        const rj = rejectProducer;
+        resolveProducer = rejectProducer = null;
+        rj(CANCEL);
+      }
+      // an error or a break: release the resource-owning stages not finished (never a
+      // flush); after a stop, only those up to the stopper, the rest waiting for the
+      // caller's flush
+      if (!completed && canAbort) {
+        const failure =
+          error instanceof defs.Stop
+            ? await releaseStopped(fns, finished, error)
+            : await abortStages(fns, finished);
+        if (failure !== undefined) throw withCleanupError(error, failure);
+      }
+    }
+  };
+
+  if (once) return g;
+  const needToFlush = fns.some(fn => defs.isFlushable(fn));
+  if (needToFlush) g = defs.flushable(g);
+  return defs.setFunctionList(g, fns);
+};
+
 // Factory parallel to fun()/gen(): normalize the fn-list (flatten, unwrap nested
 // function-lists, default to identity) and return a push-driven function tagged
 // as a function-list. The driver is `(value, push) => void | Promise`; calling
@@ -327,5 +464,6 @@ export {
   abortStages,
   stopIndex,
   releaseStopped,
-  finishStop
+  finishStop,
+  genBridge
 };

@@ -13,7 +13,7 @@ import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
 import pipe from '../../src/utils/pipe.js';
 import drain from '../../src/utils/drain.js';
 import stringerToFile from '../../src/jsonl/file/stringer.js';
-import {none, stop, Stop} from '../../src/defs.js';
+import {none, stop, Stop, flushable} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
 // per-instance property (not patchable). So we inject a write/read failure via
@@ -328,6 +328,83 @@ test.asPromise(
       '{"n":1}\n{"n":2}',
       'the lines before the stop reached the file'
     );
+    resolve();
+  }
+);
+
+// A stage before the stopper whose release fails, then the file sink after it.
+const failingRelease = () =>
+  flushable(
+    x => x,
+    () => none,
+    () => {
+      throw new Error('abort boom');
+    }
+  );
+const stopAt3 = x => (x === 3 ? stop : {n: x});
+
+test.asPromise(
+  'stringerToFile: a failing release after a stop keeps the buffered lines on every owner',
+  async (t, resolve) => {
+    await ensure();
+    const {chain: webChain} = await import('../../src/web/index.js');
+    const {readFile} = await import('node:fs/promises');
+
+    const pipePath = join(tmp, 's-release-pipe');
+    let pipeError = null;
+    try {
+      await drain(
+        pipe(
+          function* () {
+            yield* [1, 2, 3, 4];
+          },
+          failingRelease(),
+          stopAt3,
+          stringerToFile(pipePath)
+        )(0)
+      );
+    } catch (error) {
+      pipeError = error;
+    }
+
+    const nodePath = join(tmp, 's-release-node');
+    const c = chain([failingRelease(), stopAt3, stringerToFile(nodePath)]);
+    const nodeError = await new Promise(res => {
+      c.on('error', res);
+      c.on('end', () => res(null));
+      c.resume();
+      for (const x of [1, 2, 3, 4]) c.write(x);
+      c.end();
+    });
+
+    const webPath = join(tmp, 's-release-web');
+    const w = webChain([failingRelease(), stopAt3, stringerToFile(webPath)]);
+    const writer = w.writable.getWriter();
+    let webError = null;
+    const written = (async () => {
+      for (const x of [1, 2, 3, 4]) await writer.write(x).catch(e => (webError ??= e));
+      await writer.close().catch(() => {});
+    })();
+    try {
+      for await (const _ of w.readable);
+    } catch (error) {
+      webError ??= error;
+    }
+    await written;
+
+    const lines = '{"n":1}\n{"n":2}';
+    for (const [name, error, path] of [
+      ['pipe()', pipeError, pipePath],
+      ['node chain', nodeError, nodePath],
+      ['web chain', webError, webPath]
+    ]) {
+      t.equal(error?.message, 'abort boom', name + ': the release failure surfaces');
+      t.equal(
+        await readFile(path, 'utf8'),
+        lines,
+        name + ': the lines before the stop reached the file'
+      );
+    }
     resolve();
   }
 );

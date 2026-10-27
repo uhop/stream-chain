@@ -113,6 +113,17 @@ declare function finishStop(
   finished: Set<Fn>
 ): Promise<void>;
 
+/**
+ * `gen()`'s push→pull bridge over the executor. With `once`, the driver behind
+ * `pipe()`: a call drives one value through the stages and then flushes them; after
+ * a `stop`, the stages after the stopper are flushed before the stopper and the
+ * stages before it are released. Internal: shared by `gen()` and `pipe()`.
+ */
+declare function genBridge(
+  fns: unknown[],
+  once: boolean
+): <T = unknown>(value?: unknown) => AsyncGenerator<T, void, unknown>;
+
 export default exec;
 export {
   exec,
@@ -125,5 +136,6 @@ export {
   abortStages,
   stopIndex,
   releaseStopped,
-  finishStop
+  finishStop,
+  genBridge
 };

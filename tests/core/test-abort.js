@@ -390,7 +390,7 @@ test.asPromise(
 );
 
 test.asPromise(
-  'gen: a failing abort after a stop releases the stages after the stopper',
+  'pipe: a failing release after a stop still flushes the stages after the stopper',
   async (t, resolve) => {
     const abortErr = new Error('abort boom');
     const up = makeStage(() => {
@@ -405,7 +405,30 @@ test.asPromise(
     }
     t.equal(caught, abortErr, 'the cleanup error surfaces in place of the Stop');
     t.equal(up.state.aborted, 1, 'the failing stage is aborted once');
-    t.equal(down.state.flushed, 0, 'the failed pipeline is not flushed');
+    t.equal(down.state.flushed, 1, 'the stage after the stopper was flushed first');
+    t.equal(down.state.aborted, 0, 'so it is not aborted');
+    resolve();
+  }
+);
+
+// Plain gen() releases at the end of its data pass, and no flush follows a failure.
+test.asPromise(
+  'gen: a failing release after a stop releases the stages after the stopper',
+  async (t, resolve) => {
+    const abortErr = new Error('abort boom');
+    const up = makeStage(() => {
+        throw abortErr;
+      }),
+      down = makeStage();
+    let caught;
+    try {
+      await drain(gen(source, up.stage, x => (x === 2 ? stop : x), down.stage)(0));
+    } catch (error) {
+      caught = error;
+    }
+    t.equal(caught, abortErr, 'the cleanup error surfaces in place of the Stop');
+    t.equal(up.state.aborted, 1, 'the failing stage is aborted once');
+    t.equal(down.state.flushed, 0, 'no flush follows a failure');
     t.equal(down.state.aborted, 1, 'so the stage after the stopper is aborted once');
     resolve();
   }
