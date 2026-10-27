@@ -22,15 +22,19 @@
 import * as defs from './defs.js';
 
 // On a push function: the value to throw once its owner is torn down.
-const cancelSymbol = Symbol('cancel');
+const cancelSymbol = Symbol.for('object-stream.cancel');
 
 // On a pipe() run: its Stop comes after the flush, so drain() ends the run on it.
-const pipeRunSymbol = Symbol('pipeRun');
+const pipeRunSymbol = Symbol.for('object-stream.pipeRun');
 
 // On a Stop: the index of the first stage after the one that stopped. Set at every
 // stage call it leaves, so an index from an inner pipeline (a `pipe()` stage) is
 // replaced by the outer one.
-const stopAtSymbol = Symbol('stopAt');
+const stopAtSymbol = Symbol.for('object-stream.stopAt');
+
+// gen()'s consumer-side cancel: thrown by a run's own push and caught by its own
+// producer, so one value serves every run.
+const GEN_CANCEL = Symbol.for('object-stream.genCancel');
 
 const markStop = (error, index) => {
   if (error instanceof defs.Stop) error[stopAtSymbol] = index;
@@ -44,7 +48,7 @@ const stopIndex = (stop, fns) => stop[stopAtSymbol] ?? fns.length;
 // The error an abnormal exit surfaces when a cleanup also fails (a generator's
 // `finally`, fired by `it.return()`, or a stage's `abort`): the cleanup error alone
 // when there was no error or only a `stop`, a clean end; both, when the original is a
-// real Error; a non-Error control sentinel (gen()'s CANCEL) keeps its identity, since
+// real Error; a non-Error control sentinel (gen()'s GEN_CANCEL) keeps its identity, since
 // callers compare against it. One home for nextGen's abort and the owners' releases.
 const withCleanupError = (err, cleanupErr) => {
   if (err == null || err instanceof defs.Stop) return cleanupErr;
@@ -169,7 +173,7 @@ const nextGen = (it, fns, i, push) => {
     }
   };
   // Abnormal termination — a downstream stage threw (sync or rejected promise),
-  // or a push rejected (the gen bridge's consumer CANCEL) — leaves the source
+  // or a push rejected (the gen bridge's consumer GEN_CANCEL) — leaves the source
   // generator suspended at a yield, so its `finally {}` never runs and a
   // resource-owning source (e.g. asyncBlockReader's FileHandle) leaks. Run
   // `it.return()` to fire that finally, awaiting it for an async generator, then
@@ -314,7 +318,7 @@ const genBridge = (fns, once) => {
   // exec.flush on `none`); each push parks on a promise the consumer resolves
   // when it pulls the next value, so production stays one item ahead (bounded).
   // A for-await `break` runs .return() → the finally rejects the parked push
-  // with CANCEL, unwinding exec; the driver swallows it (no leaked producer).
+  // with GEN_CANCEL, unwinding exec; the driver swallows it (no leaked producer).
   let g = async function* (value) {
     if (flushed) throw Error('Call to a flushed pipe.');
     const isFlush = !once && value === defs.none;
@@ -331,10 +335,9 @@ const genBridge = (fns, once) => {
       error = null,
       cancelled = false,
       completed = false;
-    const CANCEL = Symbol('cancel');
 
     const push = v => {
-      if (cancelled) throw CANCEL;
+      if (cancelled) throw GEN_CANCEL;
       pending.push(v);
       if (wakeConsumer) {
         const w = wakeConsumer;
@@ -358,7 +361,7 @@ const genBridge = (fns, once) => {
       .then(
         () => {},
         e => {
-          if (e === CANCEL) return;
+          if (e === GEN_CANCEL) return;
           error = e;
           if (!isFlush && e instanceof defs.Stop) stopAt = stopIndex(e, fns);
         }
@@ -392,11 +395,11 @@ const genBridge = (fns, once) => {
       }
     } finally {
       cancelled = true;
-      push[cancelSymbol] = CANCEL;
+      push[cancelSymbol] = GEN_CANCEL;
       if (rejectProducer) {
         const rj = rejectProducer;
         resolveProducer = rejectProducer = null;
-        rj(CANCEL);
+        rj(GEN_CANCEL);
       }
       // an error or a break: release the resource-owning stages not finished (never a
       // flush); after a stop, only those up to the stopper, the rest waiting for the

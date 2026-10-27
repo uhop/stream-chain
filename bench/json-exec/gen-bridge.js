@@ -90,7 +90,7 @@ const cleanBridge = (gfns, onSettle = () => {}) =>
     let done = false;
     let error = null;
     let cancelled = false;
-    const CANCEL = Symbol('cancel');
+    const CANCEL = Symbol.for('object-stream.bench.genCancel');
 
     const push = v => {
       if (cancelled) throw CANCEL;

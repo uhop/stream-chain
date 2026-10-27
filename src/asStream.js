@@ -25,7 +25,7 @@ import {
 
 // Unwinds the producer after destroy(): a generator stage would otherwise run to
 // its natural end (forever, if endless) into a dead stream.
-const CANCEL = Symbol('cancel');
+const CANCEL = Symbol.for('object-stream.asStreamCancel');
 
 const asStream = (fn, options) => {
   if (typeof fn != 'function') {

@@ -162,7 +162,7 @@ test.asPromise(
   async (t, resolve) => {
     // Mirrors gen()'s CANCEL sentinel: a non-Error must NOT be wrapped, or the
     // `e !== CANCEL` swallow on consumer-break would stop working.
-    const sentinel = Symbol('sentinel');
+    const sentinel = Symbol.for('object-stream.test.sentinel');
     const source = async function* () {
       try {
         yield 1;

@@ -23,7 +23,7 @@ import {
 
 // Unwinds the producer after cancel/abort: a generator stage would otherwise run
 // to its natural end (forever, if endless) into a dead stream.
-const CANCEL = Symbol('cancel');
+const CANCEL = Symbol.for('object-stream.asWebStreamCancel');
 
 const asWebStream = (fn, options) => {
   if (isDuplexWebStream(fn) || isReadableWebStream(fn) || isWritableWebStream(fn)) {
