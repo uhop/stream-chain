@@ -15,9 +15,9 @@ import {
   flush as execFlush,
   withCleanupError,
   cancelSymbol,
-  collectAborters,
+  hasAborters,
+  noteFinal,
   abortStages,
-  releaseStopped,
   finishStop
 } from './exec.js';
 
@@ -40,7 +40,9 @@ const asWebStream = (fn, options) => {
   const writableStrategy = options?.writableStrategy ?? strategy;
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
-  const aborters = collectAborters(innerFns ?? [fn]);
+  const stages = innerFns ?? [fn];
+  const canAbort = hasAborters(stages),
+    finished = new Set(); // see exec.js noteFinal
 
   let stopped = false;
   let cancelled = false;
@@ -130,11 +132,11 @@ const asWebStream = (fn, options) => {
     cancelDrain();
   };
 
-  // Releases resource-owning stages once, unless a completed flush already did;
-  // resolves to the failure to surface, or undefined
+  // Releases the resource-owning stages not flushed or released yet; resolves to the
+  // failure to surface, or undefined
   const releaseStages = () => {
-    if (flushed || !aborters.length) return Promise.resolve(undefined);
-    releasing ??= abortStages(aborters);
+    if (flushed || !canAbort) return Promise.resolve(undefined);
+    releasing ??= abortStages(stages, finished);
     return releasing;
   };
   const rethrow = failure => {
@@ -210,13 +212,11 @@ const asWebStream = (fn, options) => {
   };
 
   // A stop is a clean end: the stages after the stopper are flushed and the rest
-  // released (finishStop), then the readable side closes. A stop raised by the
-  // closing flush has already been flushed past.
-  const endAfterStop = async (stop, inFlush) => {
+  // released (finishStop), then the readable side closes.
+  const endAfterStop = async stop => {
     stopped = true;
-    const fns = innerFns ?? [fn];
     try {
-      await (inFlush ? releaseStopped(fns, stop) : finishStop(fns, stop, enqueue));
+      await finishStop(stages, stop, enqueue, finished);
     } catch (error) {
       errorReadable(error);
       throw error;
@@ -264,16 +264,16 @@ const asWebStream = (fn, options) => {
         try {
           if (!stopped) {
             if (innerFns) {
-              const r = execFlush(innerFns, 0, enqueue);
+              const r = execFlush(innerFns, 0, enqueue, finished);
               if (r) await r;
             } else if (defs.isFlushable(fn)) {
-              const r = processValue(fn(defs.none));
+              const r = processValue(noteFinal(fn(defs.none), fn, finished));
               if (r) await r;
             }
             flushed = true;
           }
         } catch (error) {
-          if (error instanceof defs.Stop) return endAfterStop(error, true);
+          if (error instanceof defs.Stop) return endAfterStop(error);
           if (error !== CANCEL) {
             errorReadable(error);
             const failure = await releaseStages();

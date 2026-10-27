@@ -268,13 +268,48 @@ test.asPromise(
   }
 );
 
-const makeCountingStage = () => {
+// Counts its flushes and aborts; its final emits `tail`, its abort calls `abort`.
+const makeCountingStage = (abort, tail = none) => {
   const state = {flushed: 0, aborted: 0};
   const stage = flushable(
     x => x,
     () => {
       ++state.flushed;
-      return none;
+      return tail;
+    },
+    () => {
+      ++state.aborted;
+      return abort?.();
+    }
+  );
+  return {state, stage};
+};
+
+// A stage whose final stays pending until `finish()`; `started` resolves when it begins.
+const makePendingStage = () => {
+  const state = {aborted: 0};
+  let begin, finish;
+  const started = new Promise(resolve => (begin = resolve));
+  const stage = flushable(
+    x => x,
+    () => {
+      begin();
+      return new Promise(resolve => (finish = resolve)).then(() => none);
+    },
+    () => {
+      ++state.aborted;
+    }
+  );
+  return {state, stage, started, finish: () => finish()};
+};
+
+// A stage whose final throws `error`.
+const makeFailingStage = error => {
+  const state = {aborted: 0};
+  const stage = flushable(
+    x => x,
+    () => {
+      throw error;
     },
     () => {
       ++state.aborted;
@@ -349,12 +384,9 @@ test.asPromise(
   'asWebStream: a stop during the flush flushes the stages after it once',
   async (t, resolve) => {
     for (const [name, makeStopper] of Object.entries(flushStoppers)) {
-      const down = makeCountingStage();
-      const tail = flushable(
-        x => x,
-        () => 'tail'
-      );
-      const ws = asWebStream(gen(tail, makeStopper(), down.stage));
+      const down = makeCountingStage(),
+        tail = makeCountingStage(null, 'tail');
+      const ws = asWebStream(gen(tail.stage, makeStopper(), down.stage));
       const writer = ws.writable.getWriter();
       const written = writer.write(1).then(() => writer.close());
       const output = [];
@@ -363,7 +395,92 @@ test.asPromise(
       t.deepEqual(output, [1], name + ': the tail stopped at the stopper');
       t.equal(down.state.flushed, 1, name + ': the stage after the stopper is flushed once');
       t.equal(down.state.aborted, 0, name + ': and not aborted');
+      t.equal(tail.state.aborted, 0, name + ': the flushed stage before it is not aborted');
     }
+    resolve();
+  }
+);
+
+// Each flushable gets its final or its abort, once: never an abort after its own
+// final completed, and never two.
+test.asPromise(
+  'asWebStream: readable.cancel() during the flush aborts the stages not flushed yet',
+  async (t, resolve) => {
+    const flushed = makeCountingStage(null, 'tail'),
+      pending = makePendingStage();
+    const ws = asWebStream(gen(flushed.stage, pending.stage));
+    const writer = ws.writable.getWriter(),
+      reader = ws.readable.getReader();
+    const written = writer
+      .write(1)
+      .then(() => writer.close())
+      .catch(() => {});
+    const reading = (async () => {
+      for (;;) if ((await reader.read()).done) break;
+    })().catch(() => {});
+    await pending.started;
+    await reader.cancel('done reading');
+    pending.finish();
+    await Promise.all([written, reading]);
+    t.equal(flushed.state.flushed, 1, 'the first stage was flushed');
+    t.equal(flushed.state.aborted, 0, 'so it is not aborted');
+    t.equal(pending.state.aborted, 1, 'a stage whose final is still running is aborted once');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asWebStream: an error during the flush aborts the stages not flushed',
+  async (t, resolve) => {
+    const boom = new Error('boom');
+    const flushed = makeCountingStage(null, 'tail'),
+      failing = makeFailingStage(boom),
+      after = makeCountingStage();
+    const ws = asWebStream(gen(flushed.stage, failing.stage, after.stage));
+    const writer = ws.writable.getWriter();
+    const reading = (async () => {
+      for await (const _ of ws.readable);
+    })().catch(() => {});
+    let caught;
+    try {
+      await writer.write(1);
+      await writer.close();
+    } catch (error) {
+      caught = error;
+    }
+    await reading;
+    t.equal(caught, boom, 'the error surfaces');
+    t.equal(flushed.state.aborted, 0, 'a stage whose final completed is not aborted');
+    t.equal(failing.state.aborted, 1, 'a stage whose final threw is aborted once');
+    t.equal(after.state.flushed, 0, 'the stage after it was not flushed');
+    t.equal(after.state.aborted, 1, 'so it is aborted once');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asWebStream: an error in the flush after a stop releases the stages after it',
+  async (t, resolve) => {
+    const boom = new Error('boom');
+    const failing = makeFailingStage(boom),
+      after = makeCountingStage();
+    const ws = asWebStream(gen(x => (x === 2 ? stop : x), failing.stage, after.stage));
+    const writer = ws.writable.getWriter();
+    const reading = (async () => {
+      for await (const _ of ws.readable);
+    })().catch(() => {});
+    let caught;
+    try {
+      await writer.write(1);
+      await writer.write(2);
+    } catch (error) {
+      caught = error;
+    }
+    await reading;
+    t.equal(caught, boom, 'the error surfaces');
+    t.equal(failing.state.aborted, 1, 'a stage whose final threw is aborted once');
+    t.equal(after.state.flushed, 0, 'the stage after it was not flushed');
+    t.equal(after.state.aborted, 1, 'so it is aborted once');
     resolve();
   }
 );

@@ -52,7 +52,7 @@ const pipeline = chainUnchecked([x => x * x]);
 - `stop` — skip and terminate the generator pipeline; the flushable stages after the stopper are still flushed (a clean end for them), the stopper and the stages before it are not.
 - `many(values)` — emit multiple values from a single input.
 - `finalValue(value)` — skip remaining chain steps, emit value directly (gen/fun only).
-- `flushable(fn, final?, abort?)` — mark function to be called at stream end; `abort` releases its resources when the pipeline ends abnormally (called by `gen()`, `asStream()`, `asWebStream()`, never after a completed flush).
+- `flushable(fn, final?, abort?)` — mark function to be called at stream end; `abort` releases its resources when the pipeline ends abnormally (called by `gen()`, `asStream()`, `asWebStream()`, never after the stage's own `final` completed).
 
 **Convention:** In regular functions, all four markers (`none`/`stop`/`many`/`finalValue`) are return values. From a generator, don't yield `none`/`many(...)` — express them natively (skip with `continue`, emit multiple via separate `yield`s or `yield* anIterable`). But `stop` and `finalValue(...)` ARE supported from generators (they do what a plain generator can't): `stop` terminates the whole pipeline, `finalValue(x)` emits `x` and skips the segment's remaining functions. After issuing either, `return` — don't yield more in that invocation.
 

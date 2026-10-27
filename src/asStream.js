@@ -17,9 +17,9 @@ import {
   flush as execFlush,
   withCleanupError,
   cancelSymbol,
-  collectAborters,
+  hasAborters,
+  noteFinal,
   abortStages,
-  releaseStopped,
   finishStop
 } from './exec.js';
 
@@ -33,7 +33,9 @@ const asStream = (fn, options) => {
   }
 
   const innerFns = defs.isFunctionList(fn) ? fn.fList : null;
-  const aborters = collectAborters(innerFns ?? [fn]);
+  const stages = innerFns ?? [fn];
+  const canAbort = hasAborters(stages),
+    finished = new Set(); // see exec.js noteFinal
 
   let stopped = false;
   let destroyed = false;
@@ -148,17 +150,15 @@ const asStream = (fn, options) => {
   };
 
   // A stop is a clean end: the stages after the stopper are flushed and the rest
-  // released (finishStop), then the readable side ends. A stop raised by the final
-  // flush has already been flushed past.
-  const finishWrite = (callback, error, inFlush) => {
+  // released (finishStop), then the readable side ends.
+  const finishWrite = (callback, error) => {
     if (!error || error === CANCEL) {
       callback(null);
     } else if (!(error instanceof defs.Stop)) {
       callback(error);
     } else {
       stopped = true;
-      const fns = innerFns ?? [fn];
-      (inFlush ? releaseStopped(fns, error) : finishStop(fns, error, enqueue)).then(
+      finishStop(stages, error, enqueue, finished).then(
         () => {
           flushed = true;
           signalEnd();
@@ -220,12 +220,12 @@ const asStream = (fn, options) => {
       if (innerFns) {
         let r;
         try {
-          r = execFlush(innerFns, 0, enqueue);
+          r = execFlush(innerFns, 0, enqueue, finished);
         } catch (error) {
-          return finishWrite(callback, error, true);
+          return finishWrite(callback, error);
         }
         if (r && typeof r.then == 'function') {
-          r.then(onComplete, error => finishWrite(callback, error, true));
+          r.then(onComplete, error => finishWrite(callback, error));
         } else {
           onComplete();
         }
@@ -237,12 +237,13 @@ const asStream = (fn, options) => {
       }
       let r;
       try {
-        r = processValue(fn(defs.none, null));
+        const value = fn(defs.none, null);
+        r = processValue(noteFinal(value, fn, finished));
       } catch (error) {
-        return finishWrite(callback, error, true);
+        return finishWrite(callback, error);
       }
       if (r) {
-        r.then(onComplete, error => finishWrite(callback, error, true));
+        r.then(onComplete, error => finishWrite(callback, error));
       } else {
         onComplete();
       }
@@ -256,12 +257,12 @@ const asStream = (fn, options) => {
       stopped = destroyed = true;
       enqueue[cancelSymbol] = CANCEL;
       cancelPaused();
-      // a completed flush already released every stage; otherwise release, never flush
-      if (flushed || !aborters.length) {
+      // release the stages not flushed or released yet, never flush
+      if (flushed || !canAbort) {
         callback(error);
         return;
       }
-      abortStages(aborters).then(failure =>
+      abortStages(stages, finished).then(failure =>
         callback(
           failure === undefined ? error : /** @type {Error} */ (withCleanupError(error, failure))
         )

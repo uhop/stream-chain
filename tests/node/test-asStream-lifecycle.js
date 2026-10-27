@@ -207,13 +207,48 @@ test.asPromise(
   }
 );
 
-const makeCountingStage = () => {
+// Counts its flushes and aborts; its final emits `tail`, its abort calls `abort`.
+const makeCountingStage = (abort, tail = none) => {
   const state = {flushed: 0, aborted: 0};
   const stage = flushable(
     x => x,
     () => {
       ++state.flushed;
-      return none;
+      return tail;
+    },
+    () => {
+      ++state.aborted;
+      return abort?.();
+    }
+  );
+  return {state, stage};
+};
+
+// A stage whose final stays pending until `finish()`; `started` resolves when it begins.
+const makePendingStage = () => {
+  const state = {aborted: 0};
+  let begin, finish;
+  const started = new Promise(resolve => (begin = resolve));
+  const stage = flushable(
+    x => x,
+    () => {
+      begin();
+      return new Promise(resolve => (finish = resolve)).then(() => none);
+    },
+    () => {
+      ++state.aborted;
+    }
+  );
+  return {state, stage, started, finish: () => finish()};
+};
+
+// A stage whose final throws `error`.
+const makeFailingStage = error => {
+  const state = {aborted: 0};
+  const stage = flushable(
+    x => x,
+    () => {
+      throw error;
     },
     () => {
       ++state.aborted;
@@ -285,12 +320,9 @@ test.asPromise(
   'asStream: a stop during the flush flushes the stages after it once',
   async (t, resolve) => {
     for (const [name, makeStopper] of Object.entries(flushStoppers)) {
-      const down = makeCountingStage();
-      const tail = flushable(
-        x => x,
-        () => 'tail'
-      );
-      const stream = asStream(gen(tail, makeStopper(), down.stage));
+      const down = makeCountingStage(),
+        tail = makeCountingStage(null, 'tail');
+      const stream = asStream(gen(tail.stage, makeStopper(), down.stage));
       const output = [];
       stream.on('data', value => output.push(value));
       await new Promise((res, rej) => {
@@ -301,7 +333,76 @@ test.asPromise(
       t.deepEqual(output, [1], name + ': the tail stopped at the stopper');
       t.equal(down.state.flushed, 1, name + ': the stage after the stopper is flushed once');
       t.equal(down.state.aborted, 0, name + ': and not aborted');
+      t.equal(tail.state.aborted, 0, name + ': the flushed stage before it is not aborted');
     }
     resolve();
   }
 );
+
+// Each flushable gets its final or its abort, once: never an abort after its own
+// final completed, and never two.
+test.asPromise(
+  'asStream: destroy() during the flush aborts the stages not flushed yet',
+  async (t, resolve) => {
+    const flushed = makeCountingStage(null, 'tail'),
+      pending = makePendingStage();
+    const stream = asStream(gen(flushed.stage, pending.stage));
+    stream.on('data', () => {});
+    const closed = new Promise(res => stream.on('close', res));
+    stream.end(1);
+    await pending.started;
+    stream.destroy();
+    await closed;
+    pending.finish();
+    t.equal(flushed.state.flushed, 1, 'the first stage was flushed');
+    t.equal(flushed.state.aborted, 0, 'so it is not aborted');
+    t.equal(pending.state.aborted, 1, 'a stage whose final is still running is aborted once');
+    resolve();
+  }
+);
+
+test.asPromise(
+  'asStream: an error during the flush aborts the stages not flushed',
+  async (t, resolve) => {
+    const boom = new Error('boom');
+    const flushed = makeCountingStage(null, 'tail'),
+      failing = makeFailingStage(boom),
+      after = makeCountingStage();
+    const stream = asStream(gen(flushed.stage, failing.stage, after.stage));
+    stream.on('data', () => {});
+    const closed = new Promise(res => stream.on('close', res));
+    const error = await new Promise(res => {
+      stream.on('error', res);
+      stream.end(1);
+    });
+    await closed;
+    t.equal(error, boom, 'the error surfaces');
+    t.equal(flushed.state.aborted, 0, 'a stage whose final completed is not aborted');
+    t.equal(failing.state.aborted, 1, 'a stage whose final threw is aborted once');
+    t.equal(after.state.flushed, 0, 'the stage after it was not flushed');
+    t.equal(after.state.aborted, 1, 'so it is aborted once');
+    resolve();
+  }
+);
+
+test.asPromise('asStream: a failing abort after a stop is not called again', async (t, resolve) => {
+  const abortErr = new Error('abort boom');
+  const up = makeCountingStage(() => {
+      throw abortErr;
+    }),
+    down = makeCountingStage();
+  const stream = asStream(gen(up.stage, x => (x === 2 ? stop : x), down.stage));
+  stream.on('data', () => {});
+  const closed = new Promise(res => stream.on('close', res));
+  const error = await new Promise(res => {
+    stream.on('error', res);
+    stream.write(1);
+    stream.write(2);
+  });
+  await closed;
+  t.equal(error, abortErr, 'the cleanup error surfaces');
+  t.equal(up.state.aborted, 1, 'the failing stage is aborted once');
+  t.equal(down.state.flushed, 1, 'the stage after the stopper was flushed');
+  t.equal(down.state.aborted, 0, 'so it is not aborted');
+  resolve();
+});

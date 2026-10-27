@@ -50,16 +50,27 @@ const withCleanupError = (err, cleanupErr) => {
     : err;
 };
 
-// The `abort` functions of a pipeline's flushable stages, collected once at build time
-// so a pipeline without one pays nothing at teardown.
-const collectAborters = fns =>
-  fns.filter(fn => fn[defs.abortSymbol]).map(fn => fn[defs.abortSymbol]);
+// Checked once at build time, so a pipeline without an `abort` pays nothing at teardown.
+const hasAborters = fns => fns.some(fn => fn[defs.abortSymbol]);
 
-// Releases resource-owning stages on abnormal termination, in order, each once per
-// call; resolves to the failure to surface, or undefined.
-const abortStages = async aborters => {
+// Each flushable stage gets its `final` or its `abort`, at most once: an owner keeps
+// one `finished` set per pipeline, holding the stages whose `final` completed or whose
+// `abort` was called. A stage whose `final` threw, or is still running, can be aborted.
+const noteFinal = (value, fn, finished) => {
+  if (value && typeof value.then == 'function') return value.then(v => (finished.add(fn), v));
+  finished.add(fn);
+  return value;
+};
+
+// Releases resource-owning stages among fns[0..to) on abnormal termination, in order,
+// skipping those in `finished`; resolves to the failure to surface, or undefined.
+const abortStages = async (fns, finished, to = fns.length) => {
   let failure;
-  for (const abort of aborters) {
+  for (let i = 0; i < to; ++i) {
+    const fn = fns[i],
+      abort = fn[defs.abortSymbol];
+    if (!abort || finished.has(fn)) continue;
+    finished.add(fn);
     try {
       await abort();
     } catch (error) {
@@ -198,8 +209,9 @@ const nextGen = (it, fns, i, push) => {
 // the number of flushable stages under backpressure. A stop during the flush is a
 // clean end for the stages after the stopper: the flush resumes there, and the last
 // stop is rethrown at the end. A stopper never precedes the flushable being drained,
-// so each resume starts further on.
-const flush = (fns, index, push) => {
+// so each resume starts further on. An owner's `finished` set skips the stages already
+// released or flushed, and records each `final` that completes.
+const flush = (fns, index, push, finished) => {
   let stop = null;
   const resume = error => {
     if (!(error instanceof defs.Stop)) throw error;
@@ -209,7 +221,7 @@ const flush = (fns, index, push) => {
   const step = i => {
     for (; i < fns.length; ++i) {
       const f = fns[i];
-      if (!defs.isFlushable(f)) continue;
+      if (!defs.isFlushable(f) || finished?.has(f)) continue;
       let r;
       try {
         let value;
@@ -218,6 +230,7 @@ const flush = (fns, index, push) => {
         } catch (error) {
           markStop(error, i + 1);
         }
+        if (finished) value = noteFinal(value, f, finished);
         r = next(value, fns, i + 1, push);
       } catch (error) {
         return resume(error);
@@ -232,28 +245,35 @@ const flush = (fns, index, push) => {
   return step(index);
 };
 
-// After a stop, the stopper and the stages before it are released, never flushed.
-const releaseStopped = async (fns, stop) => {
-  const failure = await abortStages(collectAborters(fns.slice(0, stopIndex(stop, fns))));
-  if (failure !== undefined) throw failure;
+// After a stop, the stopper and the stages before it are released, never flushed. A
+// failing release ends the pipeline instead, and nothing will flush the stages after
+// the stopper, so they are released too. Resolves to the failure, or undefined.
+const releaseStopped = async (fns, finished, stop) => {
+  const failure = await abortStages(fns, finished, stopIndex(stop, fns));
+  if (failure === undefined) return undefined;
+  const more = await abortStages(fns, finished);
+  return more === undefined
+    ? failure
+    : new AggregateError([failure, more], 'stage cleanup failed more than once');
 };
 
 // A stop is a clean end for the stages after the one that stopped: they are flushed,
-// then the rest released. For a driver that flushes on its own (asStream, asWebStream);
-// a stop raised by its own flush needs only releaseStopped().
-const finishStop = async (fns, stop, push) => {
+// then the rest released. For a driver that flushes on its own (asStream, asWebStream),
+// after a stop from its data pass or from its own flush, whose stages are then
+// finished. A failing flush releases every stage not finished yet.
+const finishStop = async (fns, stop, push, finished) => {
   let error;
   try {
-    await flush(fns, stopIndex(stop, fns), push);
+    await flush(fns, stopIndex(stop, fns), push, finished);
   } catch (e) {
     if (e instanceof defs.Stop) stop = e;
     else error = e;
   }
-  try {
-    await releaseStopped(fns, stop);
-  } catch (failure) {
-    error = withCleanupError(error, failure);
-  }
+  const failure =
+    error === undefined
+      ? await releaseStopped(fns, finished, stop)
+      : await abortStages(fns, finished);
+  if (failure !== undefined) error = withCleanupError(error, failure);
   if (error !== undefined) throw error;
 };
 
@@ -302,7 +322,8 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
-  collectAborters,
+  hasAborters,
+  noteFinal,
   abortStages,
   stopIndex,
   releaseStopped,

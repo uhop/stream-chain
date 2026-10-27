@@ -19,10 +19,16 @@ declare function next(value: unknown, fns: Fn[], index: number, push: Push): voi
  * Flushes flushable stages in `fns[index..]`, emitting their buffered output via
  * `push`. Returns `undefined` if synchronous, or a Promise if a flush stage or a
  * backpressuring push made it suspend. A `stop` during the flush resumes it after
- * the stopper, and the last `Stop` is rethrown at the end. Used by the drivers'
- * `none` path and by `finishStop`.
+ * the stopper, and the last `Stop` is rethrown at the end. With an owner's
+ * `finished` set, it skips the stages in it and adds each stage whose `final`
+ * completes. Used by the drivers' `none` path and by `finishStop`.
  */
-declare function flush(fns: Fn[], index: number, push: Push): void | Promise<void>;
+declare function flush(
+  fns: Fn[],
+  index: number,
+  push: Push,
+  finished?: Set<Fn>
+): void | Promise<void>;
 
 /**
  * Builds a sync-when-possible, value-or-promise executor over the given
@@ -32,9 +38,9 @@ declare function flush(fns: Fn[], index: number, push: Push): void | Promise<voi
  * Calling the driver with `none` flushes flushable stages.
  *
  * Unlike `fun()` / `gen()`, the `push` return value is honored: a Promise
- * suspends the executor AT that push, preserving a bounded queue. `stop` halts
- * without flushing buffered flushables (as in `gen()`; only `fun()` flushes on
- * stop).
+ * suspends the executor AT that push, preserving a bounded queue. After a `stop`,
+ * the driver's `none` call flushes only the stages after the stopper (as in
+ * `gen()` and `fun()`).
  *
  * @param fns functions to compose: regular, async, generator, async generator,
  *   or nested arrays / function-lists. Falsy items are ignored; an empty list
@@ -58,16 +64,23 @@ declare function withCleanupError(err: unknown, cleanupErr: unknown): unknown;
 declare const cancelSymbol: unique symbol;
 
 /**
- * The `abort` functions of the flushable stages in `fns`. Internal: shared by the
- * pipeline owners.
+ * Whether any stage in `fns` has an `abort`. Internal: shared by the pipeline owners.
  */
-declare function collectAborters(fns: readonly Fn[]): Array<() => unknown>;
+declare function hasAborters(fns: readonly Fn[]): boolean;
 
 /**
- * Calls each `abort` once, in order; resolves to the failure to surface, or
- * `undefined`. Internal: shared by the pipeline owners.
+ * Adds `fn` to `finished` once its `final` completes: at once for a plain value, on
+ * resolution for a promise, which is returned in its place. Internal: shared by the
+ * pipeline owners.
  */
-declare function abortStages(aborters: ReadonlyArray<() => unknown>): Promise<unknown>;
+declare function noteFinal<T>(value: T, fn: Fn, finished: Set<Fn>): T;
+
+/**
+ * Calls the `abort` of each stage in `fns[0..to)` that is not in `finished`, in
+ * order, adding it first; resolves to the failure to surface, or `undefined`.
+ * Internal: shared by the pipeline owners.
+ */
+declare function abortStages(fns: readonly Fn[], finished: Set<Fn>, to?: number): Promise<unknown>;
 
 /**
  * Where the flush after a `stop` starts: the index of the stage after the stopper,
@@ -76,18 +89,29 @@ declare function abortStages(aborters: ReadonlyArray<() => unknown>): Promise<un
 declare function stopIndex(stop: unknown, fns: readonly Fn[]): number;
 
 /**
- * Releases the stopper and the stages before it after a `stop` raised by an owner's
- * own flush, which already flushed the stages after the stopper. Internal: shared by
- * `asStream` and `asWebStream`.
+ * After a `stop`, releases the stopper and the stages before it that are not in
+ * `finished`; if that fails, releases the rest too, since no flush follows. Resolves
+ * to the failure to surface, or `undefined`. Internal: shared by `gen()` and
+ * `finishStop`.
  */
-declare function releaseStopped(fns: readonly Fn[], stop: unknown): Promise<void>;
+declare function releaseStopped(
+  fns: readonly Fn[],
+  finished: Set<Fn>,
+  stop: unknown
+): Promise<unknown>;
 
 /**
  * Ends a pipeline after a `stop` for an owner that flushes on its own: flushes the
- * stages after the stopper, then releases the stopper and the stages before it.
- * Internal: shared by `asStream` and `asWebStream`.
+ * stages after the stopper, then releases the stopper and the stages before it; a
+ * failing flush releases every stage not in `finished`. Internal: shared by
+ * `asStream` and `asWebStream`.
  */
-declare function finishStop(fns: readonly Fn[], stop: unknown, push: Push): Promise<void>;
+declare function finishStop(
+  fns: readonly Fn[],
+  stop: unknown,
+  push: Push,
+  finished: Set<Fn>
+): Promise<void>;
 
 export default exec;
 export {
@@ -96,7 +120,8 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
-  collectAborters,
+  hasAborters,
+  noteFinal,
   abortStages,
   stopIndex,
   releaseStopped,

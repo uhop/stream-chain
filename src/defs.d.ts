@@ -107,10 +107,12 @@ export declare function isFlushable<I, O>(o: (value: I, ...rest: any[]) => O): o
  * @param abort an optional function that releases the stage's resources when the
  *   pipeline ends abnormally (an error elsewhere, an early break, a destroyed or
  *   cancelled stream, or a `stop` by this stage or a later one; the stages after a
- *   stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most once,
- *   never after a completed flush, and possibly while a call to the stage is still in
- *   flight. It releases and must not flush: buffered output is dropped. A rejection or a
- *   throw surfaces like a failing cleanup.
+ *   stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most
+ *   once, and never once the stage's own `final` has completed: a stage whose `final` threw,
+ *   or is still running, is aborted like the others, and an aborted stage is never flushed.
+ *   It can be called while a call to the stage is still in flight. It releases and must not
+ *   flush: buffered output is dropped. A rejection or a throw surfaces like a failing
+ *   cleanup.
  * @returns a `Flushable`
  * @remarks If `final` is not provided, `write` will be called with {@link none} when the pipeline is stopped
  */

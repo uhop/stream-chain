@@ -5,8 +5,9 @@ import {
   next as execNext,
   flush as execFlush,
   cancelSymbol,
-  collectAborters,
+  hasAborters,
   abortStages,
+  releaseStopped,
   withCleanupError,
   stopIndex
 } from './exec.js';
@@ -24,7 +25,8 @@ const gen = (...fns) => {
   if (!fns.length) {
     fns = [x => x];
   }
-  const aborters = collectAborters(fns);
+  const canAbort = hasAborters(fns),
+    finished = new Set(); // see exec.js noteFinal
   let flushed = false,
     stopAt = 0; // after a stop, the flush starts at the stage after the stopper
 
@@ -66,7 +68,9 @@ const gen = (...fns) => {
     };
 
     Promise.resolve()
-      .then(() => (isFlush ? execFlush(fns, stopAt, push) : execNext(value, fns, 0, push)))
+      .then(() =>
+        isFlush ? execFlush(fns, stopAt, push, finished) : execNext(value, fns, 0, push)
+      )
       .then(
         () => {},
         e => {
@@ -110,14 +114,14 @@ const gen = (...fns) => {
         resolveProducer = rejectProducer = null;
         rj(CANCEL);
       }
-      // an error or a break: release resource-owning stages (never a flush); after a
-      // stop, only the stages up to the stopper, the rest waiting for the caller's flush
-      if (!completed && aborters.length) {
-        const failure = await abortStages(
+      // an error or a break: release the resource-owning stages not finished (never a
+      // flush); after a stop, only those up to the stopper, the rest waiting for the
+      // caller's flush
+      if (!completed && canAbort) {
+        const failure =
           error instanceof defs.Stop
-            ? collectAborters(fns.slice(0, stopIndex(error, fns)))
-            : aborters
-        );
+            ? await releaseStopped(fns, finished, error)
+            : await abortStages(fns, finished);
         if (failure !== undefined) throw withCleanupError(error, failure);
       }
     }

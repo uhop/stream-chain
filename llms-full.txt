@@ -210,7 +210,7 @@ Helper functions:
 
 Marks a function to be called when the stream ends. When called at end-of-stream, `fn` receives `none` as its argument. Alternatively, provide a separate `final` function that is called with no arguments at end-of-stream.
 
-`abort` (optional, stored under `abortSymbol`) releases the stage's resources when the pipeline ends abnormally: an error in another stage, an early `break`, a destroyed or cancelled stream, or a `stop` by this stage or a later one (stages after the stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most once, never after a completed flush, possibly while a call to the stage is still in flight. It releases and must not flush: buffered output is dropped. A throw or a rejection surfaces like a failing cleanup (combined with the pipeline's error, if any). `fun()` and the bare `exec()` driver have no teardown and never call it.
+`abort` (optional, stored under `abortSymbol`) releases the stage's resources when the pipeline ends abnormally: an error in another stage, an early `break`, a destroyed or cancelled stream, or a `stop` by this stage or a later one (stages after the stopper are flushed instead). `gen()`, `asStream()`, and `asWebStream()` call it at most once, and never once the stage's own `final` has completed: a stage whose `final` threw, or is still running, is aborted like the others, and an aborted stage is never flushed. It can be called while a call to the stage is still in flight. It releases and must not flush: buffered output is dropped. A throw or a rejection surfaces like a failing cleanup (combined with the pipeline's error, if any). `fun()` and the bare `exec()` driver have no teardown and never call it.
 
 ```js
 let sum = 0;
