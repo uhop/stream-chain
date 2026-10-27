@@ -4,7 +4,8 @@ import test from 'tape-six';
 
 import asStream from '../../src/asStream.js';
 import gen from '../../src/gen.js';
-import {none, stop, flushable} from '../../src/defs.js';
+import {none, stop, Stop, flushable} from '../../src/defs.js';
+import take from '../../src/utils/take.js';
 
 // Lifecycle tests for asStream — destroy() while a write is awaiting paused,
 // plus error propagation from user fn.
@@ -268,5 +269,39 @@ test.asPromise(
     stream.write(1);
     stream.write(2);
     stream.end(3);
+  }
+);
+
+// A flushable whose final emits a tail, and stoppers that refuse that tail.
+const flushStoppers = {
+  'take(n, stop)': () => take(1, stop),
+  'a thrown Stop': () => x => {
+    if (x === 'tail') throw new Stop();
+    return x;
+  }
+};
+
+test.asPromise(
+  'asStream: a stop during the flush flushes the stages after it once',
+  async (t, resolve) => {
+    for (const [name, makeStopper] of Object.entries(flushStoppers)) {
+      const down = makeCountingStage();
+      const tail = flushable(
+        x => x,
+        () => 'tail'
+      );
+      const stream = asStream(gen(tail, makeStopper(), down.stage));
+      const output = [];
+      stream.on('data', value => output.push(value));
+      await new Promise((res, rej) => {
+        stream.on('end', res);
+        stream.on('error', rej);
+        stream.end(1);
+      });
+      t.deepEqual(output, [1], name + ': the tail stopped at the stopper');
+      t.equal(down.state.flushed, 1, name + ': the stage after the stopper is flushed once');
+      t.equal(down.state.aborted, 0, name + ': and not aborted');
+    }
+    resolve();
   }
 );

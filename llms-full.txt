@@ -165,7 +165,7 @@ chain([x => x > 0 ? x : none]); // filter: pass only positive values
 
 `Symbol.for('object-stream.stop')` — return to skip and terminate the generator. Works only within `gen()` or `fun()` segments.
 
-A stop is a clean end for the stages after the one that stopped: their flushables are still flushed, so a downstream sink (a `stringerToFile`, a `batch`) writes or emits what it buffered. The stopper and the stages before it are not flushed, and their `abort` (if any) is called. `asStream()` and `asWebStream()` do that flush themselves before ending their readable side; with `gen()`, `fun()`, and `exec()`, the caller's `none` flush covers only those stages, and `pipe()` runs it before rethrowing the `Stop`.
+A stop is a clean end for the stages after the one that stopped: their flushables are still flushed, so a downstream sink (a `stringerToFile`, a `batch`) writes or emits what it buffered. The stopper and the stages before it are not flushed, and their `abort` (if any) is called. `asStream()` and `asWebStream()` do that flush themselves before ending their readable side; with `gen()`, `fun()`, and `exec()`, the caller's `none` flush covers only those stages, and `pipe()` runs it before rethrowing the `Stop`. A `Stop` thrown by a stage acts like `stop` returned by it, and a `Stop` that leaves a `pipe()` used as a stage stops at that stage. A stop during the flush itself ends the stopper's output, and the flush goes on after it.
 
 ```js
 chain([
@@ -256,7 +256,7 @@ const opaque = clearFunctionList(gen(x => x + 1)); // will NOT be inlined
 
 ### Stop (exception class)
 
-Can be thrown instead of returning `stop`:
+Can be thrown instead of returning `stop`, with the same effect:
 
 ```js
 import {Stop} from 'stream-chain/defs.js';

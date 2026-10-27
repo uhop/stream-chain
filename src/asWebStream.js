@@ -17,6 +17,7 @@ import {
   cancelSymbol,
   collectAborters,
   abortStages,
+  releaseStopped,
   finishStop
 } from './exec.js';
 
@@ -209,11 +210,13 @@ const asWebStream = (fn, options) => {
   };
 
   // A stop is a clean end: the stages after the stopper are flushed and the rest
-  // released (finishStop), then the readable side closes.
-  const endAfterStop = async stop => {
+  // released (finishStop), then the readable side closes. A stop raised by the
+  // closing flush has already been flushed past.
+  const endAfterStop = async (stop, inFlush) => {
     stopped = true;
+    const fns = innerFns ?? [fn];
     try {
-      await finishStop(innerFns ?? [fn], stop, enqueue);
+      await (inFlush ? releaseStopped(fns, stop) : finishStop(fns, stop, enqueue));
     } catch (error) {
       errorReadable(error);
       throw error;
@@ -270,7 +273,7 @@ const asWebStream = (fn, options) => {
             flushed = true;
           }
         } catch (error) {
-          if (error instanceof defs.Stop) return endAfterStop(error);
+          if (error instanceof defs.Stop) return endAfterStop(error, true);
           if (error !== CANCEL) {
             errorReadable(error);
             const failure = await releaseStages();

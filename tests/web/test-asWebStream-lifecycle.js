@@ -4,7 +4,8 @@ import test from 'tape-six';
 
 import asWebStream from '../../src/asWebStream.js';
 import gen from '../../src/gen.js';
-import {none, stop, flushable} from '../../src/defs.js';
+import {none, stop, Stop, flushable} from '../../src/defs.js';
+import take from '../../src/utils/take.js';
 
 // Lifecycle/error-propagation tests. Cover writer.abort(), reader.cancel(),
 // and user-function errors — all should match TransformStream-shape behavior.
@@ -331,6 +332,38 @@ test.asPromise(
     t.equal(downFlushed, 1, 'the stage after the stopper is flushed once');
     t.equal(up.state.flushed, 0, 'the stage before the stopper is not flushed');
     t.equal(up.state.aborted, 1, 'it is aborted once');
+    resolve();
+  }
+);
+
+// A flushable whose final emits a tail, and stoppers that refuse that tail.
+const flushStoppers = {
+  'take(n, stop)': () => take(1, stop),
+  'a thrown Stop': () => x => {
+    if (x === 'tail') throw new Stop();
+    return x;
+  }
+};
+
+test.asPromise(
+  'asWebStream: a stop during the flush flushes the stages after it once',
+  async (t, resolve) => {
+    for (const [name, makeStopper] of Object.entries(flushStoppers)) {
+      const down = makeCountingStage();
+      const tail = flushable(
+        x => x,
+        () => 'tail'
+      );
+      const ws = asWebStream(gen(tail, makeStopper(), down.stage));
+      const writer = ws.writable.getWriter();
+      const written = writer.write(1).then(() => writer.close());
+      const output = [];
+      for await (const value of ws.readable) output.push(value);
+      await written;
+      t.deepEqual(output, [1], name + ': the tail stopped at the stopper');
+      t.equal(down.state.flushed, 1, name + ': the stage after the stopper is flushed once');
+      t.equal(down.state.aborted, 0, name + ': and not aborted');
+    }
     resolve();
   }
 );

@@ -18,8 +18,9 @@ declare function next(value: unknown, fns: Fn[], index: number, push: Push): voi
 /**
  * Flushes flushable stages in `fns[index..]`, emitting their buffered output via
  * `push`. Returns `undefined` if synchronous, or a Promise if a flush stage or a
- * backpressuring push made it suspend. Used by the factory's `none` path and by
- * `fun()`/`collect()`.
+ * backpressuring push made it suspend. A `stop` during the flush resumes it after
+ * the stopper, and the last `Stop` is rethrown at the end. Used by the drivers'
+ * `none` path and by `finishStop`.
  */
 declare function flush(fns: Fn[], index: number, push: Push): void | Promise<void>;
 
@@ -75,6 +76,13 @@ declare function abortStages(aborters: ReadonlyArray<() => unknown>): Promise<un
 declare function stopIndex(stop: unknown, fns: readonly Fn[]): number;
 
 /**
+ * Releases the stopper and the stages before it after a `stop` raised by an owner's
+ * own flush, which already flushed the stages after the stopper. Internal: shared by
+ * `asStream` and `asWebStream`.
+ */
+declare function releaseStopped(fns: readonly Fn[], stop: unknown): Promise<void>;
+
+/**
  * Ends a pipeline after a `stop` for an owner that flushes on its own: flushes the
  * stages after the stopper, then releases the stopper and the stages before it.
  * Internal: shared by `asStream` and `asWebStream`.
@@ -91,5 +99,6 @@ export {
   collectAborters,
   abortStages,
   stopIndex,
+  releaseStopped,
   finishStop
 };

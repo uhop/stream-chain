@@ -24,11 +24,18 @@ import * as defs from './defs.js';
 // On a push function: the value to throw once its owner is torn down.
 const cancelSymbol = Symbol('cancel');
 
-// On a Stop thrown by next(): the index of the first stage after the one that stopped.
+// On a Stop: the index of the first stage after the one that stopped. Set at every
+// stage call it leaves, so an index from an inner pipeline (a `pipe()` stage) is
+// replaced by the outer one.
 const stopAtSymbol = Symbol('stopAt');
 
-// Where the flush after a stop starts; a Stop with no index (thrown by hand, or by an
-// adapter's single function) leaves no stage after the stopper to flush.
+const markStop = (error, index) => {
+  if (error instanceof defs.Stop) error[stopAtSymbol] = index;
+  throw error;
+};
+
+// Where the flush after a stop starts; a Stop with no index (an adapter's single
+// function) leaves no stage after the stopper to flush.
 const stopIndex = (stop, fns) => stop[stopAtSymbol] ?? fns.length;
 
 // The error an abnormal exit surfaces when a cleanup also fails (a generator's
@@ -69,14 +76,13 @@ const next = (value, fns, index, push) => {
   for (let i = index; ;) {
     if (value && typeof value.then == 'function') {
       const ii = i;
-      return value.then(v => next(v, fns, ii, push));
+      return value.then(
+        v => next(v, fns, ii, push),
+        e => markStop(e, ii)
+      );
     }
     if (value == null || value === defs.none) return;
-    if (value === defs.stop) {
-      const stop = new defs.Stop();
-      stop[stopAtSymbol] = i;
-      throw stop;
-    }
+    if (value === defs.stop) markStop(new defs.Stop(), i);
     if (defs.isFinalValue(value)) {
       return push(defs.getFinalValue(value)); // emit, bypass remaining fns
     }
@@ -89,7 +95,11 @@ const next = (value, fns, index, push) => {
     if (i >= fns.length) {
       return push(value); // terminal plain value
     }
-    value = fns[i++](value);
+    try {
+      value = fns[i++](value);
+    } catch (error) {
+      markStop(error, i);
+    }
   }
 };
 
@@ -123,13 +133,21 @@ const nextGen = (it, fns, i, push) => {
       // a torn-down owner marks its push: a generator whose values all get dropped
       // never reaches the push, so it is stopped here, before its next yield
       if (push[cancelSymbol]) throw push[cancelSymbol];
-      let data = it.next();
+      let data;
+      try {
+        data = it.next();
+      } catch (error) {
+        markStop(error, i);
+      }
       if (data && typeof data.then == 'function') {
-        return data.then(d => {
-          if (d.done) return;
-          const r = next(d.value, fns, i, push);
-          return r && typeof r.then == 'function' ? r.then(step) : step();
-        });
+        return data.then(
+          d => {
+            if (d.done) return;
+            const r = next(d.value, fns, i, push);
+            return r && typeof r.then == 'function' ? r.then(step) : step();
+          },
+          e => markStop(e, i)
+        );
       }
       if (data.done) return;
       const r = next(data.value, fns, i, push);
@@ -175,37 +193,67 @@ const nextGen = (it, fns, i, push) => {
 };
 
 // Flush flushable stages (called when the factory's driver receives `none`).
-// Mirrors fun.flush: each flushable's output threads through the stages after
-// it, value-or-promise chained. Resumable `step` (same shape as nextMany) keeps
-// live allocation O(1) in the number of flushable stages under backpressure.
+// Each flushable's output threads through the stages after it, value-or-promise
+// chained. Resumable `step` (same shape as nextMany) keeps live allocation O(1) in
+// the number of flushable stages under backpressure. A stop during the flush is a
+// clean end for the stages after the stopper: the flush resumes there, and the last
+// stop is rethrown at the end. A stopper never precedes the flushable being drained,
+// so each resume starts further on.
 const flush = (fns, index, push) => {
+  let stop = null;
+  const resume = error => {
+    if (!(error instanceof defs.Stop)) throw error;
+    stop = error;
+    return step(stopIndex(error, fns));
+  };
   const step = i => {
     for (; i < fns.length; ++i) {
       const f = fns[i];
       if (!defs.isFlushable(f)) continue;
-      const r = next(f(defs.none), fns, i + 1, push);
+      let r;
+      try {
+        let value;
+        try {
+          value = f(defs.none);
+        } catch (error) {
+          markStop(error, i + 1);
+        }
+        r = next(value, fns, i + 1, push);
+      } catch (error) {
+        return resume(error);
+      }
       if (r && typeof r.then == 'function') {
         const ii = i;
-        return r.then(() => step(ii + 1));
+        return r.then(() => step(ii + 1), resume);
       }
     }
+    if (stop) throw stop;
   };
   return step(index);
 };
 
+// After a stop, the stopper and the stages before it are released, never flushed.
+const releaseStopped = async (fns, stop) => {
+  const failure = await abortStages(collectAborters(fns.slice(0, stopIndex(stop, fns))));
+  if (failure !== undefined) throw failure;
+};
+
 // A stop is a clean end for the stages after the one that stopped: they are flushed,
-// and the stopper and the stages before it are released, never flushed. For a driver
-// that flushes on its own (asStream, asWebStream); a nested stop just ends the flush.
+// then the rest released. For a driver that flushes on its own (asStream, asWebStream);
+// a stop raised by its own flush needs only releaseStopped().
 const finishStop = async (fns, stop, push) => {
-  const at = stopIndex(stop, fns);
   let error;
   try {
-    await flush(fns, at, push);
+    await flush(fns, stopIndex(stop, fns), push);
   } catch (e) {
-    if (!(e instanceof defs.Stop)) error = e;
+    if (e instanceof defs.Stop) stop = e;
+    else error = e;
   }
-  const failure = await abortStages(collectAborters(fns.slice(0, at)));
-  if (failure !== undefined) error = withCleanupError(error, failure);
+  try {
+    await releaseStopped(fns, stop);
+  } catch (failure) {
+    error = withCleanupError(error, failure);
+  }
   if (error !== undefined) throw error;
 };
 
@@ -257,5 +305,6 @@ export {
   collectAborters,
   abortStages,
   stopIndex,
+  releaseStopped,
   finishStop
 };

@@ -13,7 +13,7 @@ import asyncBlockWriter from '../../src/utils/asyncBlockWriter.js';
 import pipe from '../../src/utils/pipe.js';
 import drain from '../../src/utils/drain.js';
 import stringerToFile from '../../src/jsonl/file/stringer.js';
-import {none, stop} from '../../src/defs.js';
+import {none, stop, Stop} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
 // per-instance property (not patchable). So we inject a write/read failure via
@@ -264,6 +264,58 @@ test.asPromise(
     const {readFile} = await import('node:fs/promises');
     const path = join(tmp, 's-stop');
     const c = webChain([x => (x === 3 ? stop : {n: x}), stringerToFile(path)]);
+    const writer = c.writable.getWriter();
+    const written = (async () => {
+      for (const x of [1, 2, 3, 4]) await writer.write(x).catch(() => {});
+      await writer.close().catch(() => {});
+    })();
+    for await (const _ of c.readable);
+    await written;
+    t.equal(
+      await readFile(path, 'utf8'),
+      '{"n":1}\n{"n":2}',
+      'the lines before the stop reached the file'
+    );
+    resolve();
+  }
+);
+
+const throwStopAt3 = x => {
+  if (x === 3) throw new Stop();
+  return {n: x};
+};
+
+test.asPromise(
+  'stringerToFile: a thrown Stop in a node chain still writes the buffered lines',
+  async (t, resolve) => {
+    await ensure();
+    const {readFile} = await import('node:fs/promises');
+    const path = join(tmp, 's-thrown-stop-node');
+    const c = chain([throwStopAt3, stringerToFile(path)]);
+    await new Promise((res, rej) => {
+      c.on('end', res);
+      c.on('error', rej);
+      c.resume();
+      for (const x of [1, 2, 3, 4]) c.write(x);
+      c.end();
+    });
+    t.equal(
+      await readFile(path, 'utf8'),
+      '{"n":1}\n{"n":2}',
+      'the lines before the stop reached the file'
+    );
+    resolve();
+  }
+);
+
+test.asPromise(
+  'stringerToFile: a thrown Stop in a web chain still writes the buffered lines',
+  async (t, resolve) => {
+    await ensure();
+    const {chain: webChain} = await import('../../src/web/index.js');
+    const {readFile} = await import('node:fs/promises');
+    const path = join(tmp, 's-thrown-stop-web');
+    const c = webChain([throwStopAt3, stringerToFile(path)]);
     const writer = c.writable.getWriter();
     const written = (async () => {
       for (const x of [1, 2, 3, 4]) await writer.write(x).catch(() => {});

@@ -7,6 +7,7 @@ import gen from '../../src/gen.js';
 import fun from '../../src/fun.js';
 import exec from '../../src/exec.js';
 import pipe from '../../src/utils/pipe.js';
+import take from '../../src/utils/take.js';
 import drain from '../../src/utils/drain.js';
 
 // A pass-through flushable that counts its flushes and aborts.
@@ -160,4 +161,154 @@ test.asPromise('gen: a failing abort surfaces', async (t, resolve) => {
   t.ok(caught instanceof AggregateError, 'after a stage error, both surface');
   t.deepEqual(caught?.errors, [boom, abortErr], 'stage error first');
   resolve();
+});
+
+// A Stop thrown by a stage is the same as the stage returning `stop`.
+const throwers = {
+  'a function': x => {
+    if (x === 2) throw new Stop();
+    return x;
+  },
+  'an async function': async x => {
+    if (x === 2) throw new Stop();
+    return x;
+  },
+  'a generator': function* (x) {
+    if (x === 2) throw new Stop();
+    yield x;
+  },
+  'an async generator': async function* (x) {
+    if (x === 2) throw new Stop();
+    yield x;
+  }
+};
+
+const stopsAt = async fn => {
+  const up = makeStage(),
+    down = makeStage();
+  let caught;
+  try {
+    await drain(fn(up.stage, down.stage));
+  } catch (error) {
+    caught = error;
+  }
+  return {caught, up: up.state, down: down.state};
+};
+
+test.asPromise('gen: a thrown Stop flushes the stages after the thrower', async (t, resolve) => {
+  for (const [name, thrower] of Object.entries(throwers)) {
+    const {caught, up, down} = await stopsAt((up, down) => pipe(source, up, thrower, down)(0));
+    t.ok(caught instanceof Stop, name + ': the Stop propagates');
+    t.deepEqual(down.seen, [1], name + ': data before the stop reached the stage after');
+    t.equal(down.flushed, 1, name + ': the stage after the thrower is flushed');
+    t.equal(down.aborted, 0, name + ': and not aborted');
+    t.equal(up.flushed, 0, name + ': the stage before the thrower is not flushed');
+    t.equal(up.aborted, 1, name + ': it is aborted once');
+  }
+  resolve();
+});
+
+test.asPromise(
+  'gen: a stop leaving a nested pipe() stops at the pipe stage',
+  async (t, resolve) => {
+    const stopper = x => (x === 2 ? stop : x);
+    let r = await stopsAt((up, down) =>
+      pipe(
+        source,
+        up,
+        pipe(
+          x => x,
+          x => x,
+          x => x,
+          stopper
+        ),
+        down
+      )(0)
+    );
+    t.equal(r.down.flushed, 1, 'a longer inner pipeline: the stage after the pipe is flushed');
+    t.equal(r.down.aborted, 0, 'and not aborted');
+    t.equal(r.up.aborted, 1, 'the stage before the pipe is aborted');
+
+    r = await stopsAt((up, down) =>
+      pipe(
+        source,
+        up,
+        x => x,
+        x => x,
+        pipe(stopper),
+        down
+      )(0)
+    );
+    t.equal(r.up.flushed, 0, 'a shorter inner pipeline: the stage before the pipe is not flushed');
+    t.equal(r.up.aborted, 1, 'it is aborted once');
+    t.equal(r.down.flushed, 1, 'the stage after the pipe is flushed');
+
+    const inner = fun(stopper);
+    r = await stopsAt((up, down) =>
+      pipe(
+        source,
+        up,
+        x => x,
+        x => inner(x),
+        down
+      )(0)
+    );
+    t.equal(r.up.flushed, 0, 'a wrapped fun(): the stage before the wrapper is not flushed');
+    t.equal(r.up.aborted, 1, 'it is aborted once');
+    t.equal(r.down.flushed, 1, 'the stage after the wrapper is flushed');
+    resolve();
+  }
+);
+
+// A flushable whose final emits a tail, and stoppers that refuse that tail.
+const tailStage = () => {
+  const state = {flushed: 0};
+  const stage = flushable(
+    x => x,
+    () => (++state.flushed, 'tail')
+  );
+  return {state, stage};
+};
+const flushStoppers = {
+  'take(n, stop)': () => take(1, stop),
+  'a thrown Stop': () => x => {
+    if (x === 'tail') throw new Stop();
+    return x;
+  }
+};
+
+test.asPromise('gen: a stop during the flush flushes the stages after it', async (t, resolve) => {
+  for (const [name, makeStopper] of Object.entries(flushStoppers)) {
+    const tail = tailStage(),
+      down = makeStage();
+    let caught;
+    try {
+      await drain(pipe(tail.stage, makeStopper(), down.stage)(1));
+    } catch (error) {
+      caught = error;
+    }
+    t.ok(caught instanceof Stop, name + ': the Stop propagates');
+    t.equal(tail.state.flushed, 1, name + ': the stage before the stopper was flushed');
+    t.deepEqual(down.state.seen, [1], name + ': the tail stopped at the stopper');
+    t.equal(down.state.flushed, 1, name + ': the stage after the stopper is flushed');
+    t.equal(down.state.aborted, 0, name + ': and not aborted');
+  }
+  resolve();
+});
+
+test('fun and exec: a stop during the flush flushes the stages after it', t => {
+  for (const [name, makeStopper] of Object.entries(flushStoppers)) {
+    let down = makeStage();
+    const f = fun(tailStage().stage, makeStopper(), down.stage);
+    f(1);
+    t.throws(() => f(none), name + ': fun: the stop reaches the caller');
+    t.equal(down.state.flushed, 1, name + ': fun: the stage after the stopper is flushed');
+
+    down = makeStage();
+    const g = exec(tailStage().stage, makeStopper(), down.stage);
+    const push = () => {};
+    g(1, push);
+    t.throws(() => g(none, push), name + ': exec: the stop reaches the caller');
+    t.equal(down.state.flushed, 1, name + ': exec: the stage after the stopper is flushed');
+  }
 });

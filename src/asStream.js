@@ -19,6 +19,7 @@ import {
   cancelSymbol,
   collectAborters,
   abortStages,
+  releaseStopped,
   finishStop
 } from './exec.js';
 
@@ -147,15 +148,17 @@ const asStream = (fn, options) => {
   };
 
   // A stop is a clean end: the stages after the stopper are flushed and the rest
-  // released (finishStop), then the readable side ends.
-  const finishWrite = (callback, error) => {
+  // released (finishStop), then the readable side ends. A stop raised by the final
+  // flush has already been flushed past.
+  const finishWrite = (callback, error, inFlush) => {
     if (!error || error === CANCEL) {
       callback(null);
     } else if (!(error instanceof defs.Stop)) {
       callback(error);
     } else {
       stopped = true;
-      finishStop(innerFns ?? [fn], error, enqueue).then(
+      const fns = innerFns ?? [fn];
+      (inFlush ? releaseStopped(fns, error) : finishStop(fns, error, enqueue)).then(
         () => {
           flushed = true;
           signalEnd();
@@ -219,10 +222,10 @@ const asStream = (fn, options) => {
         try {
           r = execFlush(innerFns, 0, enqueue);
         } catch (error) {
-          return finishWrite(callback, error);
+          return finishWrite(callback, error, true);
         }
         if (r && typeof r.then == 'function') {
-          r.then(onComplete, error => finishWrite(callback, error));
+          r.then(onComplete, error => finishWrite(callback, error, true));
         } else {
           onComplete();
         }
@@ -236,10 +239,10 @@ const asStream = (fn, options) => {
       try {
         r = processValue(fn(defs.none, null));
       } catch (error) {
-        return finishWrite(callback, error);
+        return finishWrite(callback, error, true);
       }
       if (r) {
-        r.then(onComplete, error => finishWrite(callback, error));
+        r.then(onComplete, error => finishWrite(callback, error, true));
       } else {
         onComplete();
       }
