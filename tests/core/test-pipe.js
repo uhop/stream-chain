@@ -207,3 +207,34 @@ test.asPromise('drain: a stop in a nested pipe() still ends the outer run', asyn
   t.deepEqual(seen, [1, 2], 'no value after the stop reached the outer stage');
   resolve();
 });
+
+// Another installed copy of stream-chain defines its own Stop class with the same mark.
+class ForeignStop extends Error {}
+ForeignStop.prototype[Symbol.for('object-stream.stopError')] = 1;
+
+test.asPromise(
+  "drain: another copy's Stop ends a pipe() run like this copy's",
+  async (t, resolve) => {
+    const s = recordingSink();
+    const last = await drain(
+      pipe(
+        function* () {
+          yield* [1, 2, 3, 4];
+        },
+        x => {
+          if (x === 3) throw new ForeignStop();
+          return x;
+        },
+        x => x * 10
+      )(0)
+    );
+    t.equal(last, 20, 'the last value before the stop');
+    await drain(
+      pipe(x => {
+        throw new ForeignStop();
+      }, s.fn)(1)
+    );
+    t.ok(s.log.finalRan, 'the sink after the stopper was flushed');
+    resolve();
+  }
+);

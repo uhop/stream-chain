@@ -95,7 +95,7 @@ const readableFrom = options => {
       await processValue(value);
       stream.push(null);
     } catch (error) {
-      if (error instanceof defs.Stop) {
+      if (defs.isStop(error)) {
         stream.push(null);
         return;
       }

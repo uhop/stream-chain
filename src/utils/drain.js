@@ -8,7 +8,7 @@
 // yields once) come through as the resolved value. A `pipe()` run's `Stop` ends the
 // drain; any other `Stop` propagates.
 
-import {Stop} from '../defs.js';
+import {isStop} from '../defs.js';
 import {pipeRunSymbol} from '../exec.js';
 
 const drain = async g => {
@@ -17,7 +17,7 @@ const drain = async g => {
     for await (const v of g) last = v;
   } catch (error) {
     // a pipe() run has nothing more to feed; a gen() run's caller needs the Stop
-    if (error instanceof Stop && g[pipeRunSymbol]) return last;
+    if (isStop(error) && g[pipeRunSymbol]) return last;
     throw error;
   }
   return last;

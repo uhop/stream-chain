@@ -154,7 +154,7 @@ const asStream = (fn, options) => {
   const finishWrite = (callback, error) => {
     if (!error || error === CANCEL) {
       callback(null);
-    } else if (!(error instanceof defs.Stop)) {
+    } else if (!defs.isStop(error)) {
       callback(error);
     } else {
       stopped = true;

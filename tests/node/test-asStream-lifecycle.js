@@ -429,3 +429,28 @@ test('chain: a stop ends the output long before a large input ends', async t => 
   t.deepEqual(out, [0, 1], 'the values before the stop');
   t.ok(i < 100, `the output ended after ${i} of ${total} input values`);
 });
+
+test.asPromise(
+  "chain: another copy's Stop ends the stream like this copy's",
+  async (t, resolve) => {
+    class ForeignStop extends Error {}
+    ForeignStop.prototype[Symbol.for('object-stream.stopError')] = 1;
+    const c = chain([
+      x => {
+        if (x === 3) throw new ForeignStop();
+        return x;
+      }
+    ]);
+    const out = [];
+    const error = await new Promise(res => {
+      c.on('data', x => out.push(x));
+      c.on('end', () => res(null));
+      c.on('error', res);
+      for (const x of [1, 2, 3, 4]) c.write(x);
+      c.end();
+    });
+    t.equal(error, null, 'no error');
+    t.deepEqual(out, [1, 2], 'the values before the stop');
+    resolve();
+  }
+);

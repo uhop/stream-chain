@@ -118,7 +118,7 @@ const readableWebStreamFrom = options => {
       if (!cancelled) controller.close();
     } catch (error) {
       if (cancelled) return;
-      if (error instanceof defs.Stop) {
+      if (defs.isStop(error)) {
         controller.close();
         return;
       }

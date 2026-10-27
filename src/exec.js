@@ -37,7 +37,7 @@ const stopAtSymbol = Symbol.for('object-stream.stopAt');
 const GEN_CANCEL = Symbol.for('object-stream.genCancel');
 
 const markStop = (error, index) => {
-  if (error instanceof defs.Stop) error[stopAtSymbol] = index;
+  if (defs.isStop(error)) error[stopAtSymbol] = index;
   throw error;
 };
 
@@ -51,7 +51,7 @@ const stopIndex = (stop, fns) => stop[stopAtSymbol] ?? fns.length;
 // real Error; a non-Error control sentinel (gen()'s GEN_CANCEL) keeps its identity, since
 // callers compare against it. One home for nextGen's abort and the owners' releases.
 const withCleanupError = (err, cleanupErr) => {
-  if (err == null || err instanceof defs.Stop) return cleanupErr;
+  if (err == null || defs.isStop(err)) return cleanupErr;
   return err instanceof Error
     ? new AggregateError([err, cleanupErr], 'pipeline error; generator cleanup also failed')
     : err;
@@ -221,7 +221,7 @@ const nextGen = (it, fns, i, push) => {
 const flush = (fns, index, push, finished) => {
   let stop = null;
   const resume = error => {
-    if (!(error instanceof defs.Stop)) throw error;
+    if (!defs.isStop(error)) throw error;
     stop = error;
     return step(stopIndex(error, fns));
   };
@@ -273,7 +273,7 @@ const finishStop = async (fns, stop, push, finished) => {
   try {
     await flush(fns, stopIndex(stop, fns), push, finished);
   } catch (e) {
-    if (e instanceof defs.Stop) stop = e;
+    if (defs.isStop(e)) stop = e;
     else error = e;
   }
   const failure =
@@ -307,7 +307,7 @@ const genBridge = (fns, once) => {
     try {
       await next(value, fns, 0, push);
     } catch (error) {
-      if (!(error instanceof defs.Stop)) throw error;
+      if (!defs.isStop(error)) throw error;
       await finishStop(fns, error, push, finished);
       throw error;
     }
@@ -363,7 +363,7 @@ const genBridge = (fns, once) => {
         e => {
           if (e === GEN_CANCEL) return;
           error = e;
-          if (!isFlush && e instanceof defs.Stop) stopAt = stopIndex(e, fns);
+          if (!isFlush && defs.isStop(e)) stopAt = stopIndex(e, fns);
         }
       )
       .finally(() => {
@@ -405,10 +405,9 @@ const genBridge = (fns, once) => {
       // flush); after a stop, only those up to the stopper, the rest waiting for the
       // caller's flush
       if (!completed && canAbort) {
-        const failure =
-          error instanceof defs.Stop
-            ? await releaseStopped(fns, finished, error)
-            : await abortStages(fns, finished);
+        const failure = defs.isStop(error)
+          ? await releaseStopped(fns, finished, error)
+          : await abortStages(fns, finished);
         if (failure !== undefined) throw withCleanupError(error, failure);
       }
     }
@@ -436,7 +435,7 @@ const exec = (...fns) => {
   let flushed = false,
     stopAt = 0;
   const noteStop = error => {
-    if (error instanceof defs.Stop) stopAt = stopIndex(error, fns);
+    if (defs.isStop(error)) stopAt = stopIndex(error, fns);
     throw error;
   };
   let g = (value, push) => {

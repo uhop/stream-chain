@@ -252,7 +252,7 @@ const asWebStream = (fn, options) => {
           if (r) await r;
         } catch (error) {
           if (error === CANCEL) return;
-          if (error instanceof defs.Stop) return endAfterStop(error);
+          if (defs.isStop(error)) return endAfterStop(error);
           // Propagate user-function errors to the readable side so downstream
           // consumers (and pipeTo'd stages) learn — matches TransformStream.
           errorReadable(error);
@@ -273,7 +273,7 @@ const asWebStream = (fn, options) => {
             flushed = true;
           }
         } catch (error) {
-          if (error instanceof defs.Stop) return endAfterStop(error);
+          if (defs.isStop(error)) return endAfterStop(error);
           if (error !== CANCEL) {
             errorReadable(error);
             const failure = await releaseStages();

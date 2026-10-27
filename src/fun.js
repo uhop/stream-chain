@@ -28,7 +28,7 @@ const asArray = (...fns) => {
   let flushed = false,
     stopAt = 0; // after a stop, the flush starts at the stage after the stopper
   const noteStop = error => {
-    if (error instanceof defs.Stop) stopAt = stopIndex(error, fns);
+    if (defs.isStop(error)) stopAt = stopIndex(error, fns);
     throw error;
   };
   // results are per call: overlapping async calls must not share them (as in gen())

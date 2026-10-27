@@ -185,6 +185,8 @@ const chain = (fns, options) => {
 chain.none = defs.none;
 chain.stop = defs.stop;
 chain.Stop = defs.Stop;
+chain.stopErrorSymbol = defs.stopErrorSymbol;
+chain.isStop = defs.isStop;
 
 chain.finalSymbol = defs.finalSymbol;
 chain.finalValue = defs.finalValue;

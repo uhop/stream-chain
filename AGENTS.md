@@ -117,7 +117,7 @@ stream-chain/
 - Semicolons are enforced by Prettier (default `semi: true`).
 - All public modules declare both `export default X` and `export {X}` for the same value (default = ESM DX, named = CJS destructure + cleaner re-exports). See [fleet slice 17](https://github.com/uhop/claude-config/blob/master/topics/esm-default-export-with-named-mirror.md).
 - `// @ts-self-types="./<file>.d.ts"` directive at the top of every `.js`; JSDoc lives in the paired `.d.ts`, not in `.js`.
-- The package is `stream-chain`. Every symbol, public or internal, is `Symbol.for('object-stream.<name>')`, never `Symbol()`, so separately installed copies of the package recognize each other's markers.
+- The package is `stream-chain`. Every symbol, public or internal, is `Symbol.for('object-stream.<name>')`, never `Symbol()`, so separately installed copies of the package recognize each other's markers. A `Stop` is recognized with `defs.isStop()`, never `instanceof`: each copy defines its own `Stop` class, and `isStop()` checks the mark on its prototype (`stopErrorSymbol`).
 
 ## Critical rules
 

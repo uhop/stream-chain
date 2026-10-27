@@ -263,6 +263,8 @@ import {Stop} from 'stream-chain/defs.js';
 chain([n => { if (n > 100) throw new Stop(); return n; }]);
 ```
 
+Test for one with `isStop(error)`, not `instanceof Stop`: it checks the mark every `Stop` carries (`stopErrorSymbol` on `Stop.prototype`), so a `Stop` thrown by another installed copy of stream-chain counts too. stream-chain's own owners recognize a stop this way.
+
 ## gen(...fns)
 
 Creates an async generator pipeline from functions. Each input value is passed through all functions sequentially. Supports all special return values.

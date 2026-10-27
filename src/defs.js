@@ -8,6 +8,7 @@ const manySymbol = Symbol.for('object-stream.many');
 const flushSymbol = Symbol.for('object-stream.flush');
 const abortSymbol = Symbol.for('object-stream.abort');
 const fListSymbol = Symbol.for('object-stream.fList');
+const stopErrorSymbol = Symbol.for('object-stream.stopError');
 
 const finalValue = value => ({[finalSymbol]: 1, value});
 const many = values => ({[manySymbol]: 1, values});
@@ -16,6 +17,7 @@ const isFinalValue = o => o && o[finalSymbol] === 1;
 const isMany = o => o && o[manySymbol] === 1;
 const isFlushable = o => o && o[flushSymbol] === 1;
 const isFunctionList = o => o && o[fListSymbol] === 1;
+const isStop = o => o && o[stopErrorSymbol] === 1;
 
 const getFinalValue = o => o.value;
 const getManyValues = o => o.values;
@@ -41,6 +43,8 @@ const clearFunctionList = o => {
 };
 
 class Stop extends Error {}
+// a mark, not the class: a Stop from another installed copy is a Stop too
+Stop.prototype[stopErrorSymbol] = 1;
 
 const toMany = value =>
   value === none ? many([]) : value && value[manySymbol] === 1 ? value : many([value]);
@@ -152,6 +156,8 @@ export {
   none,
   stop,
   Stop,
+  stopErrorSymbol,
+  isStop,
   finalSymbol,
   finalValue,
   final,
