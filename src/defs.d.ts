@@ -20,7 +20,11 @@ export declare const flushSymbol: unique symbol;
 export declare const abortSymbol: unique symbol;
 /** Used internally to mark a function as being derived from a function list. */
 export declare const fListSymbol: unique symbol;
-/** Marks `Stop.prototype`, so {@link isStop} recognizes a `Stop` from any installed copy. */
+/**
+ * Marks `Stop.prototype`. A library that marks its own error class with the same
+ * well-known symbol throws a `Stop` that {@link isStop} recognizes, without depending
+ * on stream-chain.
+ */
 export declare const stopErrorSymbol: unique symbol;
 
 /**
@@ -29,8 +33,9 @@ export declare const stopErrorSymbol: unique symbol;
 export declare class Stop extends Error {}
 
 /**
- * Type predicate for `Stop`, by its mark rather than its class: a `Stop` thrown by
- * another installed copy of stream-chain counts too, which `instanceof` misses.
+ * Type predicate for `Stop`, by its mark rather than its class: an error from a library
+ * that marks its own class with `stopErrorSymbol`, without depending on stream-chain,
+ * counts too, which `instanceof` misses.
  * @param o object to test
  * @returns `true` if `o` is a `Stop`
  */

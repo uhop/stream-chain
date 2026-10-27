@@ -15,14 +15,14 @@ import {
   combineManyMut
 } from '../../src/defs.js';
 
-// Another installed copy of stream-chain defines its own Stop class with the same mark.
+// A library compatible with stream-chain defines its own Stop class with the well-known mark.
 class ForeignStop extends Error {}
 ForeignStop.prototype[Symbol.for('object-stream.stopError')] = 1;
 
 test('defs: isStop()', t => {
   t.ok(isStop(new Stop()), 'a Stop');
   t.ok(isStop(new (class extends Stop {})()), 'a subclass of Stop');
-  t.ok(isStop(new ForeignStop()), "another copy's Stop");
+  t.ok(isStop(new ForeignStop()), "a compatible library's Stop");
   t.notOk(isStop(new Error('boom')), 'an Error');
   t.notOk(isStop(stop), 'the stop value, which is returned, not thrown');
   t.notOk(isStop(null), 'null');

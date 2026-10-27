@@ -208,12 +208,12 @@ test.asPromise('drain: a stop in a nested pipe() still ends the outer run', asyn
   resolve();
 });
 
-// Another installed copy of stream-chain defines its own Stop class with the same mark.
+// A library compatible with stream-chain defines its own Stop class with the well-known mark.
 class ForeignStop extends Error {}
 ForeignStop.prototype[Symbol.for('object-stream.stopError')] = 1;
 
 test.asPromise(
-  "drain: another copy's Stop ends a pipe() run like this copy's",
+  "drain: a compatible library's Stop ends a pipe() run like stream-chain's",
   async (t, resolve) => {
     const s = recordingSink();
     const last = await drain(

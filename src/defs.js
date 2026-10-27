@@ -43,7 +43,7 @@ const clearFunctionList = o => {
 };
 
 class Stop extends Error {}
-// a mark, not the class: a Stop from another installed copy is a Stop too
+// a mark, not the class: another library can throw a compatible Stop without importing this one
 Stop.prototype[stopErrorSymbol] = 1;
 
 const toMany = value =>

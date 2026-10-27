@@ -431,7 +431,7 @@ test('chain: a stop ends the output long before a large input ends', async t => 
 });
 
 test.asPromise(
-  "chain: another copy's Stop ends the stream like this copy's",
+  "chain: a compatible library's Stop ends the stream like stream-chain's",
   async (t, resolve) => {
     class ForeignStop extends Error {}
     ForeignStop.prototype[Symbol.for('object-stream.stopError')] = 1;
