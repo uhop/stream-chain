@@ -63,6 +63,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.4.0 _`drain()` ends a `pipe()` run on its `stop` without an exception. New `isStop()` and `stopErrorSymbol` recognize a `Stop` from a compatible library. Bugfix: `asyncBlockWriter` keeps a surrogate pair split between two strings in one write (thx [edsonsims](https://github.com/edsonsims))._
 - 4.3.0 _Teardown releases resources: generator stages (thx [mkantautas](https://github.com/mkantautas)), flushable stages through a new `abort`, and file sinks, which get `close()`. A `stop` flushes the stages after it on every owner. A leading BOM is dropped, `ignoreBOM` keeps it (thx [nemphys](https://github.com/nemphys))._
 - 4.2.6 _Bugfixes: `fun()` keeps overlapping calls' outputs apart (thx [oss-security-shopify](https://github.com/oss-security-shopify)), `lines()` handles a CRLF split across chunks, `asyncBlockWriter` refuses calls after a failed write instead of truncating its file._
 - 4.2.5 _Bugfix: `asyncBlockWriter` releases its `FileHandle` when its own write fails, instead of leaking it._
