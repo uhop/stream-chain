@@ -74,8 +74,12 @@ const asyncBlockWriter = (path, options) => {
       if (typeof value !== 'string' || !value) return none;
       buf += value;
       if (buf.length < blockSize) return none;
-      const data = buf;
-      buf = '';
+      // Each filesystem write encodes independently, so keep a surrogate pair together.
+      const last = buf.charCodeAt(buf.length - 1);
+      const end = last >= 0xd800 && last <= 0xdbff ? buf.length - 1 : buf.length;
+      const data = buf.slice(0, end);
+      buf = buf.slice(end);
+      if (!data) return none;
       return serialize(async () => {
         checkUsable();
         try {

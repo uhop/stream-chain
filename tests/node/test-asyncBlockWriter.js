@@ -202,3 +202,97 @@ test.asPromise('asyncBlockWriter: the tail is written once on flush', async (t, 
   }
   resolve();
 });
+
+test.asPromise(
+  'asyncBlockWriter: Unicode survives fragment and block boundaries',
+  async (t, resolve) => {
+    const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+    const cases = [
+      ['abc\uD83D', '\uDE00def'],
+      ['\uD83D', '\uDE00'],
+      ['é', '😀', '字'],
+      ['a\uD83D', '\uDE00\uD83D', '\uDE00z'],
+      ['ab\uD83D', '\uD83D', '\uDE00z'],
+      ['abc\uD83D', 'x'],
+      ['abc\uDE00', 'x'],
+      ['abc', '\uD83D']
+    ];
+    try {
+      for (const size of [1, 4, 5]) {
+        for (const overlap of [false, true]) {
+          for (const [index, chunks] of cases.entries()) {
+            const path = join(dir, `${size}-${overlap}-${index}`);
+            const sink = asyncBlockWriter(path, {writeBlockSize: size});
+            if (overlap) {
+              await Promise.all([...chunks.map(chunk => sink(chunk)), sink(none)]);
+            } else {
+              for (const chunk of chunks) await sink(chunk);
+              await sink(none);
+            }
+            t.deepEqual(
+              await readFile(path),
+              Buffer.from(chunks.join('')),
+              `block size ${size}, overlapping ${overlap}, fragments ${index}`
+            );
+          }
+        }
+      }
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+    resolve();
+  }
+);
+
+test.asPromise('asyncBlockWriter: close() drops a pending high surrogate', async (t, resolve) => {
+  const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+  try {
+    const path = join(dir, 'out.txt');
+    const sink = asyncBlockWriter(path, {writeBlockSize: 4});
+    await sink('abc\uD83D');
+    await sink.close();
+    await sink.close();
+    t.equal(await readFile(path, 'utf8'), 'abc');
+    t.throws(() => sink('\uDE00'), 'the dropped tail cannot be resumed');
+    try {
+      await sink(none);
+      t.fail('a flush after close() must be refused');
+    } catch (e) {
+      t.ok(/closed/.test(e.message), 'flush refused');
+    }
+    t.equal(await readFile(path, 'utf8'), 'abc');
+  } finally {
+    await rm(dir, {recursive: true, force: true});
+  }
+  resolve();
+});
+
+test.asPromise(
+  'asyncBlockWriter: a pending surrogate preserves open-failure refusal',
+  async (t, resolve) => {
+    const dir = await mkdtemp(join(tmpdir(), 'stream-chain-writer-'));
+    try {
+      const sink = asyncBlockWriter(join(dir, 'missing', 'out.txt'), {writeBlockSize: 1});
+      await sink('\uD83D');
+      let error;
+      try {
+        await sink('\uDE00');
+        t.fail('opening a missing parent must fail');
+      } catch (e) {
+        error = e;
+        t.equal(e.code, 'ENOENT');
+      }
+      t.throws(() => sink('x'), 'later input is refused');
+      try {
+        await sink(none);
+        t.fail('the flush after an open failure must be refused');
+      } catch (e) {
+        t.ok(isRefusal(e, error), 'the original failure remains the cause');
+      }
+      await sink.close();
+    } finally {
+      await rm(dir, {recursive: true, force: true});
+    }
+    resolve();
+  }
+);
