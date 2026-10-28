@@ -48,7 +48,7 @@ const pipeline = chainUnchecked([x => x * x]);
 
 ### Special return values
 
-- `none` — skip, produce no value (same as returning `null`/`undefined`).
+- `none` — skip, produce no value. The stream drivers (`chain()`, `asStream()`, `asWebStream()`) treat a returned `null`/`undefined` the same way; `gen()`, `fun()`, `pipe()`, and the `/core` `chain()` pass `null`/`undefined` through like any other value.
 - `stop` — skip and terminate the generator pipeline; the flushable stages after the stopper are still flushed (a clean end for them), the stopper and the stages before it are not.
 - `many(values)` — emit multiple values from a single input.
 - `finalValue(value)` — skip remaining chain steps, emit value directly (gen/fun only).

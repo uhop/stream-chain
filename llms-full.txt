@@ -129,7 +129,7 @@ Destroying the chain before both of its sides finish (`stream.pipeline()` after 
 
 Functions receive `(chunk, encoding)`. The return value determines what happens:
 
-- **`null`, `undefined`, or `none`** — no value passed downstream (filter). Note: `null`/`undefined` are treated as `none` in `asStream()`/`chain()` because Node.js streams reserve them for end-of-stream signaling. `gen()` and `fun()` pass `null`/`undefined` through like any other value.
+- **`null`, `undefined`, or `none`** — no value passed downstream (filter). Note: `null`/`undefined` are treated as `none` at every stage in `asStream()`, `asWebStream()`, and the Node and Web `chain()`, a `finalValue()` of them included, because Node.js streams reserve them for end-of-stream signaling. `gen()`, `fun()`, `pipe()`, and the `/core` `chain()` pass `null`/`undefined` through like any other value, so a stage that returns nothing passes `undefined` on.
 - **`stop`** — no value passed and generator terminates (gen/fun only).
 - **Regular value** — passed to next step.
 - **`many(values)`** — all values in the array emitted sequentially.
@@ -273,7 +273,7 @@ Creates an async generator pipeline from functions. Each input value is passed t
 - Arrays in the argument list are flattened. Falsy values are ignored.
 - If any function is flushable, the result is also flushable.
 - The result is tagged with a function list for chain() optimization.
-- Unlike `asStream()`/`chain()`, `gen()` passes `null`/`undefined` through the pipeline like any other value. Use `none` for consistent skip behavior.
+- Unlike `asStream()`, `asWebStream()`, and the Node and Web `chain()`, `gen()` passes `null`/`undefined` through the pipeline like any other value: as input, between stages, and as output. Use `none` for consistent skip behavior.
 
 ```js
 import gen from 'stream-chain/gen.js';
@@ -289,7 +289,7 @@ for await (const v of pipeline(3)) {
 
 ## fun(...fns)
 
-Like `gen()` but returns a function instead of a generator. Values from generators are collected into `many()` arrays. For purely synchronous pipelines it returns a synchronous result; for asynchronous pipelines it returns a `Promise`. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`/`chain()`).
+Like `gen()` but returns a function instead of a generator. Values from generators are collected into `many()` arrays. For purely synchronous pipelines it returns a synchronous result; for asynchronous pipelines it returns a `Promise`. Like `gen()`, passes `null`/`undefined` through the pipeline (unlike `asStream()`, `asWebStream()`, and the Node and Web `chain()`).
 
 **Memory caveat:** `fun()` collects the entire output for a single input into one `Many` before returning. Memory scales with output-per-input. For unbounded pipelines (a stage that produces unbounded values from a single input), use `gen()` instead.
 
@@ -309,7 +309,7 @@ console.log(getManyValues(result)); // [0, 1, 4]
 
 ## asStream(fn, options?)
 
-Wraps any function as a Node Duplex stream with per-item backpressure. Supports regular, async, generator, and async generator functions. Handles all special return values. Treats `null`/`undefined` as `none` (skip) because Node.js streams reserve them for end-of-stream signaling — this differs from `gen()`/`fun()` which pass them through.
+Wraps any function as a Node Duplex stream with per-item backpressure. Supports regular, async, generator, and async generator functions. Handles all special return values. Treats `null`/`undefined` as `none` (skip) at every stage of a wrapped function list because Node.js streams reserve them for end-of-stream signaling — this differs from `gen()`, `fun()`, and `pipe()`, which pass them through.
 
 - `fn` — any function.
 - `options` — Duplex options (default: `{writableObjectMode: true, readableObjectMode: true}`).

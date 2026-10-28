@@ -15,6 +15,7 @@ import {
   flush as execFlush,
   withCleanupError,
   cancelSymbol,
+  dropNullSymbol,
   hasAborters,
   noteFinal,
   abortStages,
@@ -123,6 +124,7 @@ const asWebStream = (fn, options) => {
       });
     }
   };
+  enqueue[dropNullSymbol] = true;
 
   // Teardown: a parked push is rejected with CANCEL, and the push is marked so the
   // executor also stops a generator whose values never reach it

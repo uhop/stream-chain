@@ -17,6 +17,7 @@ import {
   flush as execFlush,
   withCleanupError,
   cancelSymbol,
+  dropNullSymbol,
   hasAborters,
   noteFinal,
   abortStages,
@@ -80,6 +81,7 @@ const asStream = (fn, options) => {
       });
     }
   };
+  enqueue[dropNullSymbol] = true;
 
   // Slow-path generator queue (preserves iterator state across re-entry) —
   // used by the single-fn processValue path below.

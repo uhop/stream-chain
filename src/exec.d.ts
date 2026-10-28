@@ -64,6 +64,14 @@ declare function withCleanupError(err: unknown, cleanupErr: unknown): unknown;
 declare const cancelSymbol: unique symbol;
 
 /**
+ * Set on a push function by a stream driver, whose stream reserves `null` for its
+ * end: the executor then drops `null` and `undefined` at every stage, as it does
+ * `none`. Without it, they pass through like any other value. Internal: shared with
+ * the adapters.
+ */
+declare const dropNullSymbol: unique symbol;
+
+/**
  * Set on the async generator a `pipe()` run returns: `drain()` ends the run on a
  * `Stop` from it, which comes after the flush. Internal: shared by `pipe()` and `drain()`.
  */
@@ -137,6 +145,7 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
+  dropNullSymbol,
   pipeRunSymbol,
   hasAborters,
   noteFinal,

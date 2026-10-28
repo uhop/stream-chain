@@ -9,8 +9,9 @@
 // when it had to suspend.
 //
 // Duck-types returned values the way the original 1.x `fun()` did: thenable →
-// chain; many() → expand; .next → iterate as a generator; none/null → drop;
-// stop → throw Stop; finalValue → emit and short-circuit. An async generator is
+// chain; many() → expand; .next → iterate as a generator; none → drop (null and
+// undefined too, for a push marked with dropNullSymbol); stop → throw Stop;
+// finalValue → emit and short-circuit. An async generator is
 // not special — it's a generator whose next() returned a promise, handled by
 // the same suspend/resume path. A sync generator stays synchronous.
 //
@@ -23,6 +24,10 @@ import * as defs from './defs.js';
 
 // On a push function: the value to throw once its owner is torn down.
 const cancelSymbol = Symbol.for('object-stream.cancel');
+
+// On a push function: its owner is a stream, which reserves null for its end, so
+// null and undefined are dropped at every stage. gen(), fun(), and pipe() pass them.
+const dropNullSymbol = Symbol.for('object-stream.dropNull');
 
 // On a pipe() run: its Stop comes after the flush, so drain() ends the run on it.
 const pipeRunSymbol = Symbol.for('object-stream.pipeRun');
@@ -99,10 +104,12 @@ const next = (value, fns, index, push) => {
         e => markStop(e, ii)
       );
     }
-    if (value == null || value === defs.none) return;
+    if (value === defs.none || (value == null && push[dropNullSymbol])) return undefined;
     if (value === defs.stop) markStop(new defs.Stop(), i);
     if (defs.isFinalValue(value)) {
-      return push(defs.getFinalValue(value)); // emit, bypass remaining fns
+      const final = defs.getFinalValue(value);
+      if (final == null && push[dropNullSymbol]) return undefined;
+      return push(final); // emit, bypass remaining fns
     }
     if (defs.isMany(value)) {
       return nextMany(defs.getManyValues(value), fns, i, push);
@@ -464,6 +471,7 @@ export {
   flush,
   withCleanupError,
   cancelSymbol,
+  dropNullSymbol,
   pipeRunSymbol,
   hasAborters,
   noteFinal,
