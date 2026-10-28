@@ -16,7 +16,7 @@ import stringerToFile from '../../src/jsonl/file/stringer.js';
 import {none, stop, Stop, flushable} from '../../src/defs.js';
 
 // FileHandle.read/write live on the prototype (patchable); close is an own
-// per-instance property (not patchable). So we inject a write/read failure via
+// per-instance property (wrapped per handle). So we inject a write/read failure via
 // the prototype, capture the handle (`this`) at the failure site, and prove it
 // was released before the error propagated: fd === -1 after close (Node, Bun,
 // Deno alike). Counting /proc/self/fd was racy under the parallel runner.
@@ -231,9 +231,15 @@ test.asPromise(
   async (t, resolve) => {
     await ensure();
     const sourceErr = new Error('source boom');
-    let caught, handle;
+    let caught, handle, signal;
+    const released = new Promise(r => (signal = r));
     await withPatched(
-      capturingWrite(h => (handle = h)),
+      capturingWrite(h => {
+        if (handle) return;
+        handle = h;
+        const close = h.close;
+        h.close = (...args) => close.apply(h, args).finally(signal);
+      }),
       () =>
         new Promise(done => {
           const c = chain([
@@ -245,10 +251,16 @@ test.asPromise(
           ]);
           pipeline(Readable.from([0]), c, error => {
             caught = error;
-            setTimeout(done, 20);
+            done();
           });
         })
     );
+    if (handle) {
+      // on Node and Bun the release follows pipeline()'s callback; the timer caps a missing one
+      let timer;
+      await Promise.race([released, new Promise(r => (timer = setTimeout(r, 1000)))]);
+      clearTimeout(timer);
+    }
     t.equal(caught, sourceErr, 'the source error reaches pipeline()');
     t.ok(handle, 'a block write opened the FileHandle');
     t.equal(handle?.fd, -1, 'the teardown released the handle');
