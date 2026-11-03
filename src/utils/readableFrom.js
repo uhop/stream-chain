@@ -2,6 +2,9 @@
 
 import {Readable} from 'node:stream';
 import * as defs from '../defs.js';
+import {withCleanupError} from '../exec.js';
+
+const CANCEL = Symbol.for('object-stream.readable-source-cancel');
 
 const readableFrom = options => {
   if (!options?.iterable) {
@@ -26,6 +29,8 @@ const readableFrom = options => {
   let paused = Promise.resolve(),
     resolvePaused = null;
   const queue = [];
+  let cancelled = false,
+    running;
 
   // pause/resume
   const resume = () => {
@@ -53,12 +58,15 @@ const readableFrom = options => {
   };
   const pump = async () => {
     while (queue.length) {
+      if (cancelled) throw CANCEL;
       await paused;
+      if (cancelled) throw CANCEL;
       const gen = queue[queue.length - 1];
       let result = gen.next();
       if (result && typeof result.then == 'function') {
         result = await result;
       }
+      if (cancelled) throw CANCEL;
       if (result.done) {
         queue.pop();
         continue;
@@ -71,6 +79,14 @@ const readableFrom = options => {
     }
   };
   const sanitize = async value => {
+    if (cancelled) {
+      if (defs.isMany(value)) {
+        pushResults(defs.getManyValues(value));
+      } else if (defs.isFinalValue(value)) {
+        return processValue(defs.getFinalValue(value));
+      }
+      throw CANCEL;
+    }
     if (value === undefined || value === null || value === defs.none) return;
     if (value === defs.stop) throw new defs.Stop();
 
@@ -91,15 +107,24 @@ const readableFrom = options => {
   };
   const startPump = async () => {
     try {
+      if (cancelled) return;
       const value = fn();
       await processValue(value);
-      stream.push(null);
+      if (!cancelled) stream.push(null);
     } catch (error) {
-      if (defs.isStop(error)) {
-        stream.push(null);
-        return;
+      let failure = error === CANCEL ? undefined : error,
+        failed = error !== CANCEL && !defs.isStop(error);
+      while (queue.length) {
+        const gen = queue.pop();
+        try {
+          if (gen.return) await gen.return();
+        } catch (cleanupError) {
+          failure = withCleanupError(failure, cleanupError);
+          failed = true;
+        }
       }
-      throw error;
+      if (failed && !defs.isStop(failure)) throw failure;
+      if (!cancelled) stream.push(null);
     }
   };
   const processValue = async value => {
@@ -115,15 +140,38 @@ const readableFrom = options => {
     return sanitize(value);
   };
 
+  const destroy = options.destroy;
   stream = new Readable({
     objectMode: true,
     ...options,
     read() {
       resume();
+    },
+    destroy(error, callback) {
+      cancelled = true;
+      resume();
+      const finish = failure => {
+        try {
+          if (typeof destroy === 'function') {
+            destroy.call(this, failure, callback);
+          } else {
+            callback(failure);
+          }
+        } catch (destroyError) {
+          callback(destroyError);
+        }
+      };
+      Promise.resolve()
+        .then(() => running)
+        .then(
+          () => finish(error),
+          failure => finish(failure === error ? error : withCleanupError(error, failure))
+        );
     }
   });
 
-  startPump().catch(error => stream.destroy(error));
+  running = startPump();
+  running.catch(error => stream.destroy(error));
   return stream;
 };
 

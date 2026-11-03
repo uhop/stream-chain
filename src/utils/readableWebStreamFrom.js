@@ -1,6 +1,9 @@
 // @ts-self-types="./readableWebStreamFrom.d.ts"
 
 import * as defs from '../defs.js';
+import {withCleanupError} from '../exec.js';
+
+const CANCEL = Symbol.for('object-stream.readable-source-cancel');
 
 const readableWebStreamFrom = options => {
   if (
@@ -45,6 +48,7 @@ const readableWebStreamFrom = options => {
 
   let controller = null;
   let cancelled = false;
+  let running;
 
   const pushResults = values => {
     if (values && typeof values.next == 'function') {
@@ -56,14 +60,15 @@ const readableWebStreamFrom = options => {
 
   const pump = async () => {
     while (queue.length) {
-      if (cancelled) throw new defs.Stop();
+      if (cancelled) throw CANCEL;
       await paused;
-      if (cancelled) throw new defs.Stop();
+      if (cancelled) throw CANCEL;
       const gen = queue[queue.length - 1];
       let result = gen.next();
       if (result && typeof result.then == 'function') {
         result = await result;
       }
+      if (cancelled) throw CANCEL;
       if (result.done) {
         queue.pop();
         continue;
@@ -77,6 +82,14 @@ const readableWebStreamFrom = options => {
   };
 
   const sanitize = async value => {
+    if (cancelled) {
+      if (defs.isMany(value)) {
+        pushResults(defs.getManyValues(value));
+      } else if (defs.isFinalValue(value)) {
+        return processValue(defs.getFinalValue(value));
+      }
+      throw CANCEL;
+    }
     if (value === undefined || value === null || value === defs.none) return;
     if (value === defs.stop) throw new defs.Stop();
 
@@ -91,7 +104,6 @@ const readableWebStreamFrom = options => {
       return processValue(value);
     }
 
-    if (cancelled) throw new defs.Stop();
     controller.enqueue(value);
     if (controller.desiredSize !== null && controller.desiredSize <= 0) {
       pause();
@@ -113,16 +125,24 @@ const readableWebStreamFrom = options => {
 
   const startPump = async () => {
     try {
+      if (cancelled) return;
       const value = fn();
       await processValue(value);
       if (!cancelled) controller.close();
     } catch (error) {
-      if (cancelled) return;
-      if (defs.isStop(error)) {
-        controller.close();
-        return;
+      let failure = error === CANCEL ? undefined : error,
+        failed = error !== CANCEL && !defs.isStop(error);
+      while (queue.length) {
+        const gen = queue.pop();
+        try {
+          if (gen.return) await gen.return();
+        } catch (cleanupError) {
+          failure = withCleanupError(failure, cleanupError);
+          failed = true;
+        }
       }
-      controller.error(error);
+      if (failed && !defs.isStop(failure)) throw failure;
+      if (!cancelled) controller.close();
     }
   };
 
@@ -132,7 +152,10 @@ const readableWebStreamFrom = options => {
     {
       start(c) {
         controller = c;
-        startPump();
+        running = startPump();
+        running.catch(error => {
+          if (!cancelled) controller.error(error);
+        });
       },
       pull() {
         resume();
@@ -140,6 +163,7 @@ const readableWebStreamFrom = options => {
       cancel() {
         cancelled = true;
         resume();
+        return running;
       }
     },
     strategy

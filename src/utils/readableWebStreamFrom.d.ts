@@ -26,6 +26,8 @@ interface ReadableWebStreamFromOptions<T> {
  *
  * Per-item backpressure: when the readable's `desiredSize` drops to 0 after an
  * enqueue, the pump parks on a promise that resolves on the next `pull()`.
+ * Cancelling the stream returns active source iterators and awaits their cleanup. An outstanding
+ * source operation must settle before cleanup can finish.
  *
  * @param options an iterable, function, or `{iterable, strategy?}` options object.
  * @returns a Web Streams `ReadableStream<T>`.
