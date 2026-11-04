@@ -134,53 +134,63 @@ test.asPromise('readableWebStreamFrom: stop releases its source cleanly', async 
   resolve();
 });
 
-test.asPromise('readableWebStreamFrom: cancellation awaits a pending next', async (t, resolve) => {
-  let finishNext, started;
-  const pending = new Promise(resolve => (started = resolve));
-  let returns = 0;
-  const stream = readableWebStreamFrom(() => ({
-    next() {
-      started();
-      return new Promise(resolve => (finishNext = resolve));
-    },
-    async return() {
-      await Promise.resolve();
-      ++returns;
-      return {done: true};
-    }
-  }));
-  const reader = stream.getReader();
-  const read = reader.read();
-  await pending;
-  let cancelled = false;
-  const done = reader.cancel().then(() => (cancelled = true));
-  await Promise.resolve();
-  t.equal(cancelled, false);
-  finishNext({value: 'late', done: false});
-  await done;
-  t.equal(returns, 1);
-  t.equal((await read).done, true);
-  resolve();
-});
+test.asPromise(
+  'readableWebStreamFrom: cancellation returns a pending iterator without waiting for next',
+  async (t, resolve) => {
+    let finishNext, started;
+    const pending = new Promise(resolve => (started = resolve));
+    let returns = 0;
+    const stream = readableWebStreamFrom(() => ({
+      next() {
+        started();
+        return new Promise(resolve => (finishNext = resolve));
+      },
+      async return() {
+        await Promise.resolve();
+        ++returns;
+        return {done: true};
+      }
+    }));
+    const reader = stream.getReader();
+    const read = reader.read();
+    await pending;
+    let cancelled = false;
+    const done = reader.cancel().then(() => (cancelled = true));
+    await Promise.resolve();
+    t.ok(await settlesBeforeSource(done));
+    t.equal(cancelled, true);
+    t.equal(returns, 1);
+    finishNext({value: 'late', done: false});
+    await done;
+    t.equal(returns, 1);
+    t.equal((await read).done, true);
+    resolve();
+  }
+);
 
 test.asPromise(
   'readableWebStreamFrom: a source arriving after cancel is returned',
   async (t, resolve) => {
     let finishSource,
+      finishReturn,
       returns = 0;
+    const returned = new Promise(resolve => (finishReturn = resolve));
     const stream = readableWebStreamFrom(() => new Promise(resolve => (finishSource = resolve)));
     const reader = stream.getReader();
     let cancelled = false;
     const done = reader.cancel().then(() => (cancelled = true));
     await Promise.resolve();
-    t.equal(cancelled, false);
+    t.ok(await settlesBeforeSource(done));
+    t.equal(cancelled, true);
     finishSource({
       next: () => ({value: 'late', done: false}),
       return() {
         ++returns;
+        finishReturn();
         return {done: true};
       }
     });
+    await returned;
     await done;
     t.equal(returns, 1);
     resolve();
@@ -290,19 +300,24 @@ for (const wrap of [many, finalValue, value => finalValue(many(value))]) {
     'readableWebStreamFrom: a wrapped source arriving after cancel is returned',
     async (t, resolve) => {
       let finishSource,
+        finishReturn,
         returns = 0;
+      const returned = new Promise(resolve => (finishReturn = resolve));
       const source = () => new Promise(resolve => (finishSource = resolve));
       const reader = readableWebStreamFrom(source).getReader();
       const done = reader.cancel();
+      t.ok(await settlesBeforeSource(done));
       finishSource(
         wrap({
           next: () => ({value: 'late', done: false}),
           return() {
             ++returns;
+            finishReturn();
             return {done: true};
           }
         })
       );
+      await returned;
       await done;
       t.equal(returns, 1);
       resolve();
@@ -354,3 +369,143 @@ for (const stopping of [false, true]) {
     }
   );
 }
+
+const settlesBeforeSource = async promise => {
+  let timer;
+  try {
+    return await Promise.race([
+      promise.then(() => true),
+      new Promise(resolve => (timer = setTimeout(() => resolve(false), 100)))
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+test.asPromise(
+  'readableWebStreamFrom: break after an await does not wait for the source',
+  async (t, resolve) => {
+    let finishSource, startNext, finishReturn;
+    const source = new Promise(resolve => (finishSource = resolve));
+    const started = new Promise(resolve => (startNext = resolve));
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    const stream = readableWebStreamFrom(async function* () {
+      try {
+        yield 1;
+        startNext();
+        await source;
+        yield 2;
+      } finally {
+        finishReturn();
+      }
+    });
+    const values = [];
+    const loop = (async () => {
+      for await (const value of stream) {
+        values.push(value);
+        await started;
+        break;
+      }
+    })();
+    t.ok(await settlesBeforeSource(loop));
+    finishSource();
+    await loop;
+    await returned;
+    t.deepEqual(values, [1]);
+    resolve();
+  }
+);
+
+test.asPromise(
+  'readableWebStreamFrom: pipeTo abort does not wait for the source',
+  async (t, resolve) => {
+    const failure = new Error('consumer aborted');
+    const controller = new AbortController();
+    let finishSource, startNext, finishReturn;
+    const source = new Promise(resolve => (finishSource = resolve));
+    const started = new Promise(resolve => (startNext = resolve));
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    const stream = readableWebStreamFrom(async function* () {
+      try {
+        yield 1;
+        startNext();
+        await source;
+      } finally {
+        finishReturn();
+      }
+    });
+    const outcome = stream.pipeTo(new WritableStream(), {signal: controller.signal}).then(
+      () => null,
+      error => error
+    );
+    await started;
+    controller.abort(failure);
+    t.ok(await settlesBeforeSource(outcome));
+    finishSource();
+    t.equal(await outcome, failure);
+    await returned;
+    resolve();
+  }
+);
+
+for (const wrap of [many, value => finalValue(many(value))]) {
+  test.asPromise(
+    'readableWebStreamFrom: a wrapped value from a cancelled next is released',
+    async (t, resolve) => {
+      let finishNext, startNext, finishChild;
+      const started = new Promise(resolve => (startNext = resolve));
+      const childReturned = new Promise(resolve => (finishChild = resolve));
+      let returns = 0;
+      const child = {
+        next: () => ({value: 'unused', done: false}),
+        return() {
+          ++returns;
+          finishChild();
+          return {done: true};
+        }
+      };
+      const stream = readableWebStreamFrom(() => ({
+        next() {
+          startNext();
+          return new Promise(resolve => (finishNext = resolve));
+        },
+        return: () => ({done: true})
+      }));
+      const reader = stream.getReader();
+      reader.read().catch(() => {});
+      await started;
+      const done = reader.cancel();
+      t.ok(await settlesBeforeSource(done));
+      finishNext({value: wrap(child), done: false});
+      t.ok(await settlesBeforeSource(childReturned));
+      t.equal(returns, 1);
+      await done;
+      resolve();
+    }
+  );
+}
+
+test.asPromise(
+  'readableWebStreamFrom: cancelling inside a synchronous generator still releases it',
+  async (t, resolve) => {
+    let reader, cancellation, finishReturn;
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    let releases = 0;
+    const stream = readableWebStreamFrom(function* () {
+      try {
+        cancellation = reader.cancel();
+        yield 1;
+      } finally {
+        ++releases;
+        finishReturn();
+      }
+    });
+    reader = stream.getReader();
+    const read = reader.read();
+    t.ok(await settlesBeforeSource(returned));
+    await cancellation;
+    t.equal(releases, 1);
+    t.equal((await read).done, true);
+    resolve();
+  }
+);

@@ -4,7 +4,10 @@ import {Readable} from 'node:stream';
 import * as defs from '../defs.js';
 import {withCleanupError} from '../exec.js';
 
-const CANCEL = Symbol.for('object-stream.readable-source-cancel');
+const CANCEL = Symbol.for('object-stream.readableFromCancel');
+const SOURCE_IDLE = 0;
+const SOURCE_CALLING = 1;
+const SOURCE_PENDING = 2;
 
 const readableFrom = options => {
   if (!options?.iterable) {
@@ -30,7 +33,8 @@ const readableFrom = options => {
     resolvePaused = null;
   const queue = [];
   let cancelled = false,
-    running;
+    running,
+    sourceState = SOURCE_IDLE;
 
   // pause/resume
   const resume = () => {
@@ -56,24 +60,55 @@ const readableFrom = options => {
     // array
     queue.push(values[Symbol.iterator]());
   };
+  const release = async error => {
+    let failure = error === CANCEL ? undefined : error,
+      failed = error !== CANCEL && !defs.isStop(error);
+    const pending = [];
+    while (queue.length) {
+      const gen = queue.pop();
+      try {
+        if (gen.return) {
+          pending.push(
+            Promise.resolve(gen.return()).then(
+              () => null,
+              error => ({error})
+            )
+          );
+        }
+      } catch (error) {
+        pending.push(Promise.resolve({error}));
+      }
+    }
+    for (const result of await Promise.all(pending)) {
+      if (result) {
+        failure = withCleanupError(failure, result.error);
+        failed = true;
+      }
+    }
+    if (failed && !defs.isStop(failure)) throw failure;
+  };
   const pump = async () => {
     while (queue.length) {
       if (cancelled) throw CANCEL;
       await paused;
       if (cancelled) throw CANCEL;
       const gen = queue[queue.length - 1];
+      sourceState = SOURCE_CALLING;
       let result = gen.next();
       if (result && typeof result.then == 'function') {
+        sourceState = SOURCE_PENDING;
         result = await result;
       }
-      if (cancelled) throw CANCEL;
+      sourceState = SOURCE_IDLE;
       if (result.done) {
-        queue.pop();
+        if (queue[queue.length - 1] === gen) queue.pop();
         continue;
       }
       let value = result.value;
       if (value && typeof value.then == 'function') {
+        sourceState = SOURCE_PENDING;
         value = await value;
+        sourceState = SOURCE_IDLE;
       }
       await sanitize(value);
     }
@@ -108,29 +143,24 @@ const readableFrom = options => {
   const startPump = async () => {
     try {
       if (cancelled) return;
+      sourceState = SOURCE_CALLING;
       const value = fn();
+      sourceState = SOURCE_IDLE;
       await processValue(value);
       if (!cancelled) stream.push(null);
     } catch (error) {
-      let failure = error === CANCEL ? undefined : error,
-        failed = error !== CANCEL && !defs.isStop(error);
-      while (queue.length) {
-        const gen = queue.pop();
-        try {
-          if (gen.return) await gen.return();
-        } catch (cleanupError) {
-          failure = withCleanupError(failure, cleanupError);
-          failed = true;
-        }
-      }
-      if (failed && !defs.isStop(failure)) throw failure;
+      sourceState = SOURCE_IDLE;
+      await release(error);
       if (!cancelled) stream.push(null);
     }
   };
   const processValue = async value => {
     if (value && typeof value.then == 'function') {
       // thenable
-      return value.then(value => processValue(value));
+      sourceState = SOURCE_PENDING;
+      value = await value;
+      sourceState = SOURCE_IDLE;
+      return processValue(value);
     }
     if (value && typeof value.next == 'function') {
       // generator
@@ -149,6 +179,7 @@ const readableFrom = options => {
     },
     destroy(error, callback) {
       cancelled = true;
+      const state = sourceState;
       resume();
       const finish = failure => {
         try {
@@ -161,17 +192,25 @@ const readableFrom = options => {
           callback(destroyError);
         }
       };
-      Promise.resolve()
-        .then(() => running)
-        .then(
-          () => finish(error),
-          failure => finish(failure === error ? error : withCleanupError(error, failure))
-        );
+      // A source can destroy its stream while its generator is still executing.
+      const cleanup =
+        state === SOURCE_CALLING ? Promise.resolve().then(() => release(CANCEL)) : release(CANCEL);
+      if (state !== SOURCE_IDLE) {
+        cleanup.catch(() => {});
+        finish(error);
+        return;
+      }
+      cleanup.then(
+        () => finish(error),
+        failure => finish(failure === error ? error : withCleanupError(error, failure))
+      );
     }
   });
 
   running = startPump();
-  running.catch(error => stream.destroy(error));
+  running.catch(error => {
+    if (!cancelled) stream.destroy(error);
+  });
   return stream;
 };
 

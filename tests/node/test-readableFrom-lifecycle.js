@@ -1,7 +1,10 @@
 'use strict';
 
 import test from 'tape-six';
-import {once} from 'node:events';
+import {once, on, EventEmitter} from 'node:events';
+import {Writable} from 'node:stream';
+import {pipeline} from 'node:stream/promises';
+import readableWebStreamFrom from '../../src/utils/readableWebStreamFrom.js';
 import readableFrom from '../../src/utils/readableFrom.js';
 import {finalValue, many, stop} from '../../src/defs.js';
 
@@ -107,7 +110,7 @@ test.asPromise('readableFrom: stop releases the source without an error', async 
 });
 
 test.asPromise(
-  'readableFrom: destroy awaits a pending next and returns it once',
+  'readableFrom: destroy returns a pending iterator without waiting for next',
   async (t, resolve) => {
     let finishNext, started;
     const pending = new Promise(resolve => (started = resolve));
@@ -128,7 +131,9 @@ test.asPromise(
     const done = closed(stream).then(() => (isClosed = true));
     stream.destroy();
     await new Promise(resolve => setTimeout(resolve, 5));
-    t.equal(isClosed, false);
+    t.ok(await settlesBeforeSource(done));
+    t.equal(isClosed, true);
+    t.equal(returns, 1);
     finishNext({value: 'late', done: false});
     await done;
     t.equal(returns, 1);
@@ -289,23 +294,328 @@ for (const wrap of [many, finalValue, value => finalValue(many(value))]) {
     'readableFrom: a wrapped source arriving after cancel is returned',
     async (t, resolve) => {
       let finishSource,
+        finishReturn,
         returns = 0;
+      const returned = new Promise(resolve => (finishReturn = resolve));
       const source = () => new Promise(resolve => (finishSource = resolve));
       const stream = readableFrom(source);
       const done = closed(stream);
       stream.destroy();
+      t.ok(await settlesBeforeSource(done));
       finishSource(
         wrap({
           next: () => ({value: 'late', done: false}),
           return() {
             ++returns;
+            finishReturn();
             return {done: true};
           }
         })
       );
+      await returned;
       await done;
       t.equal(returns, 1);
       resolve();
     }
   );
 }
+
+const settlesBeforeSource = async promise => {
+  let timer;
+  try {
+    return await Promise.race([
+      promise.then(() => true),
+      new Promise(resolve => (timer = setTimeout(() => resolve(false), 100)))
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+for (const web of [false, true]) {
+  test.asPromise(
+    `readable sources: idle events.on iterator can be cancelled (Web ${web})`,
+    async (t, resolve) => {
+      const emitter = new EventEmitter();
+      const iterator = on(emitter, 'item');
+      let startNext;
+      const started = new Promise(resolve => (startNext = resolve));
+      const next = iterator.next.bind(iterator);
+      iterator.next = () => {
+        startNext();
+        return next();
+      };
+      const stream = web ? readableWebStreamFrom(() => iterator) : readableFrom(() => iterator);
+      const reader = web ? stream.getReader() : null;
+      if (web) reader.read().catch(() => {});
+      else stream.resume();
+      await started;
+      const done = web ? reader.cancel() : closed(stream);
+      if (!web) stream.destroy();
+      const settled = await settlesBeforeSource(done);
+      t.ok(settled, 'teardown does not need a source event');
+      t.equal(emitter.listenerCount('item'), 0, 'return removes the source listener');
+      if (!settled) emitter.emit('item', 1);
+      await done;
+      resolve();
+    }
+  );
+}
+
+test.asPromise(
+  'readableFrom: a stalled async source does not block destroy',
+  async (t, resolve) => {
+    let finishSource, startNext, finishReturn;
+    const source = new Promise(resolve => (finishSource = resolve));
+    const started = new Promise(resolve => (startNext = resolve));
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    const stream = readableFrom(async function* () {
+      try {
+        yield 1;
+        startNext();
+        await source;
+        yield 2;
+      } finally {
+        finishReturn();
+      }
+    });
+    const values = [];
+    stream.on('data', value => values.push(value));
+    await started;
+    const done = closed(stream);
+    stream.destroy();
+    t.ok(await settlesBeforeSource(done));
+    finishSource();
+    await done;
+    await returned;
+    t.deepEqual(values, [1]);
+    resolve();
+  }
+);
+
+test.asPromise(
+  'readableFrom: a failed sink finishes while its source is stalled',
+  async (t, resolve) => {
+    const failure = new Error('sink failed');
+    let finishSource, startNext, finishReturn;
+    const source = new Promise(resolve => (finishSource = resolve));
+    const started = new Promise(resolve => (startNext = resolve));
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    const stream = readableFrom(async function* () {
+      try {
+        yield 1;
+        startNext();
+        await source;
+      } finally {
+        finishReturn();
+      }
+    });
+    const outcome = pipeline(
+      stream,
+      new Writable({
+        objectMode: true,
+        write(value, encoding, callback) {
+          started.then(() => callback(failure));
+        }
+      })
+    ).then(
+      () => null,
+      error => error
+    );
+    await started;
+    t.ok(await settlesBeforeSource(outcome));
+    finishSource();
+    t.equal(await outcome, failure);
+    await returned;
+    resolve();
+  }
+);
+
+for (const wrap of [many, value => finalValue(many(value))]) {
+  test.asPromise(
+    'readableFrom: a wrapped value from a cancelled next is released',
+    async (t, resolve) => {
+      let finishNext, startNext, finishChild;
+      const started = new Promise(resolve => (startNext = resolve));
+      const childReturned = new Promise(resolve => (finishChild = resolve));
+      let returns = 0;
+      const child = {
+        next: () => ({value: 'unused', done: false}),
+        return() {
+          ++returns;
+          finishChild();
+          return {done: true};
+        }
+      };
+      const stream = readableFrom(() => ({
+        next() {
+          startNext();
+          return new Promise(resolve => (finishNext = resolve));
+        },
+        return: () => ({done: true})
+      }));
+      stream.resume();
+      await started;
+      const done = closed(stream);
+      stream.destroy();
+      t.ok(await settlesBeforeSource(done));
+      finishNext({value: wrap(child), done: false});
+      t.ok(await settlesBeforeSource(childReturned));
+      t.equal(returns, 1);
+      await done;
+      resolve();
+    }
+  );
+}
+
+test.asPromise(
+  'readableFrom: pending nested iterators are returned inside out at once',
+  async (t, resolve) => {
+    let finishNext, finishInner, startNext, startReturn;
+    const started = new Promise(resolve => (startNext = resolve));
+    const returning = new Promise(resolve => (startReturn = resolve));
+    const order = [];
+    const inner = {
+      next() {
+        startNext();
+        return new Promise(resolve => (finishNext = resolve));
+      },
+      return() {
+        order.push('inner');
+        finishNext({done: true});
+        return new Promise(resolve => {
+          finishInner = resolve;
+          startReturn();
+        });
+      }
+    };
+    const stream = readableFrom(function* () {
+      try {
+        yield many(inner);
+      } finally {
+        order.push('outer');
+      }
+    });
+    stream.resume();
+    await started;
+    const done = closed(stream);
+    stream.destroy();
+    try {
+      t.ok(await settlesBeforeSource(done));
+      t.deepEqual(order, ['inner', 'outer']);
+    } finally {
+      if (!finishInner) finishNext({done: true});
+      await returning;
+      finishInner({done: true});
+      await done;
+    }
+    resolve();
+  }
+);
+
+test.asPromise(
+  'readableFrom: background cleanup failures do not become errors',
+  async (t, resolve) => {
+    const failure = new Error('background cleanup');
+    let startNext, finishNext;
+    const started = new Promise(resolve => (startNext = resolve));
+    const stream = readableFrom(() => ({
+      next() {
+        startNext();
+        return new Promise(resolve => (finishNext = resolve));
+      },
+      return: () => Promise.reject(failure)
+    }));
+    const errors = [];
+    stream.on('error', error => errors.push(error));
+    stream.resume();
+    await started;
+    const done = closed(stream);
+    stream.destroy();
+    t.ok(await settlesBeforeSource(done));
+    finishNext({done: true});
+    await done;
+    await new Promise(resolve => setTimeout(resolve, 0));
+    t.deepEqual(errors, []);
+    resolve();
+  }
+);
+
+for (const web of [false, true]) {
+  test.asPromise(
+    `readable sources: a pending yielded promise does not hold teardown (Web ${web})`,
+    async (t, resolve) => {
+      let finishValue, startNext, rejectCleanup;
+      const value = new Promise(resolve => (finishValue = resolve));
+      const started = new Promise(resolve => (startNext = resolve));
+      const cleanup = new Promise((resolve, reject) => (rejectCleanup = reject));
+      let returns = 0;
+      const source = () => ({
+        next() {
+          startNext();
+          return {value, done: false};
+        },
+        return() {
+          ++returns;
+          return cleanup;
+        }
+      });
+      const stream = web ? readableWebStreamFrom(source) : readableFrom(source);
+      const errors = [];
+      let reader;
+      if (web) {
+        reader = stream.getReader();
+        reader.read().catch(() => {});
+      } else {
+        stream.on('error', error => errors.push(error));
+        stream.resume();
+      }
+      await started;
+      const done = web
+        ? reader.cancel().then(
+            () => null,
+            error => error
+          )
+        : closed(stream);
+      if (!web) stream.destroy();
+      t.ok(await settlesBeforeSource(done));
+      t.equal(returns, 1);
+      rejectCleanup(new Error('background cleanup failed'));
+      finishValue('unused');
+      t.equal(await done, web ? null : undefined);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      t.deepEqual(errors, []);
+      resolve();
+    }
+  );
+}
+
+test.asPromise(
+  'readableFrom: aborting inside a synchronous generator still releases it',
+  async (t, resolve) => {
+    const controller = new AbortController();
+    let finishReturn;
+    const returned = new Promise(resolve => (finishReturn = resolve));
+    let releases = 0;
+    const iterator = (function* () {
+      try {
+        controller.abort();
+        yield 1;
+      } finally {
+        ++releases;
+        finishReturn();
+      }
+    })();
+    const stream = readableFrom({iterable: iterator, signal: controller.signal});
+    const errors = [];
+    stream.on('error', error => errors.push(error));
+    const done = closed(stream);
+    stream.resume();
+    t.ok(await settlesBeforeSource(returned));
+    await done;
+    t.equal(releases, 1);
+    t.equal(errors.length, 1);
+    t.equal(errors[0].code, 'ABORT_ERR');
+    resolve();
+  }
+);
