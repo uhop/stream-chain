@@ -188,11 +188,12 @@ const readableWebStreamFrom = options => {
         cancelled = true;
         const state = sourceState;
         resume();
+        const concurrent = state !== SOURCE_IDLE;
         // A source can cancel its stream while its generator is still executing.
         const cleanup =
           state === SOURCE_CALLING
-            ? Promise.resolve().then(() => release(CANCEL, true))
-            : release(CANCEL, state !== SOURCE_IDLE);
+            ? Promise.resolve().then(() => release(CANCEL, concurrent))
+            : release(CANCEL, concurrent);
         if (state === SOURCE_IDLE) return cleanup;
         cleanup.catch(() => {});
       }
