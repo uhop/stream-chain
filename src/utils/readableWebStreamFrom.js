@@ -51,8 +51,7 @@ const readableWebStreamFrom = options => {
 
   let controller = null;
   let cancelled = false;
-  let running,
-    sourceState = SOURCE_IDLE;
+  let sourceState = SOURCE_IDLE;
 
   const pushResults = values => {
     if (values && typeof values.next == 'function') {
@@ -62,26 +61,24 @@ const readableWebStreamFrom = options => {
     queue.push(values[Symbol.iterator]());
   };
 
-  const release = async error => {
+  const release = async (error, concurrent) => {
     let failure = error === CANCEL ? undefined : error,
       failed = error !== CANCEL && !defs.isStop(error);
-    const pending = [];
-    while (queue.length) {
-      const gen = queue.pop();
+    const close = async gen => {
       try {
-        if (gen.return) {
-          pending.push(
-            Promise.resolve(gen.return()).then(
-              () => null,
-              error => ({error})
-            )
-          );
-        }
+        if (gen.return) await gen.return();
+        return null;
       } catch (error) {
-        pending.push(Promise.resolve({error}));
+        return {error};
       }
+    };
+    const pending = [];
+    // A woken pump can also enter release.
+    for (const gen of queue.splice(0).reverse()) {
+      const result = close(gen);
+      pending.push(concurrent ? result : await result);
     }
-    for (const result of await Promise.all(pending)) {
+    for (const result of concurrent ? await Promise.all(pending) : pending) {
       if (result) {
         failure = withCleanupError(failure, result.error);
         failed = true;
@@ -162,7 +159,6 @@ const readableWebStreamFrom = options => {
 
   const startPump = async () => {
     try {
-      if (cancelled) return;
       sourceState = SOURCE_CALLING;
       const value = fn();
       sourceState = SOURCE_IDLE;
@@ -170,7 +166,7 @@ const readableWebStreamFrom = options => {
       if (!cancelled) controller.close();
     } catch (error) {
       sourceState = SOURCE_IDLE;
-      await release(error);
+      await release(error, false);
       if (!cancelled) controller.close();
     }
   };
@@ -181,8 +177,7 @@ const readableWebStreamFrom = options => {
     {
       start(c) {
         controller = c;
-        running = startPump();
-        running.catch(error => {
+        startPump().catch(error => {
           if (!cancelled) controller.error(error);
         });
       },
@@ -196,8 +191,8 @@ const readableWebStreamFrom = options => {
         // A source can cancel its stream while its generator is still executing.
         const cleanup =
           state === SOURCE_CALLING
-            ? Promise.resolve().then(() => release(CANCEL))
-            : release(CANCEL);
+            ? Promise.resolve().then(() => release(CANCEL, true))
+            : release(CANCEL, state !== SOURCE_IDLE);
         if (state === SOURCE_IDLE) return cleanup;
         cleanup.catch(() => {});
       }

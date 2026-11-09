@@ -261,39 +261,57 @@ test.asPromise(
   }
 );
 
-test.asPromise(
-  'readableWebStreamFrom: nested many sources release inside out',
-  async (t, resolve) => {
-    const order = [];
-    const inner = function* () {
+for (const stopSource of [false, true]) {
+  test.asPromise(
+    `readableWebStreamFrom: nested many sources await inner cleanup on ${stopSource ? 'stop' : 'cancel'}`,
+    async (t, resolve) => {
+      const order = [];
+      const inner = async function* () {
+        try {
+          yield stopSource ? stop : 1;
+          yield 2;
+        } finally {
+          order.push('inner-start');
+          await new Promise(resolve => setTimeout(resolve, 0));
+          order.push('inner-end');
+          throw new Error('inner cleanup');
+        }
+      };
+      const outer = async function* () {
+        try {
+          yield many(inner());
+        } finally {
+          order.push('outer');
+        }
+      };
+      let notifyBuffered;
+      const buffered = new Promise(resolve => (notifyBuffered = resolve));
+      const stream = readableWebStreamFrom({
+        iterable: outer,
+        strategy: {
+          highWaterMark: 1,
+          size() {
+            notifyBuffered();
+            return 1;
+          }
+        }
+      });
       try {
-        yield 1;
-        yield 2;
-      } finally {
-        order.push('inner');
-        throw new Error('inner cleanup');
+        if (stopSource) {
+          await stream.getReader().read();
+        } else {
+          await buffered;
+          await stream.cancel();
+        }
+        t.fail('the stream must report the cleanup failure');
+      } catch (error) {
+        t.equal(error.message, 'inner cleanup');
       }
-    };
-    const outer = async function* () {
-      try {
-        yield many(inner());
-      } finally {
-        await Promise.resolve();
-        order.push('outer');
-      }
-    };
-    const reader = readableWebStreamFrom(outer).getReader();
-    await reader.read();
-    try {
-      await reader.cancel();
-      t.fail('cancel must report cleanup failure');
-    } catch (error) {
-      t.equal(error.message, 'inner cleanup');
+      t.deepEqual(order, ['inner-start', 'inner-end', 'outer']);
+      resolve();
     }
-    t.deepEqual(order, ['inner', 'outer']);
-    resolve();
-  }
-);
+  );
+}
 
 for (const wrap of [many, finalValue, value => finalValue(many(value))]) {
   test.asPromise(

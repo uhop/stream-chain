@@ -198,7 +198,7 @@ test.asPromise('readableFrom: normal exhaustion does not call return', async (t,
 });
 
 test.asPromise(
-  'readableFrom: abort during source creation still awaits cleanup',
+  'readableFrom: abort during source creation releases the late source',
   async (t, resolve) => {
     const controller = new AbortController();
     let returns = 0;
@@ -257,37 +257,45 @@ test.asPromise(
   }
 );
 
-test.asPromise('readableFrom: nested many sources release inside out', async (t, resolve) => {
-  const order = [];
-  const inner = function* () {
-    try {
-      yield 1;
-      yield 2;
-    } finally {
-      order.push('inner');
-      throw new Error('inner cleanup');
+for (const stopSource of [false, true]) {
+  test.asPromise(
+    `readableFrom: nested many sources await inner cleanup on ${stopSource ? 'stop' : 'destroy'}`,
+    async (t, resolve) => {
+      const order = [];
+      const inner = async function* () {
+        try {
+          yield stopSource ? stop : 1;
+          yield 2;
+        } finally {
+          order.push('inner-start');
+          await new Promise(resolve => setTimeout(resolve, 0));
+          order.push('inner-end');
+          throw new Error('inner cleanup');
+        }
+      };
+      const outer = async function* () {
+        try {
+          yield many(inner());
+        } finally {
+          order.push('outer');
+        }
+      };
+      const stream = readableFrom({iterable: outer, highWaterMark: 1});
+      const errors = [];
+      stream.on('error', error => errors.push(error));
+      const done = closed(stream);
+      if (!stopSource) {
+        await once(stream, 'readable');
+        stream.destroy();
+      }
+      await done;
+      t.deepEqual(order, ['inner-start', 'inner-end', 'outer']);
+      t.equal(errors.length, 1);
+      t.equal(errors[0].message, 'inner cleanup');
+      resolve();
     }
-  };
-  const outer = async function* () {
-    try {
-      yield many(inner());
-    } finally {
-      await Promise.resolve();
-      order.push('outer');
-    }
-  };
-  const stream = readableFrom({iterable: outer, highWaterMark: 1});
-  const errors = [];
-  stream.on('error', error => errors.push(error));
-  await once(stream, 'readable');
-  const done = closed(stream);
-  stream.destroy();
-  await done;
-  t.deepEqual(order, ['inner', 'outer']);
-  t.equal(errors.length, 1);
-  t.equal(errors[0].message, 'inner cleanup');
-  resolve();
-});
+  );
+}
 
 for (const wrap of [many, finalValue, value => finalValue(many(value))]) {
   test.asPromise(

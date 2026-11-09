@@ -33,7 +33,6 @@ const readableFrom = options => {
     resolvePaused = null;
   const queue = [];
   let cancelled = false,
-    running,
     sourceState = SOURCE_IDLE;
 
   // pause/resume
@@ -60,26 +59,24 @@ const readableFrom = options => {
     // array
     queue.push(values[Symbol.iterator]());
   };
-  const release = async error => {
+  const release = async (error, concurrent) => {
     let failure = error === CANCEL ? undefined : error,
       failed = error !== CANCEL && !defs.isStop(error);
-    const pending = [];
-    while (queue.length) {
-      const gen = queue.pop();
+    const close = async gen => {
       try {
-        if (gen.return) {
-          pending.push(
-            Promise.resolve(gen.return()).then(
-              () => null,
-              error => ({error})
-            )
-          );
-        }
+        if (gen.return) await gen.return();
+        return null;
       } catch (error) {
-        pending.push(Promise.resolve({error}));
+        return {error};
       }
+    };
+    const pending = [];
+    // A woken pump can also enter release.
+    for (const gen of queue.splice(0).reverse()) {
+      const result = close(gen);
+      pending.push(concurrent ? result : await result);
     }
-    for (const result of await Promise.all(pending)) {
+    for (const result of concurrent ? await Promise.all(pending) : pending) {
       if (result) {
         failure = withCleanupError(failure, result.error);
         failed = true;
@@ -150,7 +147,7 @@ const readableFrom = options => {
       if (!cancelled) stream.push(null);
     } catch (error) {
       sourceState = SOURCE_IDLE;
-      await release(error);
+      await release(error, false);
       if (!cancelled) stream.push(null);
     }
   };
@@ -194,7 +191,9 @@ const readableFrom = options => {
       };
       // A source can destroy its stream while its generator is still executing.
       const cleanup =
-        state === SOURCE_CALLING ? Promise.resolve().then(() => release(CANCEL)) : release(CANCEL);
+        state === SOURCE_CALLING
+          ? Promise.resolve().then(() => release(CANCEL, true))
+          : release(CANCEL, state !== SOURCE_IDLE);
       if (state !== SOURCE_IDLE) {
         cleanup.catch(() => {});
         finish(error);
@@ -207,8 +206,7 @@ const readableFrom = options => {
     }
   });
 
-  running = startPump();
-  running.catch(error => {
+  startPump().catch(error => {
     if (!cancelled) stream.destroy(error);
   });
   return stream;
