@@ -18,6 +18,10 @@ interface ReadableFromOptions<T> extends ReadableOptions {
 
 /**
  * Creates a readable stream from an iterable or a function that will be used as a data source.
+ * Destroying the stream calls return() on active source iterators. When waiting for demand,
+ * cleanup completes before the stream closes and failures are reported. A pending source
+ * operation does not delay destruction; cleanup continues in the background and its failures
+ * are ignored.
  * @param options readable options (see {@link ReadableFromOptions}) or an iterable or a function that will be used as a data source.
  * @returns a readable stream
  */
