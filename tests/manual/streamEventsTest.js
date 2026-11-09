@@ -1,4 +1,4 @@
-const {Writable, Transform} = require('node:stream');
+import {Writable, Transform} from 'node:stream';
 
 const makeStreamT = id => {
   const stream = new Transform({

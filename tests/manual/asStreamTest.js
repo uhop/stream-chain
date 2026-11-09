@@ -1,7 +1,7 @@
-const {PassThrough} = require('node:stream');
+import {PassThrough} from 'node:stream';
 
-const defs = require('../../src/defs');
-const asStream = require('../../src/AsStream');
+import * as defs from '../../src/defs.js';
+import asStream from '../../src/asStream.js';
 
 const s = asStream(x => x * x);
 // const s = asStream(async x => x * x);
