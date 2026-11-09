@@ -532,6 +532,8 @@ Convert an iterable / iterator / function to a Node `Readable` stream.
 
 Accepts a 0-ary function (sync or async) returning a value, generator, or async generator. Speaks the chain protocol: producer can return `none`/`null`/`undefined` (skip), `stop` (terminate), `many([...])` (fan-out), `finalValue(v)` (unwrap).
 
+When the stream ends early (`destroy()`, a failing source, `stop`), `return()` is called on each active iterator, innermost first, so a generator's `finally` runs. If the pump is waiting for demand, the iterators close one at a time, the stream closes after the last one, and a failing cleanup becomes the stream's error. If a source operation is in progress (a pending `next()` or promise), `return()` is called on all iterators at once and `destroy()` doesn't wait; failures of that cleanup are ignored.
+
 ```js
 import readableFrom from 'stream-chain/utils/readableFrom.js';
 chain([readableFrom({iterable: [1, 2, 3]}), x => x * 2]);
@@ -540,6 +542,8 @@ chain([readableFrom({iterable: [1, 2, 3]}), x => x * 2]);
 ### readableWebStreamFrom(options)
 
 Web Streams counterpart of `readableFrom()` — same input shapes (iterable / iterator / function / options object), returns a `ReadableStream`. Per-item backpressure via `desiredSize`/`pull()`. For the plain iterable-to-stream case the platform's `ReadableStream.from()` suffices; reach for `readableWebStreamFrom` when you need function-source / promise-resolution / chain-protocol awareness on the producer side.
+
+Releases its source the same way as `readableFrom()`, on `cancel()` (including a `break` from `for await` and an aborted `pipeTo()`), a failing source, or `stop`. If the pump is parked, `cancel()` waits for the iterators, closing them one at a time, and rejects if a cleanup fails. If a source operation is in progress, `cancel()` doesn't wait and failures of that cleanup are ignored.
 
 ```js
 import readableWebStreamFrom from 'stream-chain/utils/readableWebStreamFrom.js';

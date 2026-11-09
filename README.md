@@ -63,6 +63,7 @@ BSD-3-Clause
 
 ## Release History
 
+- 4.4.2 _Bugfix: `readableFrom()` and `readableWebStreamFrom()` close their source iterators when a stream stops early (thx [mayankdhingra02](https://github.com/mayankdhingra02))._
 - 4.4.1 _Bugfix: `gen()`, `fun()`, `pipe()`, and the `/core` `chain()` pass `null` and `undefined` through again, as documented. The stream drivers still drop them._
 - 4.4.0 _`drain()` ends a `pipe()` run on its `stop` without an exception. New `isStop()` and `stopErrorSymbol` recognize a `Stop` from a compatible library. Bugfix: `asyncBlockWriter` keeps a surrogate pair split between two strings in one write (thx [edsonsims](https://github.com/edsonsims))._
 - 4.3.0 _Teardown releases resources: generator stages (thx [mkantautas](https://github.com/mkantautas)), flushable stages through a new `abort`, and file sinks, which get `close()`. A `stop` flushes the stages after it on every owner. A leading BOM is dropped, `ignoreBOM` keeps it (thx [nemphys](https://github.com/nemphys))._

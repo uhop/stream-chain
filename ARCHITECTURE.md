@@ -220,6 +220,7 @@ All utilities return functions or constructors suitable for use in `chain()`:
 - **Folding**: `fold` (reduce to single value at end), `scan` (emit running accumulator), `reduce` (alias for fold), `reduceStream` (Writable stream with `.accumulator`)
 - **Batching**: `batch(size)` — group items into arrays
 - **Stream helpers**: `readableFrom` (iterable → Readable), `fixUtf8Stream` (UTF-8 repartitioning), `lines` (byte stream → line stream)
+- **Source release**: `readableFrom` and `readableWebStreamFrom` call `return()` on their queued iterators, innermost first, when the stream ends early. With the pump parked or after a source failure or `stop`, the iterators close one at a time and teardown waits; with a source operation in progress, every `return()` is called at once and teardown doesn't wait
 - **Async-iterator wrappers**: `makeStreamPuller` (Node Readable), `makeWebStreamPuller` (Web ReadableStream)
 
 ## Module dependency graph
