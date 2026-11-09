@@ -504,6 +504,50 @@ for (const wrap of [many, value => finalValue(many(value))]) {
 }
 
 test.asPromise(
+  'readableWebStreamFrom: pending nested iterators are returned inside out at once',
+  async (t, resolve) => {
+    let finishNext, finishInner, startNext, startReturn;
+    const started = new Promise(resolve => (startNext = resolve));
+    const returning = new Promise(resolve => (startReturn = resolve));
+    const order = [];
+    const inner = {
+      next() {
+        startNext();
+        return new Promise(resolve => (finishNext = resolve));
+      },
+      return() {
+        order.push('inner');
+        finishNext({done: true});
+        return new Promise(resolve => {
+          finishInner = resolve;
+          startReturn();
+        });
+      }
+    };
+    const stream = readableWebStreamFrom(function* () {
+      try {
+        yield many(inner);
+      } finally {
+        order.push('outer');
+      }
+    });
+    const reader = stream.getReader();
+    reader.read().catch(() => {});
+    await started;
+    const done = reader.cancel();
+    try {
+      t.ok(await settlesBeforeSource(done));
+      t.deepEqual(order, ['inner', 'outer']);
+    } finally {
+      await returning;
+      finishInner({done: true});
+      await done;
+    }
+    resolve();
+  }
+);
+
+test.asPromise(
   'readableWebStreamFrom: cancelling inside a synchronous generator still releases it',
   async (t, resolve) => {
     let reader, cancellation, finishReturn;
