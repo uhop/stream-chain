@@ -15,8 +15,8 @@ const lines = () => {
     const lines = value.split(/\r?\n/g);
     rest += lines[0];
     if (lines.length < 2) return;
-    // a trailing CR here can only be a CRLF split across chunks
-    lines[0] = rest.endsWith('\r') ? rest.slice(0, -1) : rest;
+    // Only a leading LF can complete a CRLF left in rest by a previous chunk.
+    lines[0] = value[0] === '\n' && rest.endsWith('\r') ? rest.slice(0, -1) : rest;
     rest = lines.pop();
     yield* lines;
   });

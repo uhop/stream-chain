@@ -29,3 +29,15 @@ test.asPromise('lines: a lone CR stays in the line', async (t, resolve) => {
   t.deepEqual(out, ['a\rb']);
   resolve();
 });
+
+test.asPromise('lines: extra CRs before CRLF survive every chunk split', async (t, resolve) => {
+  const input = 'a\r\r\nb\r\r\r\nc\rd\r\nlast\r';
+  const expected = ['a\r', 'b\r\r', 'c\rd', 'last\r'];
+  t.deepEqual(await runChain([lines()], [input]), expected, 'one chunk');
+  t.deepEqual(await runChain([lines()], [...input]), expected, 'one character per chunk');
+  for (let i = 0; i <= input.length; ++i) {
+    const out = await runChain([lines()], [input.slice(0, i), '', input.slice(i)]);
+    t.deepEqual(out, expected, `split at ${i} with an empty chunk`);
+  }
+  resolve();
+});
