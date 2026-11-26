@@ -250,7 +250,7 @@ src/utils/webStreamPuller.js  ── (just wraps stream[Symbol.asyncIterator]())
 
 - **Framework**: tape-six (`tape6`)
 - **Run all**: `npm test` (parallel workers via `tape6 --flags FO`)
-- **Run single file**: `node tests/test-<name>.js`
+- **Run single file**: `node tests/<bucket>/test-<name>.js` (`tests/node/` for Node)
 - **Run with Bun**: `npm run test:bun`
 - **Run with Deno**: `npm run test:deno`
 - **Run sequential**: `npm run test:seq` (also `test:seq:bun`, `test:seq:deno`)
